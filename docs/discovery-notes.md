@@ -252,6 +252,7 @@ sequenceDiagram
     N->>M2: Announce Miner 2 as winner (lowest score)
     M2->>N: Propose new block
     N->>All: Broadcast new block header + updated difficulty
+```
 
 ### Diagram Explanation
 
@@ -323,6 +324,7 @@ graph TD
     style Plot_File fill:#f5f5f5,stroke:#999,stroke-width:1px
     style Merkle_Tree fill:#f0fff4,stroke:#6b8e23,stroke-width:1px
     style Proof fill:#f0f8ff,stroke:#4682b4,stroke-width:1px
+```
 
 ### Diagram Explanation
 
