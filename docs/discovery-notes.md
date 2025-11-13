@@ -199,6 +199,27 @@ This document summarizes key concepts, design decisions, and clarifications from
 - The same miner repeats this process every epoch
 - Late submissions are ignored for fairness in epoch resolution
 
+### Plot File Management and Size Limits
+
+- **Multiple Plot Files**  
+  Miners can generate multiple plot files, each representing a portion of their committed storage.  
+  This allows flexibility in disk management, parallel proof computation, and incremental storage addition.  
+  All plot files collectively contribute to the miner’s effective space for scoring.
+
+- **File Size Limits**  
+  The protocol can define **minimum and maximum plot file sizes** to ensure efficiency and fairness.  
+  Users may choose a file size within this range (e.g., 50 GB–500 GB).  
+  Total mining contribution is additive across all plot files.
+
+- **Practical Considerations**  
+  - Multiple smaller files allow parallel scanning and easier disk management.  
+  - Single large files are simpler but reduce flexibility.  
+  - Each proof references the Merkle root of the file containing the winning entry, ensuring verifiability.  
+  - Protocol enforces limits to prevent gaming or I/O bottlenecks.
+
+- **User Choice**  
+  Miners can decide how much storage to commit and how to split it across plot files, within protocol limits.
+
 ## 12. Epoch Timeline Diagram
 
 The diagram below illustrates the lifecycle of a single epoch — from the challenge broadcast to block proposal and difficulty adjustment.
