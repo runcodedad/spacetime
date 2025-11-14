@@ -4,6 +4,48 @@ This document summarizes key concepts, design decisions, and clarifications from
 
 ---
 
+## Table of Contents
+
+1. [Mining Approach](#1-mining-approach)
+2. [Challenge Window and Epochs](#2-challenge-window-and-epochs)
+3. [Plots and Deterministic Data](#3-plots-and-deterministic-data)
+4. [Merkle Tree and Merkle Root](#4-merkle-tree-and-merkle-root)
+   - [4a. Pseudocode Section — Build Merkle Tree](#4a-pseudocode-section--build-merkle-tree)
+   - [4b. Pseudocode Section — Generate Merkle Proof](#4b-pseudocode-section--generate-merkle-proof)
+   - [4c. Pseudocode Section — Verify Merkle Proof](#4c-pseudocode-section--verify-merkle-proof)
+5. [Node Design](#5-node-design)
+6. [Shared Challenge vs Individual](#6-shared-challenge-vs-individual)
+7. [Difficulty Control](#7-difficulty-control)
+8. [Summary of Mining Process](#8-summary-of-mining-process)
+9. [Design Principles](#9-design-principles)
+10. [References / Inspirations](#10-references--inspirations)
+11. [Pseudocode Section — Plot Scanning and Proof Submission](#11-pseudocode-section--plot-scanning-and-proof-submission)
+    - [Plot File Management and Size Limits](#plot-file-management-and-size-limits)
+12. [Epoch Timeline Diagram](#12-epoch-timeline-diagram)
+13. [Plot Structure and Merkle Proof Diagram](#13-plot-structure-and-merkle-proof-diagram)
+14. [Network Layer and Message Types](#14-network-layer-and-message-types)
+15. [Security Considerations](#15-security-considerations)
+    - [15.1 Core Security Goals](#151-core-security-goals)
+    - [15.2 Attack Vectors and Mitigations](#152-attack-vectors-and-mitigations)
+    - [15.3 Time as a Security Anchor](#153-time-as-a-security-anchor)
+    - [15.4 Space as a Resource Constraint](#154-space-as-a-resource-constraint)
+    - [15.5 Cryptographic Components](#155-cryptographic-components)
+    - [15.6 Difficulty and Network Stability](#156-difficulty-and-network-stability)
+    - [15.7 Summary](#157-summary)
+16. [Development Roadmap](#16-development-roadmap)
+    - [16.1 Phase 1 — Core Foundations (Local Prototype)](#161-phase-1--core-foundations-local-prototype)
+    - [16.2 Phase 2 — Proof-of-Space-and-Time Implementation](#162-phase-2--proof-of-space-and-time-implementation)
+    - [16.3 Phase 3 — Networking and P2P Layer](#163-phase-3--networking-and-p2p-layer)
+    - [16.4 Phase 4 — Validation, Consensus, and Chain Finalization](#164-phase-4--validation-consensus-and-chain-finalization)
+    - [16.5 Phase 5 — Wallets, Transactions, and Rewards](#165-phase-5--wallets-transactions-and-rewards)
+    - [16.6 Phase 6 — Network Hardening and Security](#166-phase-6--network-hardening-and-security)
+    - [16.7 Phase 7 — Optimization and Visualization](#167-phase-7--optimization-and-visualization)
+    - [16.8 Phase 8 — Mainnet Preparation](#168-phase-8--mainnet-preparation)
+17. [Merkle Tree & Proof Generation Notes](#17-merkle-tree--proof-generation-notes)
+18. [Glossary of Terms](#18-glossary-of-terms)
+
+---
+
 ## 1. Mining Approach
 
 - PoST chosen over PoW/PoS:
@@ -662,6 +704,59 @@ Each phase builds upon the previous, allowing incremental learning, testing, and
 
 ---
 
+## 17 Merkle Tree & Proof Generation Notes
+
+### Leaf vs Internal Nodes
+- All **plot entries** are stored as **leaves** in the Merkle tree (Level 0).  
+- **Internal nodes** (parents) are hashes computed from their children during plotting.  
+- The **Merkle root** is stored as part of the plot metadata.  
+
+### Merkle Proofs
+- A **Merkle proof** demonstrates that a particular leaf exists in the tree without exposing all other leaves.  
+- For a leaf, the proof contains:  
+  1. The **leaf value** itself  
+  2. **Sibling hashes** for each level along the path to the root  
+
+- Each sibling hash may represent a single leaf or an entire subtree, depending on the level.  
+- The **root** is already known and is used to validate the proof.
+
+### How Proof Verification Works
+1. Compute the hash of the leaf.  
+2. Combine with sibling hashes iteratively up the tree:  
+   - For each level, combine your current hash with the sibling hash to compute the parent hash.  
+3. After reaching the top, the computed hash should match the known Merkle root.  
+4. If it matches, the leaf is valid.
+
+**Key Insight:** You do not need to recompute unrelated parts of the tree; each sibling hash commits to its entire subtree.
+
+### Proof Generation
+- To generate a proof for a leaf, the miner needs the sibling hashes along the path to the root.  
+- Some sibling hashes are computed from the leaf’s immediate siblings, while others (like the top-level sibling hash) represent entire subtrees.
+
+#### Obtaining Sibling Hashes
+- **Stored during plotting:**  
+  - Some internal hashes (e.g., top levels of the tree) can be cached to speed up proof generation.  
+- **Recomputed from leaves:**  
+  - If not stored, internal hashes can be recomputed from the relevant leaves.  
+  - This may involve recomputing an entire sibling subtree for top-level nodes, which can be expensive for large plots.  
+
+#### Tradeoffs
+- **Store more internal hashes** → faster proof generation, larger plot size  
+- **Store fewer internal hashes** → smaller plot size, slower proof generation
+
+### Proof Size
+- Proof size grows with the **height of the tree**, not the total number of leaves.  
+- Typically, one sibling hash per level plus the leaf itself is required.  
+- Even for very large plots, proofs remain relatively small because the number of levels grows logarithmically with the number of leaves.
+
+### Key Takeaways
+- Proof generation is **deterministic and verifiable**.  
+- Verification requires only the leaf and sibling hashes along the path to the root.  
+- Generation may require recomputing some internal hashes unless cached during plotting.  
+- Sibling hashes at higher levels can represent entire subtrees, making proofs compact.
+
+---
+
 ### Summary
 
 | Phase | Title | Core Outcome |
@@ -679,7 +774,7 @@ Each phase builds upon the previous, allowing incremental learning, testing, and
 
 By following this roadmap, development remains **modular, testable, and transparent** — allowing you to iterate rapidly while maintaining a clear architectural vision for Spacetime.
 
-## 17. Glossary of Terms
+## 18. Glossary of Terms
 
 This glossary defines the key concepts, mechanisms, and terminology used in the Spacetime blockchain protocol.  
 It serves as a quick reference for developers, contributors, and readers exploring the design documentation.
