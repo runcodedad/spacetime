@@ -1,7 +1,7 @@
 # Spacetime Blockchain Implementation Summary
 *Assuming the Merkle Tree library is already implemented.*
 
-This document outlines, in full detail, all components required to implement the Spacetime blockchain. It assumes the Merkle Tree library (plot construction, Merkle proofs, verification, and caching) already exists and is referenced by the miner. The components described below complete the consensus engine, networking layer, chain logic, and node behavior.
+This document outlines, in full detail, all components required to implement the Spacetime blockchain. It assumes the Merkle Tree library (Merkle tree construction, Merkle proofs, verification, and caching) already exists and is referenced by the miner. The components described below complete the consensus engine, networking layer, chain logic, and node behavior.
 
 ---
 
