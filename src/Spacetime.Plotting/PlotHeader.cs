@@ -69,16 +69,24 @@ public sealed class PlotHeader
         ArgumentNullException.ThrowIfNull(merkleRoot);
 
         if (plotSeed.Length != 32)
+        {
             throw new ArgumentException("Plot seed must be 32 bytes", nameof(plotSeed));
+        }
 
         if (leafCount <= 0)
+        {
             throw new ArgumentException("Leaf count must be positive", nameof(leafCount));
+        }
 
         if (leafSize <= 0)
+        {
             throw new ArgumentException("Leaf size must be positive", nameof(leafSize));
+        }
 
         if (merkleRoot.Length != 32)
+        {
             throw new ArgumentException("Merkle root must be 32 bytes", nameof(merkleRoot));
+        }
 
         PlotSeed = plotSeed;
         LeafCount = leafCount;
@@ -103,7 +111,9 @@ public sealed class PlotHeader
     public bool VerifyChecksum()
     {
         if (Checksum == null)
+        {
             return false;
+        }
 
         using var sha256 = System.Security.Cryptography.SHA256.Create();
         var headerBytes = SerializeWithoutChecksum();
@@ -156,7 +166,9 @@ public sealed class PlotHeader
     public byte[] Serialize()
     {
         if (Checksum == null)
+        {
             throw new InvalidOperationException("Checksum must be computed before serialization");
+        }
 
         var buffer = new byte[TotalHeaderSize];
         var headerBytes = SerializeWithoutChecksum();
@@ -175,20 +187,26 @@ public sealed class PlotHeader
         ArgumentNullException.ThrowIfNull(data);
 
         if (data.Length < TotalHeaderSize)
+        {
             throw new ArgumentException($"Data too short. Expected at least {TotalHeaderSize} bytes", nameof(data));
+        }
 
         var offset = 0;
 
         // Verify magic bytes
         var magic = data.AsSpan(offset, MagicBytes.Length);
         if (!magic.SequenceEqual(MagicBytes))
+        {
             throw new InvalidOperationException("Invalid plot file: magic bytes mismatch");
+        }
         offset += MagicBytes.Length;
 
         // Verify version
         var version = data[offset++];
         if (version != FormatVersion)
+        {
             throw new InvalidOperationException($"Unsupported plot file version: {version}");
+        }
 
         // Read plot seed
         var plotSeed = new byte[32];
@@ -223,7 +241,9 @@ public sealed class PlotHeader
 
         // Verify checksum
         if (!header.VerifyChecksum())
+        {
             throw new InvalidOperationException("Plot header checksum verification failed");
+        }
 
         return header;
     }

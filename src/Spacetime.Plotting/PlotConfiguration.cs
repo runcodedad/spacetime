@@ -66,18 +66,26 @@ public sealed class PlotConfiguration
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
 
         if (plotSizeBytes < MinPlotSize || plotSizeBytes > MaxPlotSize)
+        {
             throw new ArgumentException(
                 $"Plot size must be between {MinPlotSize:N0} and {MaxPlotSize:N0} bytes",
                 nameof(plotSizeBytes));
+        }
 
         if (minerPublicKey.Length != 32)
+        {
             throw new ArgumentException("Miner public key must be 32 bytes", nameof(minerPublicKey));
+        }
 
         if (plotSeed.Length != 32)
+        {
             throw new ArgumentException("Plot seed must be 32 bytes", nameof(plotSeed));
+        }
 
         if (cacheLevels < 0)
+        {
             throw new ArgumentException("Cache levels must be non-negative", nameof(cacheLevels));
+        }
 
         PlotSizeBytes = plotSizeBytes;
         MinerPublicKey = minerPublicKey;

@@ -33,13 +33,19 @@ public static class LeafGenerator
         ArgumentNullException.ThrowIfNull(plotSeed);
 
         if (minerPublicKey.Length != 32)
+        {
             throw new ArgumentException("Miner public key must be 32 bytes", nameof(minerPublicKey));
+        }
 
         if (plotSeed.Length != 32)
+        {
             throw new ArgumentException("Plot seed must be 32 bytes", nameof(plotSeed));
+        }
 
         if (nonce < 0)
+        {
             throw new ArgumentException("Nonce must be non-negative", nameof(nonce));
+        }
 
         // Combine inputs: minerPublicKey || plotSeed || nonce
         var input = new byte[32 + 32 + 8];
@@ -78,16 +84,24 @@ public static class LeafGenerator
         ArgumentNullException.ThrowIfNull(plotSeed);
 
         if (minerPublicKey.Length != 32)
+        {
             throw new ArgumentException("Miner public key must be 32 bytes", nameof(minerPublicKey));
+        }
 
         if (plotSeed.Length != 32)
+        {
             throw new ArgumentException("Plot seed must be 32 bytes", nameof(plotSeed));
+        }
 
         if (startNonce < 0)
+        {
             throw new ArgumentException("Start nonce must be non-negative", nameof(startNonce));
+        }
 
         if (count <= 0)
+        {
             throw new ArgumentException("Count must be positive", nameof(count));
+        }
 
         for (long i = 0; i < count; i++)
         {
@@ -100,7 +114,9 @@ public static class LeafGenerator
 
             // Yield control periodically to avoid blocking
             if (i % 1000 == 0)
+            {
                 await Task.Yield();
+            }
         }
     }
 }
