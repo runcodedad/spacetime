@@ -51,10 +51,10 @@ public static class LeafGenerator
         var input = new byte[32 + 32 + 8];
         var offset = 0;
 
-        Array.Copy(minerPublicKey, 0, input, offset, 32);
+        minerPublicKey.CopyTo(input.AsSpan(offset));
         offset += 32;
 
-        Array.Copy(plotSeed, 0, input, offset, 32);
+        plotSeed.CopyTo(input.AsSpan(offset));
         offset += 32;
 
         BitConverter.TryWriteBytes(input.AsSpan(offset), nonce);
@@ -106,11 +106,7 @@ public static class LeafGenerator
         for (long i = 0; i < count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            var nonce = startNonce + i;
-            var leaf = GenerateLeaf(minerPublicKey, plotSeed, nonce);
-
-            yield return leaf;
+            yield return GenerateLeaf(minerPublicKey, plotSeed, startNonce + i);
 
             // Yield control periodically to avoid blocking
             if (i % 1000 == 0)
