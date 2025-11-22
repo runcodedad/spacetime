@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace Spacetime.Plotting;
 
 /// <summary>
@@ -5,6 +7,11 @@ namespace Spacetime.Plotting;
 /// </summary>
 public sealed class PlotHeader
 {
+    /// <summary>
+    /// Size of plot seed and Merkle root in bytes (SHA256)
+    /// </summary>
+    private const int _hashSize = 32;
+
     /// <summary>
     /// Magic bytes identifying a valid Spacetime plot file: "SPTP" (Spacetime Plot)
     /// </summary>
@@ -18,22 +25,33 @@ public sealed class PlotHeader
     /// <summary>
     /// Size of the header in bytes (without checksum)
     /// </summary>
-    public const int HeaderSize = 4 + 1 + 32 + 8 + 4 + 8 + 32; // 89 bytes
+    public const int HeaderSize = 
+        4 +         // Magic bytes
+        1 +         // Version
+        _hashSize +  // Plot seed
+        8 +         // Leaf count (long)
+        4 +         // Leaf size (int)
+        8 +         // Tree height (long)
+        _hashSize;   // Merkle root
 
     /// <summary>
     /// Size of the SHA256 checksum in bytes
     /// </summary>
-    public const int ChecksumSize = 32;
+    public const int ChecksumSize = _hashSize;
 
     /// <summary>
     /// Total size including checksum
     /// </summary>
     public const int TotalHeaderSize = HeaderSize + ChecksumSize;
 
+    private readonly byte[] _plotSeed = new byte[_hashSize];
+    private readonly byte[] _merkleRoot = new byte[_hashSize];
+    private byte[]? _checksum = new byte[ChecksumSize];
+
     /// <summary>
     /// Gets the plot seed used for deterministic generation
     /// </summary>
-    public byte[] PlotSeed { get; }
+    public ReadOnlySpan<byte> PlotSeed => _plotSeed;
 
     /// <summary>
     /// Gets the total number of leaves in the plot
@@ -53,24 +71,21 @@ public sealed class PlotHeader
     /// <summary>
     /// Gets the Merkle root hash
     /// </summary>
-    public byte[] MerkleRoot { get; }
+    public ReadOnlySpan<byte> MerkleRoot => _merkleRoot;
 
     /// <summary>
     /// Gets the header checksum (SHA256 of all header fields)
     /// </summary>
-    public byte[]? Checksum { get; private set; }
+    public ReadOnlySpan<byte> Checksum => _checksum;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlotHeader"/> class.
     /// </summary>
-    public PlotHeader(byte[] plotSeed, long leafCount, int leafSize, long treeHeight, byte[] merkleRoot)
+    public PlotHeader(ReadOnlySpan<byte> plotSeed, long leafCount, int leafSize, long treeHeight, ReadOnlySpan<byte> merkleRoot)
     {
-        ArgumentNullException.ThrowIfNull(plotSeed);
-        ArgumentNullException.ThrowIfNull(merkleRoot);
-
-        if (plotSeed.Length != 32)
+        if (plotSeed.Length != _hashSize)
         {
-            throw new ArgumentException("Plot seed must be 32 bytes", nameof(plotSeed));
+            throw new ArgumentException($"Plot seed must be {_hashSize} bytes", nameof(plotSeed));
         }
 
         if (leafCount <= 0)
@@ -83,16 +98,17 @@ public sealed class PlotHeader
             throw new ArgumentException("Leaf size must be positive", nameof(leafSize));
         }
 
-        if (merkleRoot.Length != 32)
+        if (merkleRoot.Length != _hashSize)
         {
-            throw new ArgumentException("Merkle root must be 32 bytes", nameof(merkleRoot));
+            throw new ArgumentException($"Merkle root must be {_hashSize} bytes", nameof(merkleRoot));
         }
 
-        PlotSeed = plotSeed;
+        plotSeed.CopyTo(_plotSeed);
+        merkleRoot.CopyTo(_merkleRoot);
+
         LeafCount = leafCount;
         LeafSize = leafSize;
         TreeHeight = treeHeight;
-        MerkleRoot = merkleRoot;
     }
 
     /// <summary>
@@ -100,9 +116,8 @@ public sealed class PlotHeader
     /// </summary>
     public void ComputeChecksum()
     {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
         var headerBytes = SerializeWithoutChecksum();
-        Checksum = sha256.ComputeHash(headerBytes);
+        SHA256.TryHashData(headerBytes, _checksum, out _);
     }
 
     /// <summary>
@@ -110,16 +125,16 @@ public sealed class PlotHeader
     /// </summary>
     public bool VerifyChecksum()
     {
-        if (Checksum == null)
+        if (_checksum == null)
         {
             return false;
         }
 
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        Span<byte> expectedChecksum = stackalloc byte[ChecksumSize];
         var headerBytes = SerializeWithoutChecksum();
-        var expectedChecksum = sha256.ComputeHash(headerBytes);
+        SHA256.TryHashData(headerBytes, expectedChecksum, out _);
 
-        return Checksum.SequenceEqual(expectedChecksum);
+        return _checksum.AsSpan().SequenceEqual(expectedChecksum);
     }
 
     /// <summary>
@@ -131,15 +146,15 @@ public sealed class PlotHeader
         var offset = 0;
 
         // Magic bytes
-        Array.Copy(MagicBytes, 0, buffer, offset, MagicBytes.Length);
+        MagicBytes.CopyTo(buffer.AsSpan(offset));
         offset += MagicBytes.Length;
 
         // Version
         buffer[offset++] = FormatVersion;
 
         // Plot seed
-        Array.Copy(PlotSeed, 0, buffer, offset, PlotSeed.Length);
-        offset += PlotSeed.Length;
+        _plotSeed.CopyTo(buffer.AsSpan(offset));
+        offset += _hashSize;
 
         // Leaf count
         BitConverter.TryWriteBytes(buffer.AsSpan(offset), LeafCount);
@@ -154,8 +169,7 @@ public sealed class PlotHeader
         offset += sizeof(long);
 
         // Merkle root
-        Array.Copy(MerkleRoot, 0, buffer, offset, MerkleRoot.Length);
-        offset += MerkleRoot.Length;
+        _merkleRoot.CopyTo(buffer.AsSpan(offset));
 
         return buffer;
     }
@@ -165,7 +179,7 @@ public sealed class PlotHeader
     /// </summary>
     public byte[] Serialize()
     {
-        if (Checksum == null)
+        if (_checksum == null)
         {
             throw new InvalidOperationException("Checksum must be computed before serialization");
         }
@@ -173,8 +187,8 @@ public sealed class PlotHeader
         var buffer = new byte[TotalHeaderSize];
         var headerBytes = SerializeWithoutChecksum();
 
-        Array.Copy(headerBytes, 0, buffer, 0, HeaderSize);
-        Array.Copy(Checksum, 0, buffer, HeaderSize, ChecksumSize);
+        headerBytes.CopyTo(buffer.AsSpan());
+        _checksum.CopyTo(buffer.AsSpan(HeaderSize));
 
         return buffer;
     }
@@ -182,10 +196,8 @@ public sealed class PlotHeader
     /// <summary>
     /// Deserializes a plot header from bytes.
     /// </summary>
-    public static PlotHeader Deserialize(byte[] data)
+    public static PlotHeader Deserialize(ReadOnlySpan<byte> data)
     {
-        ArgumentNullException.ThrowIfNull(data);
-
         if (data.Length < TotalHeaderSize)
         {
             throw new ArgumentException($"Data too short. Expected at least {TotalHeaderSize} bytes", nameof(data));
@@ -194,7 +206,7 @@ public sealed class PlotHeader
         var offset = 0;
 
         // Verify magic bytes
-        var magic = data.AsSpan(offset, MagicBytes.Length);
+        var magic = data.Slice(offset, MagicBytes.Length);
         if (!magic.SequenceEqual(MagicBytes))
         {
             throw new InvalidOperationException("Invalid plot file: magic bytes mismatch");
@@ -209,34 +221,31 @@ public sealed class PlotHeader
         }
 
         // Read plot seed
-        var plotSeed = new byte[32];
-        Array.Copy(data, offset, plotSeed, 0, 32);
-        offset += 32;
+        var plotSeed = data.Slice(offset, _hashSize);
+        offset += _hashSize;
 
         // Read leaf count
-        var leafCount = BitConverter.ToInt64(data, offset);
+        var leafCount = BitConverter.ToInt64(data[offset..]);
         offset += sizeof(long);
 
         // Read leaf size
-        var leafSize = BitConverter.ToInt32(data, offset);
+        var leafSize = BitConverter.ToInt32(data[offset..]);
         offset += sizeof(int);
 
         // Read tree height
-        var treeHeight = BitConverter.ToInt64(data, offset);
+        var treeHeight = BitConverter.ToInt64(data[offset..]);
         offset += sizeof(long);
 
         // Read Merkle root
-        var merkleRoot = new byte[32];
-        Array.Copy(data, offset, merkleRoot, 0, 32);
-        offset += 32;
+        var merkleRoot = data.Slice(offset, _hashSize);
+        offset += _hashSize;
 
         // Read checksum
-        var checksum = new byte[ChecksumSize];
-        Array.Copy(data, offset, checksum, 0, ChecksumSize);
+        var checksum = data.Slice(offset, ChecksumSize);
 
         var header = new PlotHeader(plotSeed, leafCount, leafSize, treeHeight, merkleRoot)
         {
-            Checksum = checksum
+            _checksum = checksum.ToArray()
         };
 
         // Verify checksum

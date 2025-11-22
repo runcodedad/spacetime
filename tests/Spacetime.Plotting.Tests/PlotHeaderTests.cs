@@ -70,7 +70,7 @@ public class PlotHeaderTests
         header.ComputeChecksum();
 
         // Assert
-        Assert.NotNull(header.Checksum);
+        Assert.False(header.Checksum.IsEmpty);
         Assert.Equal(PlotHeader.ChecksumSize, header.Checksum.Length);
     }
 

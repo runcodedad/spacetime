@@ -26,8 +26,8 @@ public class PlotCreatorTests
             Assert.True(File.Exists(outputPath));
             Assert.Equal(config.LeafCount, header.LeafCount);
             Assert.Equal(LeafGenerator.LeafSize, header.LeafSize);
-            Assert.NotNull(header.MerkleRoot);
-            Assert.NotNull(header.Checksum);
+            Assert.False(header.MerkleRoot.IsEmpty);
+            Assert.False(header.Checksum.IsEmpty);
             Assert.True(header.VerifyChecksum());
 
             // Verify file size (header + leaves)
@@ -102,7 +102,7 @@ public class PlotCreatorTests
             var header2 = await creator.CreatePlotAsync(config2);
 
             // Assert - Headers should have same merkle root
-            Assert.Equal(header1.MerkleRoot, header2.MerkleRoot);
+            Assert.True(header1.MerkleRoot.SequenceEqual(header2.MerkleRoot));
             Assert.Equal(header1.LeafCount, header2.LeafCount);
             Assert.Equal(header1.TreeHeight, header2.TreeHeight);
 
@@ -111,7 +111,7 @@ public class PlotCreatorTests
             var bytes2 = await File.ReadAllBytesAsync(outputPath2);
             Assert.Equal(bytes1.Length, bytes2.Length);
 
-            // Compare all bytes except the checksums (which are deterministic but let's check content)
+            // Compare all bytes (deterministic including checksums)
             Assert.Equal(bytes1, bytes2);
         }
         finally
@@ -154,12 +154,12 @@ public class PlotCreatorTests
 
             var readHeader = PlotHeader.Deserialize(headerBytes);
 
-            // Assert
-            Assert.Equal(originalHeader.PlotSeed, readHeader.PlotSeed);
+            // Assert - Use SequenceEqual for span comparisons
+            Assert.True(originalHeader.PlotSeed.SequenceEqual(readHeader.PlotSeed));
             Assert.Equal(originalHeader.LeafCount, readHeader.LeafCount);
             Assert.Equal(originalHeader.LeafSize, readHeader.LeafSize);
             Assert.Equal(originalHeader.TreeHeight, readHeader.TreeHeight);
-            Assert.Equal(originalHeader.MerkleRoot, readHeader.MerkleRoot);
+            Assert.True(originalHeader.MerkleRoot.SequenceEqual(readHeader.MerkleRoot));
             Assert.True(readHeader.VerifyChecksum());
         }
         finally
