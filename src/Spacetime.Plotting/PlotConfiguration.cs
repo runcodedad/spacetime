@@ -11,11 +11,6 @@ public sealed class PlotConfiguration
     public const long MinPlotSize = 100L * 1024 * 1024;
 
     /// <summary>
-    /// Maximum plot size in bytes (1 TB)
-    /// </summary>
-    public const long MaxPlotSize = 1024L * 1024 * 1024 * 1024;
-
-    /// <summary>
     /// Gets the target plot size in bytes.
     /// </summary>
     public long PlotSizeBytes { get; }
@@ -65,10 +60,10 @@ public sealed class PlotConfiguration
         ArgumentNullException.ThrowIfNull(plotSeed);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
 
-        if (plotSizeBytes < MinPlotSize || plotSizeBytes > MaxPlotSize)
+        if (plotSizeBytes < MinPlotSize)
         {
             throw new ArgumentException(
-                $"Plot size must be between {MinPlotSize:N0} and {MaxPlotSize:N0} bytes",
+                $"Plot size must be greater than {MinPlotSize:N0} bytes",
                 nameof(plotSizeBytes));
         }
 
@@ -100,26 +95,24 @@ public sealed class PlotConfiguration
     }
 
     /// <summary>
-    /// Creates a configuration for a 1 GB plot.
+    /// Creates a configuration with a plot size specified in gigabytes.
     /// </summary>
-    public static PlotConfiguration Create1GB(byte[] minerPublicKey, byte[] plotSeed, string outputPath, bool includeCache = false)
+    /// <param name="sizeInGB">The plot size in gigabytes.</param>
+    /// <param name="minerPublicKey">The miner's public key.</param>
+    /// <param name="plotSeed">The plot seed for deterministic generation.</param>
+    /// <param name="outputPath">The output file path for the plot.</param>
+    /// <param name="includeCache">Whether to include Merkle cache layers.</param>
+    /// <param name="cacheLevels">The number of top levels to cache (if caching is enabled).</param>
+    /// <returns>A new plot configuration.</returns>
+    public static PlotConfiguration CreateFromGB(
+        long sizeInGB,
+        byte[] minerPublicKey,
+        byte[] plotSeed,
+        string outputPath,
+        bool includeCache = false,
+        int cacheLevels = 5)
     {
-        return new PlotConfiguration(1024L * 1024 * 1024, minerPublicKey, plotSeed, outputPath, includeCache);
-    }
-
-    /// <summary>
-    /// Creates a configuration for a 10 GB plot.
-    /// </summary>
-    public static PlotConfiguration Create10GB(byte[] minerPublicKey, byte[] plotSeed, string outputPath, bool includeCache = false)
-    {
-        return new PlotConfiguration(10L * 1024 * 1024 * 1024, minerPublicKey, plotSeed, outputPath, includeCache);
-    }
-
-    /// <summary>
-    /// Creates a configuration for a 100 GB plot.
-    /// </summary>
-    public static PlotConfiguration Create100GB(byte[] minerPublicKey, byte[] plotSeed, string outputPath, bool includeCache = false)
-    {
-        return new PlotConfiguration(100L * 1024 * 1024 * 1024, minerPublicKey, plotSeed, outputPath, includeCache);
+        var plotSizeBytes = sizeInGB * 1024L * 1024 * 1024;
+        return new PlotConfiguration(plotSizeBytes, minerPublicKey, plotSeed, outputPath, includeCache, cacheLevels);
     }
 }

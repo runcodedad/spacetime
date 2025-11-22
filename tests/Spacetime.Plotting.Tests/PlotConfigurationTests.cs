@@ -57,20 +57,6 @@ public class PlotConfigurationTests
     }
 
     [Fact]
-    public void Constructor_PlotSizeTooLarge_ThrowsArgumentException()
-    {
-        // Arrange
-        var minerKey = RandomNumberGenerator.GetBytes(32);
-        var plotSeed = RandomNumberGenerator.GetBytes(32);
-        var outputPath = "/tmp/test.plot";
-        var plotSize = 2L * 1024 * 1024 * 1024 * 1024; // 2 TB - too large
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            new PlotConfiguration(plotSize, minerKey, plotSeed, outputPath));
-    }
-
-    [Fact]
     public void Constructor_InvalidMinerKeySize_ThrowsArgumentException()
     {
         // Arrange
@@ -113,7 +99,7 @@ public class PlotConfigurationTests
     }
 
     [Fact]
-    public void Create1GB_CreatesCorrectConfiguration()
+    public void CreateFromGB_CreatesCorrectConfiguration()
     {
         // Arrange
         var minerKey = RandomNumberGenerator.GetBytes(32);
@@ -121,15 +107,15 @@ public class PlotConfigurationTests
         var outputPath = "/tmp/test.plot";
 
         // Act
-        var config = PlotConfiguration.Create1GB(minerKey, plotSeed, outputPath);
+        var config = PlotConfiguration.CreateFromGB(1, minerKey, plotSeed, outputPath);
 
         // Assert
         Assert.Equal(1024L * 1024 * 1024, config.PlotSizeBytes);
-        Assert.Equal((1024L * 1024 * 1024) / LeafGenerator.LeafSize, config.LeafCount);
+        Assert.Equal(1024L * 1024 * 1024 / LeafGenerator.LeafSize, config.LeafCount);
     }
 
     [Fact]
-    public void Create10GB_CreatesCorrectConfiguration()
+    public void CreateFromGB_WithLargeSize_CreatesCorrectConfiguration()
     {
         // Arrange
         var minerKey = RandomNumberGenerator.GetBytes(32);
@@ -137,27 +123,28 @@ public class PlotConfigurationTests
         var outputPath = "/tmp/test.plot";
 
         // Act
-        var config = PlotConfiguration.Create10GB(minerKey, plotSeed, outputPath);
-
-        // Assert
-        Assert.Equal(10L * 1024 * 1024 * 1024, config.PlotSizeBytes);
-        Assert.Equal((10L * 1024 * 1024 * 1024) / LeafGenerator.LeafSize, config.LeafCount);
-    }
-
-    [Fact]
-    public void Create100GB_CreatesCorrectConfiguration()
-    {
-        // Arrange
-        var minerKey = RandomNumberGenerator.GetBytes(32);
-        var plotSeed = RandomNumberGenerator.GetBytes(32);
-        var outputPath = "/tmp/test.plot";
-
-        // Act
-        var config = PlotConfiguration.Create100GB(minerKey, plotSeed, outputPath);
+        var config = PlotConfiguration.CreateFromGB(100, minerKey, plotSeed, outputPath);
 
         // Assert
         Assert.Equal(100L * 1024 * 1024 * 1024, config.PlotSizeBytes);
-        Assert.Equal((100L * 1024 * 1024 * 1024) / LeafGenerator.LeafSize, config.LeafCount);
+        Assert.Equal(100L * 1024 * 1024 * 1024 / LeafGenerator.LeafSize, config.LeafCount);
+    }
+
+    [Fact]
+    public void CreateFromGB_WithCacheEnabled_CreatesCorrectConfiguration()
+    {
+        // Arrange
+        var minerKey = RandomNumberGenerator.GetBytes(32);
+        var plotSeed = RandomNumberGenerator.GetBytes(32);
+        var outputPath = "/tmp/test.plot";
+
+        // Act
+        var config = PlotConfiguration.CreateFromGB(10, minerKey, plotSeed, outputPath, includeCache: true, cacheLevels: 7);
+
+        // Assert
+        Assert.Equal(10L * 1024 * 1024 * 1024, config.PlotSizeBytes);
+        Assert.True(config.IncludeCache);
+        Assert.Equal(7, config.CacheLevels);
     }
 
     [Fact]
