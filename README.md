@@ -99,6 +99,10 @@ The instructions help Copilot understand:
 
 ## 📚 Documentation
 
+### Project Documentation
+- **[Spacetime.Plotting](src/Spacetime.Plotting/README.md)** - Plot file generation and Proof-of-Space implementation
+
+### General Documentation
 - **[Implementation Checklist](docs/implementation-checklist.md)** - Detailed development roadmap
 - **[Requirements](docs/requirements.md)** - Technical specifications and architecture
 - **[Copilot Instructions](.github/copilot-instructions.md)** - AI-assisted development guidelines
