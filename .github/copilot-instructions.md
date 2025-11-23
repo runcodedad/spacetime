@@ -571,7 +571,8 @@ public static class PlotConfigurationFactory
 {
     public static PlotConfiguration CreateFromGB(double sizeGB, ReadOnlyMemory<byte> minerKey, ReadOnlyMemory<byte> plotSeed, string outputPath)
     {
-        var sizeBytes = (long)(sizeGB * 1024 * 1024 * 1024);
+        const long gigabyte = 1024L * 1024L * 1024L;
+        var sizeBytes = (long)(sizeGB * gigabyte);
         return new PlotConfiguration(sizeBytes, minerKey, plotSeed, outputPath);
     }
 }
@@ -685,8 +686,18 @@ stream.Read(buffer, 0, buffer.Length);  // Blocks thread
 
 ✅ **Do**:
 ```csharp
+// For small files only - use streaming for large files (see plot handling guidance)
 var data = await File.ReadAllBytesAsync(path, cancellationToken);
 await stream.ReadAsync(buffer, cancellationToken);
+
+// For large files (plots), always use streaming:
+await using var stream = File.OpenRead(path);
+var buffer = new byte[81920];
+int bytesRead;
+while ((bytesRead = await stream.ReadAsync(buffer, cancellationToken)) > 0)
+{
+    // Process chunk
+}
 ```
 
 ### Direct File System Access
