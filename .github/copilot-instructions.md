@@ -3,9 +3,9 @@
 Spacetime: Proof-of-Space-Time blockchain in C# / .NET 10. Energy-efficient, disk-based mining. Modular architecture.
 
 ## Project Structure
-- Source: `src/` - `Spacetime.Plotting`, future: `Spacetime.Blockchain`, `Spacetime.Consensus`, `Spacetime.Network`
+- Source: `src/` - Current: `Spacetime.Plotting`. Planned: `Spacetime.Blockchain`, `Spacetime.Consensus`, `Spacetime.Network`
 - Tests: `tests/` - Follow `{ProjectName}.Tests` naming
-- Use MerkleTree library (already implemented) for tree operations
+- Use external MerkleTree NuGet package for tree operations
 
 ## Required Coding Patterns
 
