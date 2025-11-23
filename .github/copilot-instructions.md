@@ -571,8 +571,9 @@ public static class PlotConfigurationFactory
 {
     public static PlotConfiguration CreateFromGB(double sizeGB, ReadOnlyMemory<byte> minerKey, ReadOnlyMemory<byte> plotSeed, string outputPath)
     {
-        const long gigabyte = 1024L * 1024L * 1024L;
-        var sizeBytes = (long)(sizeGB * gigabyte);
+        // Using binary units: 1 GiB = 1024³ bytes (not 1000³)
+        const long gibibyte = 1024L * 1024L * 1024L;
+        var sizeBytes = (long)(sizeGB * gibibyte);
         return new PlotConfiguration(sizeBytes, minerKey, plotSeed, outputPath);
     }
 }
