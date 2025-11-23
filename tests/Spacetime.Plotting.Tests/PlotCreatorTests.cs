@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using MerkleTree.Hashing;
 
 namespace Spacetime.Plotting.Tests;
 
@@ -8,7 +9,7 @@ public class PlotCreatorTests
     public async Task CreatePlotAsync_CreatesValidPlotFile()
     {
         // Arrange
-        var creator = new PlotCreator();
+        var creator = new PlotCreator(new Sha256HashFunction());
         var minerKey = RandomNumberGenerator.GetBytes(32);
         var plotSeed = RandomNumberGenerator.GetBytes(32);
         var outputPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.plot");
@@ -49,7 +50,7 @@ public class PlotCreatorTests
     public async Task CreatePlotAsync_WithCache_CreatesPlotAndCacheFiles()
     {
         // Arrange
-        var creator = new PlotCreator();
+        var creator = new PlotCreator(new Sha256HashFunction());
         var minerKey = RandomNumberGenerator.GetBytes(32);
         var plotSeed = RandomNumberGenerator.GetBytes(32);
         var outputPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.plot");
@@ -86,7 +87,7 @@ public class PlotCreatorTests
     public async Task CreatePlotAsync_IsDeterministic()
     {
         // Arrange
-        var creator = new PlotCreator();
+        var creator = new PlotCreator(new Sha256HashFunction());
         var minerKey = RandomNumberGenerator.GetBytes(32);
         var plotSeed = RandomNumberGenerator.GetBytes(32);
         var outputPath1 = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.plot");
@@ -132,7 +133,7 @@ public class PlotCreatorTests
     public async Task CreatePlotAsync_CanReadHeaderFromFile()
     {
         // Arrange
-        var creator = new PlotCreator();
+        var creator = new PlotCreator(new Sha256HashFunction());
         var minerKey = RandomNumberGenerator.GetBytes(32);
         var plotSeed = RandomNumberGenerator.GetBytes(32);
         var outputPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.plot");
@@ -176,7 +177,7 @@ public class PlotCreatorTests
     public async Task CreatePlotAsync_ReportsProgress()
     {
         // Arrange
-        var creator = new PlotCreator();
+        var creator = new PlotCreator(new Sha256HashFunction());
         var minerKey = RandomNumberGenerator.GetBytes(32);
         var plotSeed = RandomNumberGenerator.GetBytes(32);
         var outputPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.plot");
@@ -210,7 +211,7 @@ public class PlotCreatorTests
     public async Task CreatePlotAsync_CancellationWorks()
     {
         // Arrange
-        var creator = new PlotCreator();
+        var creator = new PlotCreator(new Sha256HashFunction());
         var minerKey = RandomNumberGenerator.GetBytes(32);
         var plotSeed = RandomNumberGenerator.GetBytes(32);
         var outputPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.plot");
@@ -244,7 +245,7 @@ public class PlotCreatorTests
     public async Task CreatePlotAsync_CreatesOutputDirectory()
     {
         // Arrange
-        var creator = new PlotCreator();
+        var creator = new PlotCreator(new Sha256HashFunction());
         var minerKey = RandomNumberGenerator.GetBytes(32);
         var plotSeed = RandomNumberGenerator.GetBytes(32);
         var uniqueDir = Path.Combine(Path.GetTempPath(), $"plotdir_{Guid.NewGuid()}");

@@ -15,14 +15,6 @@ public sealed class PlotCreator(IHashFunction hashFunction)
     private readonly IHashFunction _hashFunction = hashFunction ?? throw new ArgumentNullException(nameof(hashFunction));
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PlotCreator"/> class.
-    /// </summary>
-    public PlotCreator()
-        : this(new Sha256HashFunction())
-    {
-    }
-
-    /// <summary>
     /// Creates a plot file asynchronously.
     /// </summary>
     /// <param name="config">The plot configuration</param>
@@ -43,6 +35,18 @@ public sealed class PlotCreator(IHashFunction hashFunction)
             Directory.CreateDirectory(directory);
         }
 
+        // Open file stream for writing
+        using var fileStream = new FileStream(
+            config.OutputPath,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None,
+            bufferSize: 81920,
+            useAsync: true);
+
+        // Reserve space for header (we'll write it at the end)
+        await fileStream.WriteAsync(new byte[PlotHeader.TotalHeaderSize], cancellationToken);
+
         // Build Merkle tree using streaming construction
         var merkleTreeStream = new MerkleTreeStream(_hashFunction);
 
@@ -59,6 +63,7 @@ public sealed class PlotCreator(IHashFunction hashFunction)
         var progressTracker = progress != null ? new ProgressReporter(config.LeafCount, progress) : null;
         Action? onLeafGenerated = progressTracker != null ? progressTracker.ReportLeafProcessed : null;
         
+        // Generate leaves once, write to file AND build Merkle tree
         var leaves = LeafGenerator.GenerateLeavesAsync(
             config.MinerPublicKey,
             config.PlotSeed,
@@ -67,70 +72,42 @@ public sealed class PlotCreator(IHashFunction hashFunction)
             onLeafGenerated,
             cancellationToken);
 
-        var metadata = await merkleTreeStream.BuildAsync(leaves, cacheConfig, cancellationToken);
+        var leavesWithWrite = WriteLeavesAsync(leaves, fileStream, cancellationToken);
+        var metadata = await merkleTreeStream.BuildAsync(leavesWithWrite, cacheConfig, cancellationToken);
 
-        // Write plot file
-        var header = await WritePlotFileAsync(
-            config.OutputPath,
-            config.MinerPublicKey,
+        await fileStream.FlushAsync(cancellationToken);
+
+        // Now write the header at the beginning
+        var header = new PlotHeader(
             config.PlotSeed,
             config.LeafCount,
-            metadata,
-            cancellationToken);
-
-        return header;
-    }
-
-    /// <summary>
-    /// Writes the plot file with header and leaves.
-    /// </summary>
-    private static async Task<PlotHeader> WritePlotFileAsync(
-        string outputPath,
-        byte[] minerPublicKey,
-        byte[] plotSeed,
-        long leafCount,
-        MerkleTreeMetadata metadata,
-        CancellationToken cancellationToken)
-    {
-        using var fileStream = new FileStream(
-            outputPath,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            bufferSize: 81920,
-            useAsync: true);
-
-        // Create header
-        var header = new PlotHeader(
-            plotSeed,
-            leafCount,
             LeafGenerator.LeafSize,
             metadata.Height,
             metadata.RootHash);
 
         header.ComputeChecksum();
 
-        // Write header
+        fileStream.Seek(0, SeekOrigin.Begin);
         var headerBytes = header.Serialize();
         await fileStream.WriteAsync(headerBytes, cancellationToken);
-
-        // Write leaves
-        var leaves = LeafGenerator.GenerateLeavesAsync(
-            minerPublicKey,
-            plotSeed,
-            startNonce: 0,
-            leafCount,
-            onLeafGenerated: null,
-            cancellationToken);
-
-        await foreach (var leaf in leaves.WithCancellation(cancellationToken))
-        {
-            await fileStream.WriteAsync(leaf, cancellationToken);
-        }
-
         await fileStream.FlushAsync(cancellationToken);
 
         return header;
+    }
+
+    /// <summary>
+    /// Writes leaves to the file stream while passing them through for Merkle tree construction.
+    /// </summary>
+    private static async IAsyncEnumerable<byte[]> WriteLeavesAsync(
+        IAsyncEnumerable<byte[]> leaves,
+        FileStream fileStream,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var leaf in leaves.WithCancellation(cancellationToken))
+        {
+            await fileStream.WriteAsync(leaf, cancellationToken);
+            yield return leaf;
+        }
     }
 
     /// <summary>
