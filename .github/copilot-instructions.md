@@ -3,7 +3,17 @@
 Spacetime: Proof-of-Space-Time blockchain in C# / .NET 10. Energy-efficient, disk-based mining. Modular architecture.
 
 ## Project Structure
-- Source: `src/` - Current: `Spacetime.Plotting`. Planned: `Spacetime.Blockchain`, `Spacetime.Consensus`, `Spacetime.Network`
+- Source: `src/`
+   - `Spacetime.Core` - Core blockchain data structures and interfaces
+   - `Spacetime.Consensus` - Consensus logic, proof validation, difficulty adjustment
+   - `Spacetime.Plotting` - Plot creating, loading, proof generation
+   - `Spacetime.Network` - P2P networking, peer management, message handling
+   - `Spacetime.Storage` - Database abstractions, chain storage 
+   - `Spacetime.Node` - Full node executable
+   - `Spacetime.Miner` - Miner/prover executable
+   - `Spacetime.Cli` - Shared CLI utilities and commands
+   - `Spacetime.Wallet` - Wallet management, key storage, transaction signing
+   - `Spacetime.Common` - Shared utilities, extensions, helpers (logging, config, crypto helpers)
 - Tests: `tests/` - Follow `{ProjectName}.Tests` naming
 - Use external MerkleTree NuGet package for tree operations
 
@@ -108,3 +118,12 @@ Spacetime: Proof-of-Space-Time blockchain in C# / .NET 10. Energy-efficient, dis
 ## XML Documentation
 - Always document all public APIs with `<summary>`, `<param>`, `<returns>`, `<exception>`
 - Always include usage examples for complex APIs with `<example>` and `<code>`
+
+## Markdown Documentation
+- Keep main `README.md` as a general overview and directory to specific docs
+- Never include implementation specifics in main `README.md`
+- Always create project-specific `README.md` for each `Spacetime.*` project in `src/`
+- Always include architecture, usage examples, and API documentation in project READMEs
+- Never create READMEs for test projects (`*.Tests`)
+- Always place non-project-specific documentation in `docs/` folder
+- Use clear, concise language with code examples where appropriate

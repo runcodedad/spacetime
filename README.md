@@ -54,7 +54,7 @@ Spacetime is developed in **incremental phases**:
 6. **Epoch Logic** — time-based participation and decay  
 7. **Testing & Simulation** — local testnet and performance tuning  
 
-A detailed engineering checklist is available in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+A detailed list of requirements is available in [`docs/requirements.md`](docs/implementation-checklist.md).
 
 ---
 
