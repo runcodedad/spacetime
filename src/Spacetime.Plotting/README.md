@@ -130,6 +130,69 @@ await foreach (var leaf in LeafGenerator.GenerateLeavesAsync(
 }
 ```
 
+### PlotLoader
+
+Loads and validates plot files, providing efficient random access to leaves.
+
+**Key Features:**
+- Reads and validates plot file headers (including checksum verification)
+- Memory-efficient random access to individual leaves
+- Optional Merkle root verification for integrity checking
+- Shared reading support (multiple loaders on same file)
+- Proper async disposal for file handle management
+- Clear error messages for corrupted or invalid files
+
+**Usage:**
+```csharp
+using Spacetime.Plotting;
+using MerkleTree.Hashing;
+
+// Load a plot file
+var hashFunction = new Sha256HashFunction();
+await using var loader = await PlotLoader.LoadAsync("my-plot.dat", hashFunction);
+
+// Access metadata
+Console.WriteLine($"Leaf count: {loader.LeafCount:N0}");
+Console.WriteLine($"Tree height: {loader.TreeHeight}");
+Console.WriteLine($"Merkle root: {BitConverter.ToString(loader.MerkleRoot.ToArray())}");
+
+// Read specific leaves
+var leaf = await loader.ReadLeafAsync(42);
+Console.WriteLine($"Leaf 42: {BitConverter.ToString(leaf)}");
+
+// Read multiple consecutive leaves
+var leaves = await loader.ReadLeavesAsync(startIndex: 0, count: 10);
+
+// Optionally verify Merkle root (expensive - scans entire plot)
+var progress = new Progress<double>(p => Console.WriteLine($"Verification: {p:F1}%"));
+var isValid = await loader.VerifyMerkleRootAsync(progress);
+if (!isValid)
+{
+    Console.WriteLine("WARNING: Plot file is corrupted!");
+}
+```
+
+**Error Handling:**
+```csharp
+try
+{
+    await using var loader = await PlotLoader.LoadAsync("my-plot.dat", hashFunction);
+    // Use loader...
+}
+catch (FileNotFoundException)
+{
+    Console.WriteLine("Plot file not found");
+}
+catch (InvalidOperationException ex) when (ex.Message.Contains("checksum"))
+{
+    Console.WriteLine("Plot file has invalid checksum - file is corrupted");
+}
+catch (InvalidOperationException ex) when (ex.Message.Contains("truncated"))
+{
+    Console.WriteLine("Plot file is incomplete or truncated");
+}
+```
+
 ### PlotHeader
 
 Binary header structure stored at the beginning of each plot file.
@@ -155,17 +218,18 @@ Total: 121 bytes
 
 **Usage:**
 ```csharp
-// Read header from existing plot file
-using var stream = File.OpenRead("my-plot.dat");
-var header = await PlotHeader.ReadFromStreamAsync(stream, cancellationToken);
+// Create a new header (typically done by PlotCreator)
+var header = new PlotHeader(plotSeed, leafCount, leafSize, treeHeight, merkleRoot);
+header.ComputeChecksum();
 
-if (!header.VerifyChecksum())
-{
-    throw new InvalidDataException("Plot file corrupted");
-}
+// Serialize to bytes
+var headerBytes = header.Serialize();
 
-Console.WriteLine($"Plot contains {header.LeafCount:N0} leaves");
-Console.WriteLine($"Merkle tree height: {header.TreeHeight}");
+// Deserialize from bytes
+var loadedHeader = PlotHeader.Deserialize(headerBytes);
+
+Console.WriteLine($"Plot contains {loadedHeader.LeafCount:N0} leaves");
+Console.WriteLine($"Merkle tree height: {loadedHeader.TreeHeight}");
 ```
 
 ## Plot File Format
@@ -262,7 +326,6 @@ Planned improvements:
 - Parallel leaf generation using multiple CPU cores
 - GPU-accelerated hashing for faster plot creation
 - Compression schemes for reduced disk usage
-- Plot verification utility to scan for corruption
 - Plot metadata indexing for multi-plot management
 
 ---
