@@ -58,7 +58,7 @@ Spacetime: Proof-of-Space-Time blockchain in C# / .NET 10. Energy-efficient, dis
 - Always follow Arrange-Act-Assert pattern
 - Always name tests: `MethodName_Scenario_ExpectedBehavior`
 - Always clean up resources (files, streams) with `try/finally` or `using`
-- Always target 80%+ code coverage for business logic
+- Always target 90%+ code coverage for business logic
 - Always mock interfaces only, never concrete classes
 
 ## Blockchain-Specific Rules
