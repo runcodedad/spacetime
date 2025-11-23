@@ -205,7 +205,7 @@ public class LeafGeneratorTests
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
             await foreach (var leaf in LeafGenerator.GenerateLeavesAsync(
-                minerKey, plotSeed, 0, 10000, cts.Token))
+                minerKey, plotSeed, 0, 10000, onLeafGenerated: null, cancellationToken: cts.Token))
             {
                 leaves.Add(leaf);
                 if (leaves.Count == 5)
@@ -217,5 +217,48 @@ public class LeafGeneratorTests
 
         // Should have stopped early
         Assert.True(leaves.Count < 10000);
+    }
+
+    [Fact]
+    public async Task GenerateLeavesAsync_CallbackIsInvokedForEachLeaf()
+    {
+        // Arrange
+        var minerKey = RandomNumberGenerator.GetBytes(32);
+        var plotSeed = RandomNumberGenerator.GetBytes(32);
+        const int count = 50;
+        var callbackCount = 0;
+        void callback() => callbackCount++;
+
+        // Act
+        var leaves = new List<byte[]>();
+        await foreach (var leaf in LeafGenerator.GenerateLeavesAsync(
+            minerKey, plotSeed, 0, count, callback))
+        {
+            leaves.Add(leaf);
+        }
+
+        // Assert
+        Assert.Equal(count, leaves.Count);
+        Assert.Equal(count, callbackCount);
+    }
+
+    [Fact]
+    public async Task GenerateLeavesAsync_NullCallback_DoesNotThrow()
+    {
+        // Arrange
+        var minerKey = RandomNumberGenerator.GetBytes(32);
+        var plotSeed = RandomNumberGenerator.GetBytes(32);
+        const int count = 10;
+
+        // Act
+        var leaves = new List<byte[]>();
+        await foreach (var leaf in LeafGenerator.GenerateLeavesAsync(
+            minerKey, plotSeed, 0, count, onLeafGenerated: null))
+        {
+            leaves.Add(leaf);
+        }
+
+        // Assert
+        Assert.Equal(count, leaves.Count);
     }
 }

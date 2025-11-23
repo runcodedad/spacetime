@@ -7,9 +7,12 @@ namespace Spacetime.Plotting;
 /// <summary>
 /// Creates plot files with deterministic leaf values and Merkle tree structure.
 /// </summary>
-public sealed class PlotCreator
+/// <remarks>
+/// Initializes a new instance of the <see cref="PlotCreator"/> class with a custom hash function.
+/// </remarks>
+public sealed class PlotCreator(IHashFunction hashFunction)
 {
-    private readonly IHashFunction _hashFunction;
+    private readonly IHashFunction _hashFunction = hashFunction ?? throw new ArgumentNullException(nameof(hashFunction));
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlotCreator"/> class.
@@ -17,14 +20,6 @@ public sealed class PlotCreator
     public PlotCreator()
         : this(new Sha256HashFunction())
     {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PlotCreator"/> class with a custom hash function.
-    /// </summary>
-    public PlotCreator(IHashFunction hashFunction)
-    {
-        _hashFunction = hashFunction ?? throw new ArgumentNullException(nameof(hashFunction));
     }
 
     /// <summary>
@@ -48,16 +43,8 @@ public sealed class PlotCreator
             Directory.CreateDirectory(directory);
         }
 
-        // Generate leaves asynchronously
-        var leaves = LeafGenerator.GenerateLeavesAsync(
-            config.MinerPublicKey,
-            config.PlotSeed,
-            startNonce: 0,
-            config.LeafCount,
-            cancellationToken);
-
         // Build Merkle tree using streaming construction
-        var streamBuilder = new MerkleTreeStream(_hashFunction);
+        var merkleTreeStream = new MerkleTreeStream(_hashFunction);
 
         CacheConfiguration? cacheConfig = null;
         if (config.IncludeCache)
@@ -68,14 +55,22 @@ public sealed class PlotCreator
                 topLevelsToCache: config.CacheLevels);
         }
 
-        // Track progress during tree building
+        // Generate leaves asynchronously with progress tracking
         var progressTracker = progress != null ? new ProgressReporter(config.LeafCount, progress) : null;
-        var trackedLeaves = TrackProgress(leaves, progressTracker, cancellationToken);
+        Action? onLeafGenerated = progressTracker != null ? progressTracker.ReportLeafProcessed : null;
+        
+        var leaves = LeafGenerator.GenerateLeavesAsync(
+            config.MinerPublicKey,
+            config.PlotSeed,
+            startNonce: 0,
+            config.LeafCount,
+            onLeafGenerated,
+            cancellationToken);
 
-        var metadata = await streamBuilder.BuildAsync(trackedLeaves, cacheConfig, cancellationToken);
+        var metadata = await merkleTreeStream.BuildAsync(leaves, cacheConfig, cancellationToken);
 
         // Write plot file
-        await WritePlotFileAsync(
+        var header = await WritePlotFileAsync(
             config.OutputPath,
             config.MinerPublicKey,
             config.PlotSeed,
@@ -83,40 +78,13 @@ public sealed class PlotCreator
             metadata,
             cancellationToken);
 
-        // Create and return header
-        var header = new PlotHeader(
-            config.PlotSeed,
-            config.LeafCount,
-            LeafGenerator.LeafSize,
-            metadata.Height,
-            metadata.RootHash);
-
-        header.ComputeChecksum();
-
         return header;
-    }
-
-    /// <summary>
-    /// Wraps an async enumerable with progress tracking.
-    /// </summary>
-    private async IAsyncEnumerable<byte[]> TrackProgress(
-        IAsyncEnumerable<byte[]> source,
-        ProgressReporter? progressReporter,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        long count = 0;
-        await foreach (var item in source.WithCancellation(cancellationToken))
-        {
-            yield return item;
-            count++;
-            progressReporter?.ReportLeafProcessed();
-        }
     }
 
     /// <summary>
     /// Writes the plot file with header and leaves.
     /// </summary>
-    private async Task WritePlotFileAsync(
+    private static async Task<PlotHeader> WritePlotFileAsync(
         string outputPath,
         byte[] minerPublicKey,
         byte[] plotSeed,
@@ -152,6 +120,7 @@ public sealed class PlotCreator
             plotSeed,
             startNonce: 0,
             leafCount,
+            onLeafGenerated: null,
             cancellationToken);
 
         await foreach (var leaf in leaves.WithCancellation(cancellationToken))
@@ -160,34 +129,28 @@ public sealed class PlotCreator
         }
 
         await fileStream.FlushAsync(cancellationToken);
+
+        return header;
     }
 
     /// <summary>
     /// Helper class for reporting progress.
     /// </summary>
-    private sealed class ProgressReporter
+    private sealed class ProgressReporter(long totalLeaves, IProgress<double> progress)
     {
-        private readonly long _totalLeaves;
-        private readonly IProgress<double> _progress;
         private long _processedLeaves;
         private int _lastReportedPercentage = -1;
-
-        public ProgressReporter(long totalLeaves, IProgress<double> progress)
-        {
-            _totalLeaves = totalLeaves;
-            _progress = progress;
-        }
 
         public void ReportLeafProcessed()
         {
             var processed = Interlocked.Increment(ref _processedLeaves);
-            var percentage = (int)((processed * 100.0) / _totalLeaves);
+            var percentage = (int)(processed * 100.0 / totalLeaves);
 
             // Only report when percentage changes to reduce overhead
             if (percentage != _lastReportedPercentage)
             {
                 _lastReportedPercentage = percentage;
-                _progress.Report(percentage);
+                progress.Report(percentage);
             }
         }
     }

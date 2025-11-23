@@ -121,11 +121,17 @@ public sealed class PlotHeader
     }
 
     /// <summary>
+    /// Checks if the checksum has been computed.
+    /// </summary>
+    /// <returns>True if the checksum has been computed; otherwise, false.</returns>
+    private bool IsChecksumComputed() => !_checksum.AsSpan().SequenceEqual(stackalloc byte[ChecksumSize]);
+
+    /// <summary>
     /// Verifies that the checksum matches the header contents.
     /// </summary>
     public bool VerifyChecksum()
     {
-        if (_checksum == null)
+        if (!IsChecksumComputed())
         {
             return false;
         }
@@ -179,7 +185,7 @@ public sealed class PlotHeader
     /// </summary>
     public byte[] Serialize()
     {
-        if (_checksum == null)
+        if (!IsChecksumComputed())
         {
             throw new InvalidOperationException("Checksum must be computed before serialization");
         }

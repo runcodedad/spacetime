@@ -71,6 +71,7 @@ public static class LeafGenerator
     /// <param name="plotSeed">The plot seed (32 bytes)</param>
     /// <param name="startNonce">The starting nonce value</param>
     /// <param name="count">The number of leaves to generate</param>
+    /// <param name="onLeafGenerated">Optional callback invoked after each leaf is generated</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>An async enumerable of leaf values</returns>
     public static async IAsyncEnumerable<byte[]> GenerateLeavesAsync(
@@ -78,6 +79,7 @@ public static class LeafGenerator
         byte[] plotSeed,
         long startNonce,
         long count,
+        Action? onLeafGenerated = null,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(minerPublicKey);
@@ -107,6 +109,7 @@ public static class LeafGenerator
         {
             cancellationToken.ThrowIfCancellationRequested();
             yield return GenerateLeaf(minerPublicKey, plotSeed, startNonce + i);
+            onLeafGenerated?.Invoke();
 
             // Yield control periodically to avoid blocking
             if (i % 1000 == 0)
