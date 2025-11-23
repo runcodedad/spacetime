@@ -569,7 +569,7 @@ Use for complex object creation with validation:
 ```csharp
 public static class PlotConfigurationFactory
 {
-    public static PlotConfiguration CreateFromGB(double sizeGB, byte[] minerKey, byte[] plotSeed, string outputPath)
+    public static PlotConfiguration CreateFromGB(double sizeGB, ReadOnlyMemory<byte> minerKey, ReadOnlyMemory<byte> plotSeed, string outputPath)
     {
         var sizeBytes = (long)(sizeGB * 1024 * 1024 * 1024);
         return new PlotConfiguration(sizeBytes, minerKey, plotSeed, outputPath);
@@ -706,7 +706,7 @@ public class PlotScanner
 ```csharp
 public interface IFileSystem
 {
-    Stream OpenRead(string path);
+    Task<Stream> OpenReadAsync(string path, CancellationToken cancellationToken = default);
 }
 
 public class PlotScanner
@@ -718,9 +718,9 @@ public class PlotScanner
         _fileSystem = fileSystem;
     }
     
-    public void ScanPlot(string path)
+    public async Task ScanPlotAsync(string path, CancellationToken cancellationToken = default)
     {
-        using var stream = _fileSystem.OpenRead(path);
+        using var stream = await _fileSystem.OpenReadAsync(path, cancellationToken);
         // ...
     }
 }
@@ -782,7 +782,7 @@ public async Task ProcessAsync(CancellationToken cancellationToken)
 {
     for (int i = 0; i < 1000000; i++)
     {
-        await ProcessItemAsync(i);  // Never checks cancellation
+        await ProcessItemAsync(i);  // Doesn't check cancellation or pass token
     }
 }
 ```
