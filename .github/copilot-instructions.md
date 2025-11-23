@@ -54,7 +54,7 @@ Spacetime: Proof-of-Space-Time blockchain in C# / .NET 10. Energy-efficient, dis
 ## Blockchain-Specific Rules
 
 ### Cryptography
-- Always use `System.Security.Cryptography.SHA256` for hashing
+- Always use SHA-256 for hashing (via `IHashFunction` abstraction)
 - Always use `RandomNumberGenerator.GetBytes()` for random data
 - Never use `System.Random` for security operations
 - Never implement custom crypto algorithms
