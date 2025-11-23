@@ -4,6 +4,12 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - '**.cs'
+      - '**.csproj'
+      - '.github/workflows/pr-check.yml'
+      - 'src/**'
+      - 'tests/**'
 
 jobs:
   build-and-test:

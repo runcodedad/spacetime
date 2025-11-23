@@ -54,7 +54,7 @@ Spacetime is developed in **incremental phases**:
 6. **Epoch Logic** — time-based participation and decay  
 7. **Testing & Simulation** — local testnet and performance tuning  
 
-A detailed engineering checklist is available in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+A detailed list of requirements is available in [`docs/requirements.md`](docs/implementation-checklist.md).
 
 ---
 
@@ -70,3 +70,35 @@ A detailed engineering checklist is available in [`docs/implementation-checklist
 git clone https://github.com/yourusername/spacetime.git
 cd spacetime
 dotnet build
+```
+
+---
+
+## 🤖 Contributing with GitHub Copilot
+
+This project includes comprehensive GitHub Copilot instructions to help generate contextually appropriate code. 
+
+📄 **[`.github/copilot-instructions.md`](.github/copilot-instructions.md)** - Contains:
+- Project architecture and design principles
+- Coding standards and conventions  
+- Testing requirements and patterns
+- Blockchain-specific guidance
+- Security considerations
+- Common patterns and anti-patterns
+
+The instructions help Copilot understand:
+- Spacetime's Proof-of-Space-Time consensus mechanism
+- C# 14.0 / .NET 10 best practices for this project
+- Async/await patterns and performance considerations
+- Cryptographic operations and binary data handling
+- Thread safety for concurrent plot operations
+
+*These instructions are automatically used by GitHub Copilot when working in this repository.*
+
+---
+
+## 📚 Documentation
+
+- **[Implementation Checklist](docs/implementation-checklist.md)** - Detailed development roadmap
+- **[Requirements](docs/requirements.md)** - Technical specifications and architecture
+- **[Copilot Instructions](.github/copilot-instructions.md)** - AI-assisted development guidelines
