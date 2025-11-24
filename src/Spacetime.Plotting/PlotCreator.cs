@@ -1,6 +1,7 @@
 using MerkleTree.Cache;
 using MerkleTree.Core;
 using MerkleTree.Hashing;
+using Spacetime.Common;
 
 namespace Spacetime.Plotting;
 
@@ -61,7 +62,7 @@ public sealed class PlotCreator(IHashFunction hashFunction)
 
         // Generate leaves asynchronously with progress tracking
         var progressTracker = progress != null ? new ProgressReporter(config.LeafCount, progress) : null;
-        Action? onLeafGenerated = progressTracker != null ? progressTracker.ReportLeafProcessed : null;
+        Action? onLeafGenerated = progressTracker != null ? progressTracker.ReportItemProcessed : null;
         
         // Generate leaves once, write to file AND build Merkle tree
         var leaves = LeafGenerator.GenerateLeavesAsync(
@@ -107,28 +108,6 @@ public sealed class PlotCreator(IHashFunction hashFunction)
         {
             await fileStream.WriteAsync(leaf, cancellationToken);
             yield return leaf;
-        }
-    }
-
-    /// <summary>
-    /// Helper class for reporting progress.
-    /// </summary>
-    private sealed class ProgressReporter(long totalLeaves, IProgress<double> progress)
-    {
-        private long _processedLeaves;
-        private int _lastReportedPercentage = -1;
-
-        public void ReportLeafProcessed()
-        {
-            var processed = Interlocked.Increment(ref _processedLeaves);
-            var percentage = (int)(processed * 100.0 / totalLeaves);
-
-            // Only report when percentage changes to reduce overhead
-            if (percentage != _lastReportedPercentage)
-            {
-                _lastReportedPercentage = percentage;
-                progress.Report(percentage);
-            }
         }
     }
 }

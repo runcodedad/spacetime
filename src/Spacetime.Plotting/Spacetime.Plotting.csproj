@@ -10,4 +10,8 @@
     <PackageReference Include="MerkleTree" Version="1.0.0-beta.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Spacetime.Common\Spacetime.Common.csproj" />
+  </ItemGroup>
+
 </Project>

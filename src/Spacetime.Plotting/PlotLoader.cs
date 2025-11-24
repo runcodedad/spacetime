@@ -1,6 +1,6 @@
-using System.IO.MemoryMappedFiles;
 using MerkleTree.Core;
 using MerkleTree.Hashing;
+using Spacetime.Common;
 
 namespace Spacetime.Plotting;
 
@@ -30,53 +30,52 @@ namespace Spacetime.Plotting;
 /// </example>
 public sealed class PlotLoader : IAsyncDisposable
 {
+    private const int _bufferSize = 81920;
     private readonly FileStream _fileStream;
     private readonly IHashFunction _hashFunction;
-    private readonly PlotHeader _header;
-    private readonly string _filePath;
     private bool _disposed;
 
     /// <summary>
     /// Gets the plot header containing metadata.
     /// </summary>
-    public PlotHeader Header => _header;
+    public PlotHeader Header { get; }
 
     /// <summary>
     /// Gets the total number of leaves in the plot.
     /// </summary>
-    public long LeafCount => _header.LeafCount;
+    public long LeafCount => Header.LeafCount;
 
     /// <summary>
     /// Gets the size of each leaf entry in bytes.
     /// </summary>
-    public int LeafSize => _header.LeafSize;
+    public int LeafSize => Header.LeafSize;
 
     /// <summary>
     /// Gets the Merkle root hash.
     /// </summary>
-    public ReadOnlySpan<byte> MerkleRoot => _header.MerkleRoot;
+    public ReadOnlySpan<byte> MerkleRoot => Header.MerkleRoot;
 
     /// <summary>
     /// Gets the Merkle tree height.
     /// </summary>
-    public long TreeHeight => _header.TreeHeight;
+    public long TreeHeight => Header.TreeHeight;
 
     /// <summary>
     /// Gets the plot seed used for deterministic generation.
     /// </summary>
-    public ReadOnlySpan<byte> PlotSeed => _header.PlotSeed;
+    public ReadOnlySpan<byte> PlotSeed => Header.PlotSeed;
 
     /// <summary>
     /// Gets the file path of the loaded plot.
     /// </summary>
-    public string FilePath => _filePath;
+    public string FilePath { get; }
 
     private PlotLoader(FileStream fileStream, PlotHeader header, IHashFunction hashFunction, string filePath)
     {
         _fileStream = fileStream;
-        _header = header;
+        Header = header;
         _hashFunction = hashFunction;
-        _filePath = filePath;
+        FilePath = filePath;
     }
 
     /// <summary>
@@ -111,7 +110,7 @@ public sealed class PlotLoader : IAsyncDisposable
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read,
-                bufferSize: 81920,
+                bufferSize: _bufferSize, // 20 x 4KB (default)
                 useAsync: true);
 
             // Read header
@@ -167,27 +166,27 @@ public sealed class PlotLoader : IAsyncDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        if (leafIndex < 0 || leafIndex >= _header.LeafCount)
+        if (leafIndex < 0 || leafIndex >= Header.LeafCount)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(leafIndex),
                 leafIndex,
-                $"Leaf index must be between 0 and {_header.LeafCount - 1}");
+                $"Leaf index must be between 0 and {Header.LeafCount - 1}");
         }
 
         // Calculate file position: header + (leafIndex * leafSize)
-        var position = PlotHeader.TotalHeaderSize + (leafIndex * _header.LeafSize);
+        var position = PlotHeader.TotalHeaderSize + (leafIndex * Header.LeafSize);
 
-        var buffer = new byte[_header.LeafSize];
+        var buffer = new byte[Header.LeafSize];
         
         // Seek and read
         _fileStream.Seek(position, SeekOrigin.Begin);
         var bytesRead = await _fileStream.ReadAsync(buffer, cancellationToken);
 
-        if (bytesRead < _header.LeafSize)
+        if (bytesRead < Header.LeafSize)
         {
             throw new InvalidOperationException(
-                $"Failed to read complete leaf at index {leafIndex}. Expected {_header.LeafSize} bytes, got {bytesRead} bytes");
+                $"Failed to read complete leaf at index {leafIndex}. Expected {Header.LeafSize} bytes, got {bytesRead} bytes");
         }
 
         return buffer;
@@ -206,12 +205,12 @@ public sealed class PlotLoader : IAsyncDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        if (startIndex < 0 || startIndex >= _header.LeafCount)
+        if (startIndex < 0 || startIndex >= Header.LeafCount)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(startIndex),
                 startIndex,
-                $"Start index must be between 0 and {_header.LeafCount - 1}");
+                $"Start index must be between 0 and {Header.LeafCount - 1}");
         }
 
         if (count <= 0)
@@ -219,30 +218,30 @@ public sealed class PlotLoader : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(count), count, "Count must be positive");
         }
 
-        if (startIndex + count > _header.LeafCount)
+        if (startIndex + count > Header.LeafCount)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(count),
                 count,
-                $"Range [{startIndex}, {startIndex + count}) exceeds leaf count {_header.LeafCount}");
+                $"Range [{startIndex}, {startIndex + count}) exceeds leaf count {Header.LeafCount}");
         }
 
         var leaves = new byte[count][];
-        var position = PlotHeader.TotalHeaderSize + (startIndex * _header.LeafSize);
+        var position = PlotHeader.TotalHeaderSize + (startIndex * Header.LeafSize);
         
         _fileStream.Seek(position, SeekOrigin.Begin);
 
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             
-            var buffer = new byte[_header.LeafSize];
+            var buffer = new byte[Header.LeafSize];
             var bytesRead = await _fileStream.ReadAsync(buffer, cancellationToken);
 
-            if (bytesRead < _header.LeafSize)
+            if (bytesRead < Header.LeafSize)
             {
                 throw new InvalidOperationException(
-                    $"Failed to read complete leaf at index {startIndex + i}. Expected {_header.LeafSize} bytes, got {bytesRead} bytes");
+                    $"Failed to read complete leaf at index {startIndex + i}. Expected {Header.LeafSize} bytes, got {bytesRead} bytes");
             }
 
             leaves[i] = buffer;
@@ -274,10 +273,10 @@ public sealed class PlotLoader : IAsyncDisposable
             
             // Stream leaves asynchronously
             var leaves = ReadAllLeavesAsync(progress, cancellationToken);
-            var metadata = await merkleTreeStream.BuildAsync(leaves, null, cancellationToken);
+            var metadata = await merkleTreeStream.BuildAsync(leaves, cancellationToken: cancellationToken);
 
             // Compare computed root with header root
-            return _header.MerkleRoot.SequenceEqual(metadata.RootHash);
+            return Header.MerkleRoot.SequenceEqual(metadata.RootHash);
         }
         catch (Exception)
         {
@@ -296,45 +295,23 @@ public sealed class PlotLoader : IAsyncDisposable
         // Reset to start of leaves
         _fileStream.Seek(PlotHeader.TotalHeaderSize, SeekOrigin.Begin);
 
-        var progressTracker = progress != null ? new ProgressReporter(_header.LeafCount, progress) : null;
+        var progressTracker = progress != null ? new ProgressReporter(Header.LeafCount, progress) : null;
 
-        for (long i = 0; i < _header.LeafCount; i++)
+        for (long i = 0; i < Header.LeafCount; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var buffer = new byte[_header.LeafSize];
+            var buffer = new byte[Header.LeafSize];
             var bytesRead = await _fileStream.ReadAsync(buffer, cancellationToken);
 
-            if (bytesRead < _header.LeafSize)
+            if (bytesRead < Header.LeafSize)
             {
                 throw new InvalidOperationException(
-                    $"Failed to read complete leaf at index {i}. Expected {_header.LeafSize} bytes, got {bytesRead} bytes");
+                    $"Failed to read complete leaf at index {i}. Expected {Header.LeafSize} bytes, got {bytesRead} bytes");
             }
 
-            progressTracker?.ReportLeafProcessed();
+            progressTracker?.ReportItemProcessed();
             yield return buffer;
-        }
-    }
-
-    /// <summary>
-    /// Helper class for reporting progress.
-    /// </summary>
-    private sealed class ProgressReporter(long totalLeaves, IProgress<double> progress)
-    {
-        private long _processedLeaves;
-        private int _lastReportedPercentage = -1;
-
-        public void ReportLeafProcessed()
-        {
-            var processed = Interlocked.Increment(ref _processedLeaves);
-            var percentage = (int)(processed * 100.0 / totalLeaves);
-
-            // Only report when percentage changes to reduce overhead
-            if (percentage != _lastReportedPercentage)
-            {
-                _lastReportedPercentage = percentage;
-                progress.Report(percentage);
-            }
         }
     }
 
