@@ -1,7 +1,7 @@
 ---
 name: testing-expert
 description: Specialized agent for creating and maintaining tests and test infrastructure for the Spacetime blockchain project
-tools: ['edit', 'search', 'testFailure', 'runTests']
+tools: ['edit', 'search', 'runCommands', 'problems', 'changes', 'testFailure', 'runTests']
 model: Claude Sonnet 4.5 (copilot)
 ---
 
