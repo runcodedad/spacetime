@@ -1,7 +1,7 @@
 ---
 name: readme-specialist
 description: Specialized agent for creating and improving README files and project documentation
-tools: ['search', 'edit']
+tools: ['edit', 'search']
 model: Claude Sonnet 4.5 (copilot)
 ---
 

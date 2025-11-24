@@ -1,7 +1,7 @@
 ---
 name: csharp-expert
 description: Specialized agent for C# development, architecture, and best practices
-tools: ['search', 'edit']
+tools: ['edit', 'search', 'runCommands', 'problems', 'changes']
 model: Claude Sonnet 4.5 (copilot)
 ---
 
