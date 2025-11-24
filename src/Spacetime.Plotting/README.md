@@ -106,9 +106,13 @@ var config = PlotConfiguration.CreateFromGB(
 
 // Create the plot with progress reporting
 var progress = new Progress<double>(p => Console.WriteLine($"Progress: {p:F1}%"));
-var header = await plotCreator.CreatePlotAsync(config, progress, cancellationToken);
+var result = await plotCreator.CreatePlotAsync(config, progress, cancellationToken);
 
-Console.WriteLine($"Plot created with Merkle root: {BitConverter.ToString(header.MerkleRoot)}");
+Console.WriteLine($"Plot created with Merkle root: {BitConverter.ToString(result.Header.MerkleRoot)}");
+if (result.CacheFilePath != null)
+{
+    Console.WriteLine($"Cache file created at: {result.CacheFilePath}");
+}
 ```
 
 ### PlotConfiguration

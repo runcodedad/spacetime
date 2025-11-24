@@ -20,10 +20,13 @@ public class PlotCreatorTests
             var config = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed, outputPath);
 
             // Act
-            var header = await creator.CreatePlotAsync(config);
+            var result = await creator.CreatePlotAsync(config);
 
             // Assert
-            Assert.NotNull(header);
+            Assert.NotNull(result);
+            Assert.NotNull(result.Header);
+            Assert.Null(result.CacheFilePath);
+            var header = result.Header;
             Assert.True(File.Exists(outputPath));
             Assert.Equal(config.LeafCount, header.LeafCount);
             Assert.Equal(LeafGenerator.LeafSize, header.LeafSize);
@@ -62,12 +65,15 @@ public class PlotCreatorTests
             var config = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed, outputPath, includeCache: true, cacheLevels: 3);
 
             // Act
-            var header = await creator.CreatePlotAsync(config);
+            var result = await creator.CreatePlotAsync(config);
 
             // Assert
             Assert.True(File.Exists(outputPath));
             Assert.True(File.Exists(cacheFilePath));
-            Assert.NotNull(header);
+            Assert.NotNull(result);
+            Assert.NotNull(result.Header);
+            Assert.Equal(cacheFilePath, result.CacheFilePath);
+            Assert.True(File.Exists(result.CacheFilePath));
         }
         finally
         {
@@ -99,13 +105,13 @@ public class PlotCreatorTests
             var config2 = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed, outputPath2);
 
             // Act
-            var header1 = await creator.CreatePlotAsync(config1);
-            var header2 = await creator.CreatePlotAsync(config2);
+            var result1 = await creator.CreatePlotAsync(config1);
+            var result2 = await creator.CreatePlotAsync(config2);
 
             // Assert - Headers should have same merkle root
-            Assert.True(header1.MerkleRoot.SequenceEqual(header2.MerkleRoot));
-            Assert.Equal(header1.LeafCount, header2.LeafCount);
-            Assert.Equal(header1.TreeHeight, header2.TreeHeight);
+            Assert.True(result1.Header.MerkleRoot.SequenceEqual(result2.Header.MerkleRoot));
+            Assert.Equal(result1.Header.LeafCount, result2.Header.LeafCount);
+            Assert.Equal(result1.Header.TreeHeight, result2.Header.TreeHeight);
 
             // Assert - Files should be identical
             var bytes1 = await File.ReadAllBytesAsync(outputPath1);
@@ -143,7 +149,8 @@ public class PlotCreatorTests
             var config = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed, outputPath);
 
             // Act - Create plot
-            var originalHeader = await creator.CreatePlotAsync(config);
+            var result = await creator.CreatePlotAsync(config);
+            var originalHeader = result.Header;
 
             // Read header from file
             var headerBytes = new byte[PlotHeader.TotalHeaderSize];
