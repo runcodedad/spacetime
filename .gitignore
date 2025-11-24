@@ -123,3 +123,7 @@ logs/
 # Temp files
 *.tmp
 *.temp
+
+# BenchmarkDotNet artifacts
+BenchmarkDotNet.Artifacts/
+**/BenchmarkDotNet.Artifacts/
