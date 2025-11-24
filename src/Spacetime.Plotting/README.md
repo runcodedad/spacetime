@@ -14,6 +14,60 @@ A plot file contains:
 
 ## Key Components
 
+### ProofGenerator
+
+Generates cryptographic proofs from plot files by scanning for the best score for a given challenge. This is the core mining operation in the Spacetime blockchain.
+
+**Key Features:**
+- Multiple scanning strategies (full scan vs sampling)
+- Asynchronous proof generation with progress reporting
+- Parallel scanning across multiple plots
+- Automatic Merkle proof generation for winning leaves
+- Score computation matching consensus rules: `score = H(challenge || leaf)`
+
+**Example:**
+```csharp
+using Spacetime.Plotting;
+using MerkleTree.Hashing;
+
+// Setup
+var hashFunction = new Sha256HashFunction();
+var generator = new ProofGenerator(hashFunction);
+
+// Load a plot file
+await using var loader = await PlotLoader.LoadAsync("my-plot.dat", hashFunction);
+
+// Get challenge from blockchain (e.g., from latest block)
+var challenge = blockchainState.GetCurrentChallenge();
+
+// Generate proof using full scan
+var proof = await generator.GenerateProofAsync(
+    loader,
+    challenge,
+    FullScanStrategy.Instance,
+    progress: new Progress<double>(p => Console.WriteLine($"Scanning: {p:F1}%")));
+
+if (proof != null)
+{
+    Console.WriteLine($"Found proof with score: {BitConverter.ToString(proof.Score)}");
+    Console.WriteLine($"Leaf index: {proof.LeafIndex}");
+    // Submit proof to blockchain...
+}
+
+// For large plots, use sampling strategy for faster results
+var samplingProof = await generator.GenerateProofAsync(
+    loader,
+    challenge,
+    new SamplingScanStrategy(10_000)); // Sample 10k leaves
+
+// Scan multiple plots in parallel and get best proof
+var loaders = new[] { loader1, loader2, loader3 };
+var bestProof = await generator.GenerateProofFromMultiplePlotsAsync(
+    loaders,
+    challenge,
+    FullScanStrategy.Instance);
+```
+
 ### PlotCreator
 
 The main entry point for creating plot files. Coordinates leaf generation, file writing, and Merkle tree construction in a single streaming operation.
@@ -232,6 +286,82 @@ Console.WriteLine($"Plot contains {loadedHeader.LeafCount:N0} leaves");
 Console.WriteLine($"Merkle tree height: {loadedHeader.TreeHeight}");
 ```
 
+### Proof
+
+Represents a cryptographic proof that demonstrates a miner has valid data matching a challenge. Contains all information needed for blockchain verification.
+
+**Properties:**
+- `LeafValue` — The 32-byte leaf that produced the best score
+- `LeafIndex` — Zero-based position of the leaf in the plot
+- `SiblingHashes` — Merkle proof path (sibling hashes)
+- `OrientationBits` — Merkle proof path (sibling positions)
+- `MerkleRoot` — Root hash of the plot's Merkle tree
+- `Challenge` — The 32-byte challenge used
+- `Score` — Computed score: `H(challenge || leaf)` (lower is better)
+
+**Usage:**
+```csharp
+// Proof is typically created by ProofGenerator
+var proof = await generator.GenerateProofAsync(loader, challenge, strategy);
+
+// Access proof data
+Console.WriteLine($"Winning leaf: {BitConverter.ToString(proof.LeafValue)}");
+Console.WriteLine($"Score: {BitConverter.ToString(proof.Score)}");
+Console.WriteLine($"At index: {proof.LeafIndex}");
+
+// Verify the Merkle proof (consensus rules)
+var merkleProof = new MerkleTree.Proofs.MerkleProof(
+    proof.LeafValue,
+    proof.LeafIndex,
+    proof.SiblingHashes.ToArray(),
+    proof.OrientationBits.ToArray());
+
+bool isValid = merkleProof.Verify(proof.MerkleRoot, hashFunction);
+```
+
+### Scanning Strategies
+
+Control how the proof generator scans a plot to find the best score. Trade-off between proof quality and generation speed.
+
+#### FullScanStrategy
+
+Scans every leaf in the plot to guarantee finding the absolute best proof.
+
+**Best for:**
+- Small to medium plots (< 10 GB)
+- When finding the optimal proof is critical
+- When parallel scanning is available
+
+**Usage:**
+```csharp
+var proof = await generator.GenerateProofAsync(
+    loader,
+    challenge,
+    FullScanStrategy.Instance);
+```
+
+#### SamplingScanStrategy
+
+Scans only a subset of leaves for faster proof generation on large plots. Uses evenly distributed sampling for good coverage.
+
+**Best for:**
+- Very large plots (> 10 GB)
+- Time-sensitive proof generation
+- When "good enough" proofs are acceptable
+
+**Usage:**
+```csharp
+// Sample 10,000 leaves
+var strategy = new SamplingScanStrategy(10_000);
+var proof = await generator.GenerateProofAsync(
+    loader,
+    challenge,
+    strategy);
+
+Console.WriteLine($"Strategy: {strategy.Name}"); // "Sampling(10000)"
+Console.WriteLine($"Sample size: {strategy.SampleSize}"); // 10000
+```
+
 ## Plot File Format
 
 ### Layout
@@ -262,7 +392,7 @@ If caching is enabled, a separate `.cache` file is created containing the top le
 - Asynchronous I/O to avoid blocking
 - Single-pass generation (leaves written as they're generated)
 
-### Generation Time
+### Plot Generation Time
 Approximate times on modern hardware (4-core CPU, SSD):
 - 1 GB plot: ~30 seconds
 - 10 GB plot: ~5 minutes
@@ -270,18 +400,33 @@ Approximate times on modern hardware (4-core CPU, SSD):
 
 *Actual times vary based on CPU hash performance and disk speed.*
 
+### Proof Generation Performance
+Approximate times for scanning and proof generation:
+- Full scan (100 MB plot, ~3M leaves): ~30-60 seconds
+- Sampling scan (10K samples): ~1-5 seconds
+- Merkle proof generation overhead: ~30-60 seconds (requires reading all leaves)
+
+**Optimization tips:**
+- Use `SamplingScanStrategy` for large plots (> 10 GB)
+- Scan multiple plots in parallel with `GenerateProofFromMultiplePlotsAsync`
+- Monitor scanning with progress reporters to track performance
+
 ### Caching Strategy
 - Caching top Merkle tree levels trades disk space for proof speed
 - Default 5 levels caches approximately 1/32nd of tree nodes
 - Cache size: `(2^cacheLevels - 1) × 32 bytes`
 - Example: 5 levels = ~1 KB cache
+- Cache can accelerate Merkle proof generation in future versions
 
 ## Thread Safety
 
 - `LeafGenerator` methods are **thread-safe** (pure functions)
 - `PlotCreator` instances are **NOT thread-safe** (use one per plot creation)
+- `PlotLoader` instances are **thread-safe** for reading (supports shared access)
+- `ProofGenerator` instances are **thread-safe** (can scan multiple plots concurrently)
 - `PlotConfiguration` is **immutable** and safe to share
 - `PlotHeader` is **thread-safe** for reading after construction
+- `Proof` instances are **immutable** and safe to share
 
 ## Dependencies
 
@@ -318,6 +463,12 @@ Test coverage includes:
 - Configuration validation
 - Header serialization and checksum verification
 - Plot creation with various sizes
+- **Proof generation and validation**
+- **Scanning strategy behavior (full scan and sampling)**
+- **Merkle proof verification with MerkleTree library**
+- **Score computation matching consensus rules**
+- **Parallel multi-plot proof generation**
+- **Performance benchmarks**
 - Error handling and edge cases
 
 ## Future Enhancements
