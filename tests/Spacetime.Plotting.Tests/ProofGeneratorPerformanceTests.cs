@@ -56,8 +56,9 @@ public class ProofGeneratorPerformanceTests
             Console.WriteLine($"Time per leaf: {timePerLeaf:F3} ms");
 
             // Sanity check - should be able to scan at least 10,000 leaves per second
-            Assert.True(leavesPerSecond > 10_000, 
-                $"Scanning performance too slow: {leavesPerSecond:N0} leaves/sec (expected > 10,000/sec)");
+            const int minExpectedThroughput = 10_000;
+            Assert.True(leavesPerSecond > minExpectedThroughput, 
+                $"Scanning performance too slow: {leavesPerSecond:N0} leaves/sec (expected > {minExpectedThroughput:N0}/sec)");
         }
         finally
         {
@@ -87,7 +88,7 @@ public class ProofGeneratorPerformanceTests
 
             await using var loader = await PlotLoader.LoadAsync(outputPath, _hashFunction);
 
-            var sampleSize = 1000;
+            const int sampleSize = 1000;
             var strategy = new SamplingScanStrategy(sampleSize);
 
             // Act - measure proof generation time with sampling
@@ -207,7 +208,8 @@ public class ProofGeneratorPerformanceTests
             await using var loader = await PlotLoader.LoadAsync(outputPath, _hashFunction);
 
             // Use sampling to isolate Merkle proof generation cost
-            var strategy = new SamplingScanStrategy(100);
+            const int scanSampleSize = 100;
+            var strategy = new SamplingScanStrategy(scanSampleSize);
 
             // Act - measure total proof generation time
             var totalStopwatch = Stopwatch.StartNew();
@@ -223,7 +225,7 @@ public class ProofGeneratorPerformanceTests
             Console.WriteLine($"=== Merkle Proof Generation Overhead ===");
             Console.WriteLine($"Total leaves: {loader.LeafCount:N0}");
             Console.WriteLine($"Tree height: {header.TreeHeight}");
-            Console.WriteLine($"Sample scanned: 100 leaves");
+            Console.WriteLine($"Sample scanned: {scanSampleSize} leaves");
             Console.WriteLine($"Total time: {totalStopwatch.ElapsedMilliseconds:N0} ms");
             Console.WriteLine($"Proof sibling count: {proof!.SiblingHashes.Count}");
 

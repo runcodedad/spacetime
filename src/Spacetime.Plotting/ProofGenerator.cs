@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using MerkleTree.Core;
 using MerkleTree.Hashing;
 using MerkleTree.Proofs;

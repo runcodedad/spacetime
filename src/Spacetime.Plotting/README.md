@@ -401,10 +401,12 @@ Approximate times on modern hardware (4-core CPU, SSD):
 *Actual times vary based on CPU hash performance and disk speed.*
 
 ### Proof Generation Performance
-Approximate times for scanning and proof generation:
+Approximate times for scanning and proof generation (benchmarked on modern 4-core CPU with SSD, as of 2025):
 - Full scan (100 MB plot, ~3M leaves): ~30-60 seconds
 - Sampling scan (10K samples): ~1-5 seconds
 - Merkle proof generation overhead: ~30-60 seconds (requires reading all leaves)
+
+*Note: Actual performance varies based on CPU hash speed, disk I/O throughput, and system load.*
 
 **Optimization tips:**
 - Use `SamplingScanStrategy` for large plots (> 10 GB)
