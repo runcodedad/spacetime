@@ -2,14 +2,13 @@ using System.Security.Cryptography;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using MerkleTree.Hashing;
-using Spacetime.Plotting;
 
 namespace Spacetime.Plotting.Benchmarks;
 
 /// <summary>
 /// Performance benchmarks for proof generation operations.
 /// </summary>
-[SimpleJob(RuntimeMoniker.Net80)]
+[SimpleJob(RuntimeMoniker.Net10_0)]
 [MemoryDiagnoser]
 [MarkdownExporter]
 public class ProofGenerationBenchmarks
