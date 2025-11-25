@@ -291,19 +291,4 @@ public sealed class ProofGenerator
     /// Internal result of scanning a plot.
     /// </summary>
     private sealed record ScanResult(byte[] LeafValue, long LeafIndex, byte[] Score);
-
-    /// <summary>
-    /// Comparer for byte arrays (used for finding lowest score).
-    /// </summary>
-    private sealed class ByteArrayComparer : IComparer<byte[]>
-    {
-        public int Compare(byte[]? x, byte[]? y)
-        {
-            if (x == null && y == null) return 0;
-            if (x == null) return 1;
-            if (y == null) return -1;
-
-            return CompareScores(x, y);
-        }
-    }
 }

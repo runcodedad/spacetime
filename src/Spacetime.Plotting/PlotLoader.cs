@@ -286,22 +286,15 @@ public sealed class PlotLoader : IAsyncDisposable
     }
 
     /// <summary>
-    /// Reads all leaves from the plot as an async enumerable.
+    /// Reads all leaves from the plot as an async enumerable with optional progress reporting.
     /// </summary>
+    /// <param name="progress">Optional progress reporter (reports percentage 0-100)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>An async enumerable of leaf data</returns>
     /// <remarks>
     /// This method streams leaves one at a time without loading the entire plot into memory.
     /// Reads are sequential and optimized (no seeking between consecutive leaves).
     /// </remarks>
-    // public IAsyncEnumerable<byte[]> ReadAllLeavesAsync(CancellationToken cancellationToken = default)
-    // {
-    //     return ReadAllLeavesAsyncCore(progress: null, cancellationToken);
-    // }
-
-    /// <summary>
-    /// Reads all leaves from the plot as an async enumerable with progress reporting.
-    /// </summary>
     public async IAsyncEnumerable<byte[]> ReadAllLeavesAsync(
         IProgress<double>? progress,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
