@@ -225,9 +225,12 @@ public class PlotLoaderTests
             await using var loader = await PlotLoader.LoadAsync(outputPath, _hashFunction);
 
             // Act - Read first, middle, and last leaf
-            var firstLeaf = await loader.ReadLeafAsync(0);
-            var middleLeaf = await loader.ReadLeafAsync(loader.LeafCount / 2);
-            var lastLeaf = await loader.ReadLeafAsync(loader.LeafCount - 1);
+            var firstLeaf = new byte[loader.LeafSize];
+            await loader.ReadLeafAsync(0, firstLeaf.AsMemory());
+            var middleLeaf = new byte[loader.LeafSize];
+            await loader.ReadLeafAsync(loader.LeafCount / 2, middleLeaf.AsMemory());
+            var lastLeaf = new byte[loader.LeafSize];
+            await loader.ReadLeafAsync(loader.LeafCount - 1, lastLeaf.AsMemory());
 
             // Assert
             Assert.NotNull(firstLeaf);
@@ -272,8 +275,9 @@ public class PlotLoaderTests
             await using var loader = await PlotLoader.LoadAsync(outputPath, _hashFunction);
 
             // Act & Assert
+            var buffer = new byte[loader.LeafSize];
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-                await loader.ReadLeafAsync(-1));
+                await loader.ReadLeafAsync(-1, buffer.AsMemory()));
         }
         finally
         {
@@ -301,8 +305,9 @@ public class PlotLoaderTests
             await using var loader = await PlotLoader.LoadAsync(outputPath, _hashFunction);
 
             // Act & Assert
+            var buffer = new byte[loader.LeafSize];
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-                await loader.ReadLeafAsync(loader.LeafCount));
+                await loader.ReadLeafAsync(loader.LeafCount, buffer.AsMemory()));
         }
         finally
         {
@@ -331,8 +336,9 @@ public class PlotLoaderTests
             await loader.DisposeAsync();
 
             // Act & Assert
+            var buffer = new byte[32];
             await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
-                await loader.ReadLeafAsync(0));
+                await loader.ReadLeafAsync(0, buffer.AsMemory()));
         }
         finally
         {
@@ -536,10 +542,14 @@ public class PlotLoaderTests
             await using var loader = await PlotLoader.LoadAsync(outputPath, _hashFunction);
 
             // Act - Read same leaf multiple times
-            var leaf1 = await loader.ReadLeafAsync(42);
-            var leaf2 = await loader.ReadLeafAsync(42);
-            var leaf3 = await loader.ReadLeafAsync(100);
-            var leaf4 = await loader.ReadLeafAsync(42);
+            var leaf1 = new byte[loader.LeafSize];
+            await loader.ReadLeafAsync(42, leaf1.AsMemory());
+            var leaf2 = new byte[loader.LeafSize];
+            await loader.ReadLeafAsync(42, leaf2.AsMemory());
+            var leaf3 = new byte[loader.LeafSize];
+            await loader.ReadLeafAsync(100, leaf3.AsMemory());
+            var leaf4 = new byte[loader.LeafSize];
+            await loader.ReadLeafAsync(42, leaf4.AsMemory());
 
             // Assert
             Assert.Equal(leaf1, leaf2);
@@ -605,8 +615,10 @@ public class PlotLoaderTests
             await using var loader1 = await PlotLoader.LoadAsync(outputPath, _hashFunction);
             await using var loader2 = await PlotLoader.LoadAsync(outputPath, _hashFunction);
 
-            var leaf1 = await loader1.ReadLeafAsync(10);
-            var leaf2 = await loader2.ReadLeafAsync(10);
+            var leaf1 = new byte[loader1.LeafSize];
+            await loader1.ReadLeafAsync(10, leaf1.AsMemory());
+            var leaf2 = new byte[loader2.LeafSize];
+            await loader2.ReadLeafAsync(10, leaf2.AsMemory());
 
             // Assert - Both loaders can read the same file
             Assert.Equal(leaf1, leaf2);

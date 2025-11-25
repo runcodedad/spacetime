@@ -155,14 +155,19 @@ public sealed class PlotLoader : IAsyncDisposable
     }
 
     /// <summary>
-    /// Reads a specific leaf by its index.
+    /// Reads a specific leaf by its index into a provided buffer.
     /// </summary>
     /// <param name="leafIndex">Zero-based index of the leaf to read</param>
+    /// <param name="buffer">The buffer to read into (must be at least LeafSize bytes)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The leaf data as a byte array</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when leafIndex is out of range</exception>
+    /// <exception cref="ArgumentException">Thrown when buffer is too small</exception>
     /// <exception cref="ObjectDisposedException">Thrown when the loader has been disposed</exception>
-    public async Task<byte[]> ReadLeafAsync(long leafIndex, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// This method is designed for memory-efficient leaf reading by allowing callers to reuse buffers,
+    /// such as when using ArrayPool or processing many leaves sequentially.
+    /// </remarks>
+    public async Task ReadLeafAsync(long leafIndex, Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -174,22 +179,25 @@ public sealed class PlotLoader : IAsyncDisposable
                 $"Leaf index must be between 0 and {Header.LeafCount - 1}");
         }
 
+        if (buffer.Length < Header.LeafSize)
+        {
+            throw new ArgumentException(
+                $"Buffer must be at least {Header.LeafSize} bytes, got {buffer.Length} bytes",
+                nameof(buffer));
+        }
+
         // Calculate file position: header + (leafIndex * leafSize)
         var position = PlotHeader.TotalHeaderSize + (leafIndex * Header.LeafSize);
 
-        var buffer = new byte[Header.LeafSize];
-        
-        // Seek and read
+        // Seek and read into provided buffer
         _fileStream.Seek(position, SeekOrigin.Begin);
-        var bytesRead = await _fileStream.ReadAsync(buffer, cancellationToken);
+        var bytesRead = await _fileStream.ReadAsync(buffer[..Header.LeafSize], cancellationToken);
 
         if (bytesRead < Header.LeafSize)
         {
             throw new InvalidOperationException(
                 $"Failed to read complete leaf at index {leafIndex}. Expected {Header.LeafSize} bytes, got {bytesRead} bytes");
         }
-
-        return buffer;
     }
 
     /// <summary>
@@ -272,7 +280,7 @@ public sealed class PlotLoader : IAsyncDisposable
             var merkleTreeStream = new MerkleTreeStream(_hashFunction);
             
             // Stream leaves asynchronously
-            var leaves = ReadAllLeavesAsyncCore(progress, cancellationToken);
+            var leaves = ReadAllLeavesAsync(progress, cancellationToken);
             var metadata = await merkleTreeStream.BuildAsync(leaves, cancellationToken: cancellationToken);
 
             // Compare computed root with header root
@@ -294,15 +302,15 @@ public sealed class PlotLoader : IAsyncDisposable
     /// This method streams leaves one at a time without loading the entire plot into memory.
     /// Reads are sequential and optimized (no seeking between consecutive leaves).
     /// </remarks>
-    public IAsyncEnumerable<byte[]> ReadAllLeavesAsync(CancellationToken cancellationToken = default)
-    {
-        return ReadAllLeavesAsyncCore(progress: null, cancellationToken);
-    }
+    // public IAsyncEnumerable<byte[]> ReadAllLeavesAsync(CancellationToken cancellationToken = default)
+    // {
+    //     return ReadAllLeavesAsyncCore(progress: null, cancellationToken);
+    // }
 
     /// <summary>
     /// Reads all leaves from the plot as an async enumerable with progress reporting.
     /// </summary>
-    private async IAsyncEnumerable<byte[]> ReadAllLeavesAsyncCore(
+    public async IAsyncEnumerable<byte[]> ReadAllLeavesAsync(
         IProgress<double>? progress,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {

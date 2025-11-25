@@ -1,3 +1,4 @@
+using System.Buffers;
 using MerkleTree.Core;
 using MerkleTree.Hashing;
 using MerkleTree.Proofs;
@@ -86,8 +87,6 @@ public sealed class ProofGenerator
             merkleProgress,
             cancellationToken);
 
-        progress?.Report(100);
-
         // Build the complete proof object
         var proof = new Proof(
             leafValue: bestResult.LeafValue,
@@ -133,32 +132,35 @@ public sealed class ProofGenerator
             throw new ArgumentException("Challenge must be 32 bytes", nameof(challenge));
         }
 
+        // Track best proof as we go instead of collecting all in memory
+        Proof? bestProof = null;
+        var bestProofLock = new object();
+
         // Generate proofs from all plots in parallel
         var tasks = plotLoaders.Select(async loader =>
         {
             try
             {
-                return await GenerateProofAsync(loader, challenge, strategy, null, cancellationToken);
+                var proof = await GenerateProofAsync(loader, challenge, strategy, null, cancellationToken);
+                if (proof != null)
+                {
+                    // Update best proof if this one is better
+                    lock (bestProofLock)
+                    {
+                        if (bestProof == null || CompareScores(proof.Score, bestProof.Score) < 0)
+                        {
+                            bestProof = proof;
+                        }
+                    }
+                }
             }
             catch (Exception)
             {
                 // If one plot fails, continue with others
-                return null;
             }
         }).ToArray();
 
-        var proofs = await Task.WhenAll(tasks);
-
-        // Filter out nulls and find the proof with the lowest score
-        var validProofs = proofs.Where(p => p != null).ToArray();
-        
-        if (validProofs.Length == 0)
-        {
-            return null;
-        }
-
-        // Compare scores (lower is better)
-        var bestProof = validProofs.OrderBy(p => p!.Score, new ByteArrayComparer()).First();
+        await Task.WhenAll(tasks);
 
         progress?.Report(100);
 
@@ -183,30 +185,45 @@ public sealed class ProofGenerator
         var totalToScan = strategy.GetScanCount(plotLoader.LeafCount);
         long scanned = 0;
 
-        foreach (var leafIndex in indicesToScan)
+        // Rent buffers from pool to minimize allocations
+        var leafBuffer = ArrayPool<byte>.Shared.Rent(plotLoader.LeafSize);
+        var scoreBuffer = ArrayPool<byte>.Shared.Rent(32);
+
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Read leaf from plot
-            var leaf = await plotLoader.ReadLeafAsync(leafIndex, cancellationToken);
-
-            // Compute score = H(challenge || leaf)
-            var score = ComputeScore(challenge, leaf);
-
-            // Track best score (lowest value wins)
-            if (bestScore == null || CompareScores(score, bestScore) < 0)
+            foreach (var leafIndex in indicesToScan)
             {
-                bestScore = score;
-                bestLeaf = leaf;
-                bestLeafIndex = leafIndex;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
 
-            scanned++;
-            if (progress != null && scanned % 100 == 0)
-            {
-                var percentage = (double)scanned / totalToScan * 100.0;
-                progress.Report(percentage);
+                // Read leaf from plot into rented buffer
+                await plotLoader.ReadLeafAsync(leafIndex, leafBuffer.AsMemory(0, plotLoader.LeafSize), cancellationToken);
+
+                // Compute score = H(challenge || leaf) using span-based approach
+                ComputeScore(challenge, leafBuffer.AsSpan(0, plotLoader.LeafSize), scoreBuffer);
+
+                // Track best score (lowest value wins)
+                if (bestScore == null || CompareScores(scoreBuffer.AsSpan(0, 32), bestScore) < 0)
+                {
+                    // Copy score to owned array
+                    bestScore = scoreBuffer.AsSpan(0, 32).ToArray();
+                    // Copy leaf to owned array
+                    bestLeaf = leafBuffer.AsSpan(0, plotLoader.LeafSize).ToArray();
+                    bestLeafIndex = leafIndex;
+                }
+
+                scanned++;
+                if (progress != null && scanned % 100 == 0)
+                {
+                    var percentage = (double)scanned / totalToScan * 100.0;
+                    progress.Report(percentage);
+                }
             }
+        }
+        finally
+        {
+            // Return buffers to pool
+            ArrayPool<byte>.Shared.Return(leafBuffer);
+            ArrayPool<byte>.Shared.Return(scoreBuffer);
         }
 
         progress?.Report(100);
@@ -229,7 +246,7 @@ public sealed class ProofGenerator
         CancellationToken cancellationToken)
     {
         // Use PlotLoader's optimized sequential read (no seeking between leaves)
-        var leavesStream = plotLoader.ReadAllLeavesAsync(cancellationToken);
+        var leavesStream = plotLoader.ReadAllLeavesAsync(progress, cancellationToken);
 
         // Use MerkleTreeStream to generate proof
         // Note: MerkleTreeStream doesn't support progress reporting yet
@@ -251,21 +268,30 @@ public sealed class ProofGenerator
     /// Computes the score for a leaf given a challenge.
     /// Score = H(challenge || leaf)
     /// </summary>
-    private byte[] ComputeScore(byte[] challenge, byte[] leaf)
+    /// <remarks>
+    /// This span-based implementation uses stack allocation for the combined input
+    /// to minimize heap allocations during score computation. The result is written
+    /// to the provided output buffer.
+    /// </remarks>
+    private void ComputeScore(ReadOnlySpan<byte> challenge, ReadOnlySpan<byte> leaf, Span<byte> output)
     {
-        var input = new byte[challenge.Length + leaf.Length];
-        challenge.CopyTo(input.AsSpan());
-        leaf.CopyTo(input.AsSpan(challenge.Length));
+        // Use stack allocation for small combined input (32 + 32 = 64 bytes is safe)
+        Span<byte> input = stackalloc byte[challenge.Length + leaf.Length];
+        challenge.CopyTo(input);
+        leaf.CopyTo(input[challenge.Length..]);
 
-        return _hashFunction.ComputeHash(input);
+        // MerkleTree package only supports byte[] input, so convert from stack to array
+        // Still more efficient than previous approach since we use stack memory for staging
+        var hash = _hashFunction.ComputeHash(input.ToArray());
+        hash.CopyTo(output);
     }
 
     /// <summary>
     /// Compares two scores. Returns negative if score1 is better (lower).
     /// </summary>
-    private static int CompareScores(byte[] score1, byte[] score2)
+    private static int CompareScores(ReadOnlySpan<byte> score1, ReadOnlySpan<byte> score2)
     {
-        for (var i = 0; i < score1.Length; i++)
+        for (var i = 0; i < score1.Length && i < score2.Length; i++)
         {
             var diff = score1[i] - score2[i];
             if (diff != 0)
@@ -274,6 +300,14 @@ public sealed class ProofGenerator
             }
         }
         return 0;
+    }
+
+    /// <summary>
+    /// Compares two scores (byte array version for compatibility).
+    /// </summary>
+    private static int CompareScores(byte[] score1, byte[] score2)
+    {
+        return CompareScores(score1.AsSpan(), score2.AsSpan());
     }
 
     /// <summary>
