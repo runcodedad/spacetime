@@ -56,12 +56,22 @@ public sealed class ProofGenerator
             throw new ArgumentException("Challenge must be 32 bytes", nameof(challenge));
         }
 
-        // Scan the plot to find the best score
+        // Split progress: 50% for scanning, 50% for Merkle proof generation
+        IProgress<double>? scanProgress = null;
+        IProgress<double>? merkleProgress = null;
+        
+        if (progress != null)
+        {
+            scanProgress = new Progress<double>(p => progress.Report(p * 0.5));
+            merkleProgress = new Progress<double>(p => progress.Report(50 + (p * 0.5)));
+        }
+
+        // Scan the plot to find the best score (0-50%)
         var bestResult = await ScanPlotAsync(
             plotLoader,
             challenge,
             strategy,
-            progress,
+            scanProgress,
             cancellationToken);
 
         if (bestResult == null)
@@ -69,11 +79,14 @@ public sealed class ProofGenerator
             return null;
         }
 
-        // Generate Merkle proof for the winning leaf
+        // Generate Merkle proof for the winning leaf (50-100%)
         var merkleProof = await GenerateMerkleProofAsync(
             plotLoader,
             bestResult.LeafIndex,
+            merkleProgress,
             cancellationToken);
+
+        progress?.Report(100);
 
         // Build the complete proof object
         var proof = new Proof(
@@ -212,12 +225,14 @@ public sealed class ProofGenerator
     private async Task<MerkleProof> GenerateMerkleProofAsync(
         PlotLoader plotLoader,
         long leafIndex,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
-        // Create a streaming async enumerable of all leaves
-        var leavesStream = ReadAllLeavesAsync(plotLoader, cancellationToken);
+        // Use PlotLoader's optimized sequential read (no seeking between leaves)
+        var leavesStream = plotLoader.ReadAllLeavesAsync(cancellationToken);
 
         // Use MerkleTreeStream to generate proof
+        // Note: MerkleTreeStream doesn't support progress reporting yet
         var merkleTreeStream = new MerkleTreeStream(_hashFunction);
         var merkleProof = await merkleTreeStream.GenerateProofAsync(
             leavesStream,
@@ -226,22 +241,10 @@ public sealed class ProofGenerator
             cache: null, // TODO: Support cache if available
             cancellationToken);
 
-        return merkleProof;
-    }
+        // Report completion of this phase
+        progress?.Report(100);
 
-    /// <summary>
-    /// Reads all leaves from a plot as an async enumerable.
-    /// </summary>
-    private static async IAsyncEnumerable<byte[]> ReadAllLeavesAsync(
-        PlotLoader plotLoader,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        for (long i = 0; i < plotLoader.LeafCount; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var leaf = await plotLoader.ReadLeafAsync(i, cancellationToken);
-            yield return leaf;
-        }
+        return merkleProof;
     }
 
     /// <summary>
