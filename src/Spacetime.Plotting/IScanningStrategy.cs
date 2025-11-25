@@ -21,4 +21,11 @@ public interface IScanningStrategy
     /// <param name="totalLeaves">The total number of leaves in the plot</param>
     /// <returns>An enumerable of leaf indices to check</returns>
     IEnumerable<long> GetIndicesToScan(long totalLeaves);
+
+    /// <summary>
+    /// Gets the number of leaves that will be scanned without enumerating.
+    /// </summary>
+    /// <param name="totalLeaves">The total number of leaves in the plot</param>
+    /// <returns>The count of leaves to scan</returns>
+    long GetScanCount(long totalLeaves);
 }

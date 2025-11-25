@@ -37,4 +37,15 @@ public sealed class FullScanStrategy : IScanningStrategy
             yield return i;
         }
     }
+
+    /// <inheritdoc/>
+    public long GetScanCount(long totalLeaves)
+    {
+        if (totalLeaves <= 0)
+        {
+            throw new ArgumentException("Total leaves must be positive", nameof(totalLeaves));
+        }
+
+        return totalLeaves;
+    }
 }

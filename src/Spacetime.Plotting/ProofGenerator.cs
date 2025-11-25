@@ -166,9 +166,9 @@ public sealed class ProofGenerator
         long bestLeafIndex = -1;
         byte[]? bestScore = null;
 
-        var indicesToScan = strategy.GetIndicesToScan(plotLoader.LeafCount).ToArray();
-        var totalToScan = indicesToScan.Length;
-        var scanned = 0;
+        var indicesToScan = strategy.GetIndicesToScan(plotLoader.LeafCount);
+        var totalToScan = strategy.GetScanCount(plotLoader.LeafCount);
+        long scanned = 0;
 
         foreach (var leafIndex in indicesToScan)
         {
