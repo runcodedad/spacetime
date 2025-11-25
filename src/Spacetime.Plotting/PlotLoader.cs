@@ -155,19 +155,14 @@ public sealed class PlotLoader : IAsyncDisposable
     }
 
     /// <summary>
-    /// Reads a specific leaf by its index into a provided buffer.
+    /// Reads a specific leaf by its index.
     /// </summary>
     /// <param name="leafIndex">Zero-based index of the leaf to read</param>
-    /// <param name="buffer">The buffer to read into (must be at least LeafSize bytes)</param>
     /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The leaf data as a byte array</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when leafIndex is out of range</exception>
-    /// <exception cref="ArgumentException">Thrown when buffer is too small</exception>
     /// <exception cref="ObjectDisposedException">Thrown when the loader has been disposed</exception>
-    /// <remarks>
-    /// This method is designed for memory-efficient leaf reading by allowing callers to reuse buffers,
-    /// such as when using ArrayPool or processing many leaves sequentially.
-    /// </remarks>
-    public async Task ReadLeafAsync(long leafIndex, Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public async Task<byte[]> ReadLeafAsync(long leafIndex, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -179,25 +174,22 @@ public sealed class PlotLoader : IAsyncDisposable
                 $"Leaf index must be between 0 and {Header.LeafCount - 1}");
         }
 
-        if (buffer.Length < Header.LeafSize)
-        {
-            throw new ArgumentException(
-                $"Buffer must be at least {Header.LeafSize} bytes, got {buffer.Length} bytes",
-                nameof(buffer));
-        }
-
         // Calculate file position: header + (leafIndex * leafSize)
         var position = PlotHeader.TotalHeaderSize + (leafIndex * Header.LeafSize);
 
-        // Seek and read into provided buffer
+        var buffer = new byte[Header.LeafSize];
+        
+        // Seek and read
         _fileStream.Seek(position, SeekOrigin.Begin);
-        var bytesRead = await _fileStream.ReadAsync(buffer[..Header.LeafSize], cancellationToken);
+        var bytesRead = await _fileStream.ReadAsync(buffer, cancellationToken);
 
         if (bytesRead < Header.LeafSize)
         {
             throw new InvalidOperationException(
                 $"Failed to read complete leaf at index {leafIndex}. Expected {Header.LeafSize} bytes, got {bytesRead} bytes");
         }
+
+        return buffer;
     }
 
     /// <summary>

@@ -185,45 +185,31 @@ public sealed class ProofGenerator
         var totalToScan = strategy.GetScanCount(plotLoader.LeafCount);
         long scanned = 0;
 
-        // Rent buffers from pool to minimize allocations
-        var leafBuffer = ArrayPool<byte>.Shared.Rent(plotLoader.LeafSize);
-        var scoreBuffer = ArrayPool<byte>.Shared.Rent(32);
-
-        try
+        foreach (var leafIndex in indicesToScan)
         {
-            foreach (var leafIndex in indicesToScan)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Read leaf from plot
+            var leaf = await plotLoader.ReadLeafAsync(leafIndex, cancellationToken);
+
+            // Compute score = H(challenge || leaf)
+            var score = ComputeScore(challenge, leaf);
+
+            // Track best score (lowest value wins)
+            if (bestScore == null || CompareScores(score, bestScore) < 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // Read leaf from plot into rented buffer
-                await plotLoader.ReadLeafAsync(leafIndex, leafBuffer.AsMemory(0, plotLoader.LeafSize), cancellationToken);
-
-                // Compute score = H(challenge || leaf) using span-based approach
-                ComputeScore(challenge, leafBuffer.AsSpan(0, plotLoader.LeafSize), scoreBuffer);
-
-                // Track best score (lowest value wins)
-                if (bestScore == null || CompareScores(scoreBuffer.AsSpan(0, 32), bestScore) < 0)
-                {
-                    // Copy score to owned array
-                    bestScore = scoreBuffer.AsSpan(0, 32).ToArray();
-                    // Copy leaf to owned array
-                    bestLeaf = leafBuffer.AsSpan(0, plotLoader.LeafSize).ToArray();
-                    bestLeafIndex = leafIndex;
-                }
-
-                scanned++;
-                if (progress != null && scanned % 100 == 0)
-                {
-                    var percentage = (double)scanned / totalToScan * 100.0;
-                    progress.Report(percentage);
-                }
+                bestScore = score;
+                // Store leaf directly (already a byte array)
+                bestLeaf = leaf;
+                bestLeafIndex = leafIndex;
             }
-        }
-        finally
-        {
-            // Return buffers to pool
-            ArrayPool<byte>.Shared.Return(leafBuffer);
-            ArrayPool<byte>.Shared.Return(scoreBuffer);
+
+            scanned++;
+            if (progress != null && scanned % 100 == 0)
+            {
+                var percentage = (double)scanned / totalToScan * 100.0;
+                progress.Report(percentage);
+            }
         }
 
         progress?.Report(100);
@@ -268,22 +254,13 @@ public sealed class ProofGenerator
     /// Computes the score for a leaf given a challenge.
     /// Score = H(challenge || leaf)
     /// </summary>
-    /// <remarks>
-    /// This span-based implementation uses stack allocation for the combined input
-    /// to minimize heap allocations during score computation. The result is written
-    /// to the provided output buffer.
-    /// </remarks>
-    private void ComputeScore(ReadOnlySpan<byte> challenge, ReadOnlySpan<byte> leaf, Span<byte> output)
+    private byte[] ComputeScore(byte[] challenge, byte[] leaf)
     {
-        // Use stack allocation for small combined input (32 + 32 = 64 bytes is safe)
-        Span<byte> input = stackalloc byte[challenge.Length + leaf.Length];
-        challenge.CopyTo(input);
-        leaf.CopyTo(input[challenge.Length..]);
+        var input = new byte[challenge.Length + leaf.Length];
+        challenge.CopyTo(input.AsSpan());
+        leaf.CopyTo(input.AsSpan(challenge.Length));
 
-        // MerkleTree package only supports byte[] input, so convert from stack to array
-        // Still more efficient than previous approach since we use stack memory for staging
-        var hash = _hashFunction.ComputeHash(input.ToArray());
-        hash.CopyTo(output);
+        return _hashFunction.ComputeHash(input);
     }
 
     /// <summary>
