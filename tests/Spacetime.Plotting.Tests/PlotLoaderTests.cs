@@ -19,7 +19,8 @@ public class PlotLoaderTests
         try
         {
             var config = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed, outputPath);
-            var createdHeader = await creator.CreatePlotAsync(config);
+            var result = await creator.CreatePlotAsync(config);
+            var createdHeader = result.Header;
 
             // Act
             await using var loader = await PlotLoader.LoadAsync(outputPath, _hashFunction);

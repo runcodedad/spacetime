@@ -21,8 +21,8 @@ public sealed class PlotCreator(IHashFunction hashFunction)
     /// <param name="config">The plot configuration</param>
     /// <param name="progress">Optional progress reporter (reports percentage 0-100)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The created plot header</returns>
-    public async Task<PlotHeader> CreatePlotAsync(
+    /// <returns>The plot creation result containing the header and optional cache file path</returns>
+    public async Task<PlotCreationResult> CreatePlotAsync(
         PlotConfiguration config,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
@@ -52,9 +52,10 @@ public sealed class PlotCreator(IHashFunction hashFunction)
         var merkleTreeStream = new MerkleTreeStream(_hashFunction);
 
         CacheConfiguration? cacheConfig = null;
+        string? cacheFilePath = null;
         if (config.IncludeCache)
         {
-            var cacheFilePath = $"{config.OutputPath}.cache";
+            cacheFilePath = $"{config.OutputPath}.cache";
             cacheConfig = new CacheConfiguration(
                 filePath: cacheFilePath,
                 topLevelsToCache: config.CacheLevels);
@@ -93,7 +94,7 @@ public sealed class PlotCreator(IHashFunction hashFunction)
         await fileStream.WriteAsync(headerBytes, cancellationToken);
         await fileStream.FlushAsync(cancellationToken);
 
-        return header;
+        return new PlotCreationResult(header, cacheFilePath);
     }
 
     /// <summary>

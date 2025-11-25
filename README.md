@@ -106,3 +106,6 @@ The instructions help Copilot understand:
 - **[Implementation Checklist](docs/implementation-checklist.md)** - Detailed development roadmap
 - **[Requirements](docs/requirements.md)** - Technical specifications and architecture
 - **[Copilot Instructions](.github/copilot-instructions.md)** - AI-assisted development guidelines
+
+### Performance Benchmarks
+- **[Spacetime.Plotting.Benchmarks](benchmarks/Spacetime.Plotting.Benchmarks/README.md)** - Performance benchmarks using BenchmarkDotNet
