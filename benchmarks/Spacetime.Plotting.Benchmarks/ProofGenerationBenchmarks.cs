@@ -24,6 +24,14 @@ public class ProofGenerationBenchmarks
     private string _plotFilePathWithCache = null!;
     private string? _cacheFilePath = null!;
 
+    // For multi-plot benchmarks
+    private List<PlotLoader> _multiplePlotsNoCache = null!;
+    private List<PlotLoader> _multiplePlotsWithCache = null!;
+    private List<string> _multiplePlotPathsNoCache = null!;
+    private List<string> _multiplePlotPathsWithCache = null!;
+    private List<string> _multipleCachePaths = null!;
+    private const int MultiPlotCount = 4;
+
     [GlobalSetup]
     public async Task GlobalSetup()
     {
@@ -60,6 +68,49 @@ public class ProofGenerationBenchmarks
         var result = await _plotCreator.CreatePlotAsync(configWithCache);
         _cacheFilePath = result.CacheFilePath;
         _plotLoaderWithCache = await PlotLoader.LoadAsync(_plotFilePathWithCache, _hashFunction);
+
+        // Create multiple plots for multi-plot benchmarks
+        _multiplePlotsNoCache = new List<PlotLoader>();
+        _multiplePlotsWithCache = new List<PlotLoader>();
+        _multiplePlotPathsNoCache = new List<string>();
+        _multiplePlotPathsWithCache = new List<string>();
+        _multipleCachePaths = new List<string>();
+
+        for (int i = 0; i < MultiPlotCount; i++)
+        {
+            var multiPlotSeed = RandomNumberGenerator.GetBytes(32);
+            
+            // Plot without cache
+            var pathNoCache = Path.Combine(Path.GetTempPath(), $"benchmark_multi_nocache_{i}_{Guid.NewGuid()}.plot");
+            var configMultiNoCache = new PlotConfiguration(
+                PlotConfiguration.MinPlotSize,
+                minerKey,
+                multiPlotSeed,
+                pathNoCache,
+                includeCache: false);
+            
+            await _plotCreator.CreatePlotAsync(configMultiNoCache);
+            _multiplePlotsNoCache.Add(await PlotLoader.LoadAsync(pathNoCache, _hashFunction));
+            _multiplePlotPathsNoCache.Add(pathNoCache);
+
+            // Plot with cache
+            var pathWithCache = Path.Combine(Path.GetTempPath(), $"benchmark_multi_cache_{i}_{Guid.NewGuid()}.plot");
+            var configMultiWithCache = new PlotConfiguration(
+                PlotConfiguration.MinPlotSize,
+                minerKey,
+                multiPlotSeed,
+                pathWithCache,
+                includeCache: true,
+                cacheLevels: 5);
+            
+            var multiResult = await _plotCreator.CreatePlotAsync(configMultiWithCache);
+            _multiplePlotsWithCache.Add(await PlotLoader.LoadAsync(pathWithCache, _hashFunction));
+            _multiplePlotPathsWithCache.Add(pathWithCache);
+            if (multiResult.CacheFilePath != null)
+            {
+                _multipleCachePaths.Add(multiResult.CacheFilePath);
+            }
+        }
     }
 
     [GlobalCleanup]
@@ -89,11 +140,62 @@ public class ProofGenerationBenchmarks
         {
             File.Delete(_cacheFilePath);
         }
+
+        // Clean up multi-plot resources
+        if (_multiplePlotsNoCache != null)
+        {
+            foreach (var loader in _multiplePlotsNoCache)
+            {
+                await loader.DisposeAsync();
+            }
+        }
+
+        if (_multiplePlotsWithCache != null)
+        {
+            foreach (var loader in _multiplePlotsWithCache)
+            {
+                await loader.DisposeAsync();
+            }
+        }
+
+        if (_multiplePlotPathsNoCache != null)
+        {
+            foreach (var path in _multiplePlotPathsNoCache)
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+
+        if (_multiplePlotPathsWithCache != null)
+        {
+            foreach (var path in _multiplePlotPathsWithCache)
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+
+        if (_multipleCachePaths != null)
+        {
+            foreach (var path in _multipleCachePaths)
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
     }
 
     // ========== Benchmarks WITHOUT cache ==========
 
     [Benchmark(Description = "Full scan (no cache)")]
+    [BenchmarkCategory("Single", "NoCache")]
     public async Task<Proof?> FullScan_NoCache()
     {
         return await _proofGenerator.GenerateProofAsync(
@@ -103,6 +205,7 @@ public class ProofGenerationBenchmarks
     }
 
     [Benchmark(Description = "Sampling 1K (no cache)")]
+    [BenchmarkCategory("Single", "NoCache")]
     public async Task<Proof?> Sampling1K_NoCache()
     {
         return await _proofGenerator.GenerateProofAsync(
@@ -112,6 +215,7 @@ public class ProofGenerationBenchmarks
     }
 
     [Benchmark(Description = "Sampling 10K (no cache)")]
+    [BenchmarkCategory("Single", "NoCache")]
     public async Task<Proof?> Sampling10K_NoCache()
     {
         return await _proofGenerator.GenerateProofAsync(
@@ -121,6 +225,7 @@ public class ProofGenerationBenchmarks
     }
 
     [Benchmark(Description = "Sampling 100K (no cache)")]
+    [BenchmarkCategory("Single", "NoCache")]
     public async Task<Proof?> Sampling100K_NoCache()
     {
         return await _proofGenerator.GenerateProofAsync(
@@ -132,6 +237,7 @@ public class ProofGenerationBenchmarks
     // ========== Benchmarks WITH cache ==========
 
     [Benchmark(Description = "Full scan (with cache)")]
+    [BenchmarkCategory("Single", "WithCache")]
     public async Task<Proof?> FullScan_WithCache()
     {
         return await _proofGenerator.GenerateProofAsync(
@@ -141,6 +247,7 @@ public class ProofGenerationBenchmarks
     }
 
     [Benchmark(Description = "Sampling 1K (with cache)")]
+    [BenchmarkCategory("Single", "WithCache")]
     public async Task<Proof?> Sampling1K_WithCache()
     {
         return await _proofGenerator.GenerateProofAsync(
@@ -150,6 +257,7 @@ public class ProofGenerationBenchmarks
     }
 
     [Benchmark(Description = "Sampling 10K (with cache)")]
+    [BenchmarkCategory("Single", "WithCache")]
     public async Task<Proof?> Sampling10K_WithCache()
     {
         return await _proofGenerator.GenerateProofAsync(
@@ -159,11 +267,76 @@ public class ProofGenerationBenchmarks
     }
 
     [Benchmark(Description = "Sampling 100K (with cache)")]
+    [BenchmarkCategory("Single", "WithCache")]
     public async Task<Proof?> Sampling100K_WithCache()
     {
         return await _proofGenerator.GenerateProofAsync(
             _plotLoaderWithCache,
             _challenge,
             new SamplingScanStrategy(100_000));
+    }
+
+    // ========== Multi-plot benchmarks WITHOUT cache ==========
+
+    [Benchmark(Description = "Multi-plot 4x full scan (no cache)")]
+    [BenchmarkCategory("MultiPlot", "NoCache")]
+    public async Task<Proof?> MultiPlot_FullScan_NoCache()
+    {
+        return await _proofGenerator.GenerateProofFromMultiplePlotsAsync(
+            _multiplePlotsNoCache,
+            _challenge,
+            FullScanStrategy.Instance);
+    }
+
+    [Benchmark(Description = "Multi-plot 4x sampling 1K (no cache)")]
+    [BenchmarkCategory("MultiPlot", "NoCache")]
+    public async Task<Proof?> MultiPlot_Sampling1K_NoCache()
+    {
+        return await _proofGenerator.GenerateProofFromMultiplePlotsAsync(
+            _multiplePlotsNoCache,
+            _challenge,
+            new SamplingScanStrategy(1_000));
+    }
+
+    [Benchmark(Description = "Multi-plot 4x sampling 10K (no cache)")]
+    [BenchmarkCategory("MultiPlot", "NoCache")]
+    public async Task<Proof?> MultiPlot_Sampling10K_NoCache()
+    {
+        return await _proofGenerator.GenerateProofFromMultiplePlotsAsync(
+            _multiplePlotsNoCache,
+            _challenge,
+            new SamplingScanStrategy(10_000));
+    }
+
+    // ========== Multi-plot benchmarks WITH cache ==========
+
+    [Benchmark(Description = "Multi-plot 4x full scan (with cache)")]
+    [BenchmarkCategory("MultiPlot", "WithCache")]
+    public async Task<Proof?> MultiPlot_FullScan_WithCache()
+    {
+        return await _proofGenerator.GenerateProofFromMultiplePlotsAsync(
+            _multiplePlotsWithCache,
+            _challenge,
+            FullScanStrategy.Instance);
+    }
+
+    [Benchmark(Description = "Multi-plot 4x sampling 1K (with cache)")]
+    [BenchmarkCategory("MultiPlot", "WithCache")]
+    public async Task<Proof?> MultiPlot_Sampling1K_WithCache()
+    {
+        return await _proofGenerator.GenerateProofFromMultiplePlotsAsync(
+            _multiplePlotsWithCache,
+            _challenge,
+            new SamplingScanStrategy(1_000));
+    }
+
+    [Benchmark(Description = "Multi-plot 4x sampling 10K (with cache)")]
+    [BenchmarkCategory("MultiPlot", "WithCache")]
+    public async Task<Proof?> MultiPlot_Sampling10K_WithCache()
+    {
+        return await _proofGenerator.GenerateProofFromMultiplePlotsAsync(
+            _multiplePlotsWithCache,
+            _challenge,
+            new SamplingScanStrategy(10_000));
     }
 }
