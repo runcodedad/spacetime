@@ -34,7 +34,7 @@ namespace Spacetime.Plotting;
 /// </example>
 public sealed class PlotManager : IPlotManager
 {
-    private const string PlotFilePattern = "*.plot";
+    private const string _plotFilePattern = "*.plot";
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
@@ -55,7 +55,7 @@ public sealed class PlotManager : IPlotManager
         get
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            return _loadedPlots.Values.ToList();
+            return [.. _loadedPlots.Values];
         }
     }
 
@@ -65,7 +65,7 @@ public sealed class PlotManager : IPlotManager
         get
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            return _plotMetadata.Values.ToList();
+            return [.. _plotMetadata.Values];
         }
     }
 
@@ -147,7 +147,7 @@ public sealed class PlotManager : IPlotManager
 
             if (hasDirectory && Directory.Exists(plotDirectory))
             {
-                var directoryFiles = Directory.GetFiles(plotDirectory, PlotFilePattern);
+                var directoryFiles = Directory.GetFiles(plotDirectory, _plotFilePattern);
                 plotPaths.AddRange(directoryFiles);
             }
 
@@ -433,6 +433,17 @@ public sealed class PlotManager : IPlotManager
         catch (JsonException)
         {
             // Corrupted metadata file - start fresh
+            try
+            {
+                var backupPath = _metadataFilePath + ".corrupt." + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+                File.Move(_metadataFilePath, backupPath, overwrite: true);
+                // TODO: Add logging for backup in the future
+            }
+            catch
+            {
+                // TODO: Add logging for backup failure in the future
+            }
+            _plotMetadata.Clear();
         }
     }
 
@@ -440,16 +451,14 @@ public sealed class PlotManager : IPlotManager
         string filePath,
         CancellationToken cancellationToken)
     {
-        var status = await DetermineStatusAsync(filePath, cancellationToken);
-
-        if (status == PlotStatus.Missing)
+        if (!File.Exists(filePath))
         {
             // Create metadata for missing file
             var missingMetadata = new PlotMetadata(
                 PlotId: Guid.NewGuid(),
                 FilePath: filePath,
                 SpaceAllocatedBytes: 0,
-                MerkleRoot: Array.Empty<byte>(),
+                MerkleRoot: [],
                 CreatedAtUtc: DateTime.UtcNow,
                 Status: PlotStatus.Missing);
 
