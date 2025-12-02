@@ -175,7 +175,7 @@ if (!VerifyEcdsaSecp256k1(headerHash, block.Header.Signature, block.Header.Miner
 
 4. **Defensive Copying**: All byte arrays are copied on construction to prevent external modification.
 
-5. **Immutable Properties**: Hash fields are exposed as `byte[]` properties with private or no setters to prevent modification after construction.
+5. **ReadOnlySpan**: Hash fields are exposed as `ReadOnlySpan<byte>` to prevent modification while avoiding heap allocations. Use `.ToArray()` if you need to store or pass the data to async methods.
 
 ## Dependencies
 

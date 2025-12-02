@@ -21,10 +21,14 @@ public sealed class BlockProof
     /// </summary>
     private const int HashSize = 32;
 
+    private readonly byte[] _leafValue;
+    private readonly List<byte[]> _merkleProofPath;
+    private readonly List<bool> _orientationBits;
+
     /// <summary>
     /// Gets the leaf value that produced this proof.
     /// </summary>
-    public byte[] LeafValue { get; }
+    public ReadOnlySpan<byte> LeafValue => _leafValue;
 
     /// <summary>
     /// Gets the zero-based index of the leaf in the plot.
@@ -37,7 +41,7 @@ public sealed class BlockProof
     /// <remarks>
     /// Each entry is a 32-byte hash. The list length equals the tree height.
     /// </remarks>
-    public IReadOnlyList<byte[]> MerkleProofPath { get; }
+    public IReadOnlyList<byte[]> MerkleProofPath => _merkleProofPath;
 
     /// <summary>
     /// Gets the orientation bits for the Merkle proof path.
@@ -46,7 +50,7 @@ public sealed class BlockProof
     /// Each bit indicates whether the sibling is on the left (false) or right (true).
     /// The length equals the tree height.
     /// </remarks>
-    public IReadOnlyList<bool> OrientationBits { get; }
+    public IReadOnlyList<bool> OrientationBits => _orientationBits;
 
     /// <summary>
     /// Gets the plot metadata associated with this proof.
@@ -101,10 +105,10 @@ public sealed class BlockProof
             }
         }
 
-        LeafValue = leafValue.ToArray();
+        _leafValue = leafValue.ToArray();
         LeafIndex = leafIndex;
-        MerkleProofPath = new List<byte[]>(merkleProofPath.Select(h => (byte[])h.Clone())).AsReadOnly();
-        OrientationBits = new List<bool>(orientationBits).AsReadOnly();
+        _merkleProofPath = new List<byte[]>(merkleProofPath.Select(h => (byte[])h.Clone()));
+        _orientationBits = new List<bool>(orientationBits);
         PlotMetadata = plotMetadata;
     }
 
@@ -118,24 +122,24 @@ public sealed class BlockProof
         ArgumentNullException.ThrowIfNull(writer);
 
         // Write leaf value
-        writer.Write(LeafValue);
+        writer.Write(_leafValue);
 
         // Write leaf index
         writer.Write(LeafIndex);
 
         // Write Merkle proof path count and hashes
-        writer.Write(MerkleProofPath.Count);
-        foreach (var hash in MerkleProofPath)
+        writer.Write(_merkleProofPath.Count);
+        foreach (var hash in _merkleProofPath)
         {
             writer.Write(hash);
         }
 
         // Write orientation bits as packed bytes
-        var bitCount = OrientationBits.Count;
+        var bitCount = _orientationBits.Count;
         writer.Write(bitCount);
         for (var i = 0; i < bitCount; i++)
         {
-            writer.Write(OrientationBits[i]);
+            writer.Write(_orientationBits[i]);
         }
 
         // Write plot metadata

@@ -132,13 +132,13 @@ public class BlockTests
         Assert.Equal(original.Header.Timestamp, deserialized.Header.Timestamp);
         Assert.Equal(original.Header.Difficulty, deserialized.Header.Difficulty);
         Assert.Equal(original.Header.Epoch, deserialized.Header.Epoch);
-        Assert.Equal(original.Header.ParentHash, deserialized.Header.ParentHash);
-        Assert.Equal(original.Header.Challenge, deserialized.Header.Challenge);
-        Assert.Equal(original.Header.PlotRoot, deserialized.Header.PlotRoot);
-        Assert.Equal(original.Header.ProofScore, deserialized.Header.ProofScore);
-        Assert.Equal(original.Header.TxRoot, deserialized.Header.TxRoot);
-        Assert.Equal(original.Header.MinerId, deserialized.Header.MinerId);
-        Assert.Equal(original.Header.Signature, deserialized.Header.Signature);
+        Assert.Equal(original.Header.ParentHash.ToArray(), deserialized.Header.ParentHash.ToArray());
+        Assert.Equal(original.Header.Challenge.ToArray(), deserialized.Header.Challenge.ToArray());
+        Assert.Equal(original.Header.PlotRoot.ToArray(), deserialized.Header.PlotRoot.ToArray());
+        Assert.Equal(original.Header.ProofScore.ToArray(), deserialized.Header.ProofScore.ToArray());
+        Assert.Equal(original.Header.TxRoot.ToArray(), deserialized.Header.TxRoot.ToArray());
+        Assert.Equal(original.Header.MinerId.ToArray(), deserialized.Header.MinerId.ToArray());
+        Assert.Equal(original.Header.Signature.ToArray(), deserialized.Header.Signature.ToArray());
 
         Assert.Equal(original.Body.Transactions.Count, deserialized.Body.Transactions.Count);
         for (int i = 0; i < original.Body.Transactions.Count; i++)
