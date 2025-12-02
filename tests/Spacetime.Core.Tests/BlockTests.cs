@@ -40,12 +40,19 @@ public class BlockTests
             signature: signed ? RandomNumberGenerator.GetBytes(64) : Array.Empty<byte>());
     }
 
+    private static Transaction CreateValidTransaction()
+    {
+        var sender = RandomNumberGenerator.GetBytes(33);
+        var recipient = RandomNumberGenerator.GetBytes(33);
+        return new Transaction(sender, recipient, 1000, 1, 10, RandomNumberGenerator.GetBytes(64));
+    }
+
     private static BlockBody CreateValidBody()
     {
         var transactions = new[]
         {
-            RandomNumberGenerator.GetBytes(100),
-            RandomNumberGenerator.GetBytes(200)
+            CreateValidTransaction(),
+            CreateValidTransaction()
         };
         return new BlockBody(transactions, CreateValidProof());
     }
@@ -143,7 +150,9 @@ public class BlockTests
         Assert.Equal(original.Body.Transactions.Count, deserialized.Body.Transactions.Count);
         for (int i = 0; i < original.Body.Transactions.Count; i++)
         {
-            Assert.Equal(original.Body.Transactions[i], deserialized.Body.Transactions[i]);
+            Assert.Equal(original.Body.Transactions[i].Amount, deserialized.Body.Transactions[i].Amount);
+            Assert.Equal(original.Body.Transactions[i].Nonce, deserialized.Body.Transactions[i].Nonce);
+            Assert.Equal(original.Body.Transactions[i].Fee, deserialized.Body.Transactions[i].Fee);
         }
     }
 
@@ -220,7 +229,7 @@ public class BlockTests
         // Arrange
         var header = CreateValidHeader();
         var body1 = CreateValidBody();
-        var body2 = new BlockBody(Array.Empty<byte[]>(), CreateValidProof());
+        var body2 = new BlockBody(Array.Empty<Transaction>(), CreateValidProof());
 
         var block1 = new Block(header, body1);
         var block2 = new Block(header, body2);

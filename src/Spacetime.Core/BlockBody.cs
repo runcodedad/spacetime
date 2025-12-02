@@ -5,27 +5,17 @@ namespace Spacetime.Core;
 /// </summary>
 /// <remarks>
 /// The block body contains:
-/// - List of transactions (as Transaction objects or raw byte arrays for backward compatibility)
+/// - List of transactions (as Transaction objects)
 /// - The winning PoST proof from the miner
 /// </remarks>
 public sealed class BlockBody
 {
-    private readonly List<byte[]> _transactionBytes;
-    private readonly List<Transaction>? _transactions;
+    private readonly List<Transaction> _transactions;
 
     /// <summary>
-    /// Gets the list of transactions in this block as raw byte arrays.
+    /// Gets the list of transactions in this block.
     /// </summary>
-    /// <remarks>
-    /// This property is maintained for backward compatibility.
-    /// Use <see cref="GetTransactions"/> to access transactions as Transaction objects.
-    /// </remarks>
-    public IReadOnlyList<byte[]> Transactions => _transactionBytes;
-
-    /// <summary>
-    /// Gets whether this block body contains typed Transaction objects.
-    /// </summary>
-    public bool HasTypedTransactions => _transactions != null;
+    public IReadOnlyList<Transaction> Transactions => _transactions;
 
     /// <summary>
     /// Gets the winning PoST proof for this block.
@@ -33,35 +23,9 @@ public sealed class BlockBody
     public BlockProof Proof { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BlockBody"/> class with raw transaction bytes.
+    /// Initializes a new instance of the <see cref="BlockBody"/> class.
     /// </summary>
-    /// <param name="transactions">The list of transactions as byte arrays.</param>
-    /// <param name="proof">The PoST proof.</param>
-    /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-    public BlockBody(IReadOnlyList<byte[]> transactions, BlockProof proof)
-    {
-        ArgumentNullException.ThrowIfNull(transactions);
-        ArgumentNullException.ThrowIfNull(proof);
-
-        // Validate and copy transactions
-        _transactionBytes = new List<byte[]>(transactions.Count);
-        foreach (var tx in transactions)
-        {
-            if (tx == null)
-            {
-                throw new ArgumentException("Transactions cannot contain null entries", nameof(transactions));
-            }
-            _transactionBytes.Add((byte[])tx.Clone());
-        }
-
-        _transactions = null;
-        Proof = proof;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BlockBody"/> class with Transaction objects.
-    /// </summary>
-    /// <param name="transactions">The list of typed transactions.</param>
+    /// <param name="transactions">The list of transactions.</param>
     /// <param name="proof">The PoST proof.</param>
     /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
     public BlockBody(IReadOnlyList<Transaction> transactions, BlockProof proof)
@@ -71,7 +35,6 @@ public sealed class BlockBody
 
         // Validate and store transactions
         _transactions = new List<Transaction>(transactions.Count);
-        _transactionBytes = new List<byte[]>(transactions.Count);
         
         foreach (var tx in transactions)
         {
@@ -86,38 +49,9 @@ public sealed class BlockBody
             }
             
             _transactions.Add(tx);
-            _transactionBytes.Add(tx.Serialize());
         }
 
         Proof = proof;
-    }
-
-    /// <summary>
-    /// Gets the transactions as Transaction objects.
-    /// </summary>
-    /// <returns>The list of transactions.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when transactions are not typed or cannot be deserialized.</exception>
-    public IReadOnlyList<Transaction> GetTransactions()
-    {
-        if (_transactions != null)
-        {
-            return _transactions;
-        }
-
-        // Try to deserialize byte arrays to Transaction objects
-        var result = new List<Transaction>(_transactionBytes.Count);
-        foreach (var txBytes in _transactionBytes)
-        {
-            try
-            {
-                result.Add(Transaction.Deserialize(txBytes));
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to deserialize transaction: {ex.Message}", ex);
-            }
-        }
-        return result;
     }
 
     /// <summary>
@@ -130,11 +64,12 @@ public sealed class BlockBody
         ArgumentNullException.ThrowIfNull(writer);
 
         // Write transaction count and each transaction
-        writer.Write(_transactionBytes.Count);
-        foreach (var tx in _transactionBytes)
+        writer.Write(_transactions.Count);
+        foreach (var tx in _transactions)
         {
-            writer.Write(tx.Length);
-            writer.Write(tx);
+            var txBytes = tx.Serialize();
+            writer.Write(txBytes.Length);
+            writer.Write(txBytes);
         }
 
         // Write proof
@@ -159,7 +94,7 @@ public sealed class BlockBody
             throw new InvalidOperationException("Invalid transaction count");
         }
 
-        var transactions = new List<byte[]>(txCount);
+        var transactions = new List<Transaction>(txCount);
         for (var i = 0; i < txCount; i++)
         {
             var txLength = reader.ReadInt32();
@@ -168,12 +103,13 @@ public sealed class BlockBody
                 throw new InvalidOperationException("Invalid transaction length");
             }
 
-            var tx = reader.ReadBytes(txLength);
-            if (tx.Length != txLength)
+            var txBytes = reader.ReadBytes(txLength);
+            if (txBytes.Length != txLength)
             {
                 throw new InvalidOperationException("Failed to read transaction: unexpected end of stream");
             }
-            transactions.Add(tx);
+            
+            transactions.Add(Transaction.Deserialize(txBytes));
         }
 
         // Read proof

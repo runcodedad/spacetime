@@ -252,18 +252,11 @@ var transactions = new Transaction[]
 var body = new BlockBody(transactions, proof);
 
 // Retrieve transactions from block body
-var txList = body.GetTransactions();
+var txList = body.Transactions;
 foreach (var tx in txList)
 {
     Console.WriteLine($"Amount: {tx.Amount}, Fee: {tx.Fee}, Nonce: {tx.Nonce}");
 }
-
-// Backward compatibility with byte arrays
-var legacyTxBytes = new[] { tx1Bytes, tx2Bytes };
-var legacyBody = new BlockBody(legacyTxBytes, proof);
-
-// Can still retrieve as typed transactions
-var typedTxs = legacyBody.GetTransactions();
 ```
 
 ## Transaction Validation Rules
@@ -320,8 +313,6 @@ Account state includes:
 4. **Defensive Copying**: All byte arrays are copied on construction to prevent external modification.
 
 5. **ReadOnlySpan**: Hash fields are exposed as `ReadOnlySpan<byte>` to prevent modification while avoiding heap allocations. Use `.ToArray()` if you need to store or pass the data to async methods.
-
-6. **Backward Compatibility**: `BlockBody` supports both typed `Transaction` objects and raw `byte[]` transactions for gradual migration.
 
 ## Dependencies
 
