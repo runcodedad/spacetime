@@ -27,7 +27,7 @@ public class BlockProofTests
         var proof = new BlockProof(leafValue, leafIndex, merkleProofPath, orientationBits, plotMetadata);
 
         // Assert
-        Assert.Equal(leafValue, proof.LeafValue.ToArray());
+        Assert.Equal(leafValue, proof.LeafValue);
         Assert.Equal(leafIndex, proof.LeafIndex);
         Assert.Equal(merkleProofPath.Length, proof.MerkleProofPath.Count);
         Assert.Equal(orientationBits, proof.OrientationBits);
@@ -177,7 +177,7 @@ public class BlockProofTests
         var deserialized = BlockProof.Deserialize(reader);
 
         // Assert
-        Assert.Equal(original.LeafValue.ToArray(), deserialized.LeafValue.ToArray());
+        Assert.Equal(original.LeafValue, deserialized.LeafValue);
         Assert.Equal(original.LeafIndex, deserialized.LeafIndex);
         Assert.Equal(original.MerkleProofPath.Count, deserialized.MerkleProofPath.Count);
         for (int i = 0; i < original.MerkleProofPath.Count; i++)
@@ -229,7 +229,7 @@ public class BlockProofTests
         merkleProofPath[0][0] ^= 0xFF;
 
         // Assert - proof should have original values
-        Assert.Equal(originalLeafValue, proof.LeafValue.ToArray());
+        Assert.Equal(originalLeafValue, proof.LeafValue);
         Assert.Equal(originalHash, proof.MerkleProofPath[0]);
     }
 }

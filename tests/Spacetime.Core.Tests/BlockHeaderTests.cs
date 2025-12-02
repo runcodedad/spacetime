@@ -52,17 +52,17 @@ public class BlockHeaderTests
 
         // Assert
         Assert.Equal(BlockHeader.CurrentVersion, header.Version);
-        Assert.Equal(parentHash, header.ParentHash.ToArray());
+        Assert.Equal(parentHash, header.ParentHash);
         Assert.Equal(100, header.Height);
         Assert.Equal(1234567890, header.Timestamp);
         Assert.Equal(1000, header.Difficulty);
         Assert.Equal(10, header.Epoch);
-        Assert.Equal(challenge, header.Challenge.ToArray());
-        Assert.Equal(plotRoot, header.PlotRoot.ToArray());
-        Assert.Equal(proofScore, header.ProofScore.ToArray());
-        Assert.Equal(txRoot, header.TxRoot.ToArray());
-        Assert.Equal(minerId, header.MinerId.ToArray());
-        Assert.Equal(signature, header.Signature.ToArray());
+        Assert.Equal(challenge, header.Challenge);
+        Assert.Equal(plotRoot, header.PlotRoot);
+        Assert.Equal(proofScore, header.ProofScore);
+        Assert.Equal(txRoot, header.TxRoot);
+        Assert.Equal(minerId, header.MinerId);
+        Assert.Equal(signature, header.Signature);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class BlockHeaderTests
 
         // Assert
         Assert.False(header.IsSigned());
-        Assert.Empty(header.Signature.ToArray());
+        Assert.Empty(header.Signature);
     }
 
     [Fact]
@@ -259,7 +259,7 @@ public class BlockHeaderTests
 
         // Assert
         Assert.True(header.IsSigned());
-        Assert.Equal(signature, header.Signature.ToArray());
+        Assert.Equal(signature, header.Signature);
     }
 
     [Fact]
@@ -321,17 +321,17 @@ public class BlockHeaderTests
 
         // Assert
         Assert.Equal(original.Version, deserialized.Version);
-        Assert.Equal(original.ParentHash.ToArray(), deserialized.ParentHash.ToArray());
+        Assert.Equal(original.ParentHash, deserialized.ParentHash);
         Assert.Equal(original.Height, deserialized.Height);
         Assert.Equal(original.Timestamp, deserialized.Timestamp);
         Assert.Equal(original.Difficulty, deserialized.Difficulty);
         Assert.Equal(original.Epoch, deserialized.Epoch);
-        Assert.Equal(original.Challenge.ToArray(), deserialized.Challenge.ToArray());
-        Assert.Equal(original.PlotRoot.ToArray(), deserialized.PlotRoot.ToArray());
-        Assert.Equal(original.ProofScore.ToArray(), deserialized.ProofScore.ToArray());
-        Assert.Equal(original.TxRoot.ToArray(), deserialized.TxRoot.ToArray());
-        Assert.Equal(original.MinerId.ToArray(), deserialized.MinerId.ToArray());
-        Assert.Equal(original.Signature.ToArray(), deserialized.Signature.ToArray());
+        Assert.Equal(original.Challenge, deserialized.Challenge);
+        Assert.Equal(original.PlotRoot, deserialized.PlotRoot);
+        Assert.Equal(original.ProofScore, deserialized.ProofScore);
+        Assert.Equal(original.TxRoot, deserialized.TxRoot);
+        Assert.Equal(original.MinerId, deserialized.MinerId);
+        Assert.Equal(original.Signature, deserialized.Signature);
     }
 
     [Fact]

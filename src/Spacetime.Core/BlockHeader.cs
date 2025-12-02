@@ -41,14 +41,6 @@ public sealed class BlockHeader
     /// </summary>
     public const byte CurrentVersion = 1;
 
-    private readonly byte[] _parentHash;
-    private readonly byte[] _challenge;
-    private readonly byte[] _plotRoot;
-    private readonly byte[] _proofScore;
-    private readonly byte[] _txRoot;
-    private readonly byte[] _minerId;
-    private byte[] _signature;
-
     /// <summary>
     /// Gets the protocol version for this block.
     /// </summary>
@@ -57,7 +49,7 @@ public sealed class BlockHeader
     /// <summary>
     /// Gets the hash of the previous block.
     /// </summary>
-    public ReadOnlySpan<byte> ParentHash => _parentHash;
+    public byte[] ParentHash { get; }
 
     /// <summary>
     /// Gets the block height (parent height + 1).
@@ -82,32 +74,32 @@ public sealed class BlockHeader
     /// <summary>
     /// Gets the challenge issued for this epoch.
     /// </summary>
-    public ReadOnlySpan<byte> Challenge => _challenge;
+    public byte[] Challenge { get; }
 
     /// <summary>
     /// Gets the Merkle root of the winning miner's plot file.
     /// </summary>
-    public ReadOnlySpan<byte> PlotRoot => _plotRoot;
+    public byte[] PlotRoot { get; }
 
     /// <summary>
     /// Gets the computed score for the winning leaf.
     /// </summary>
-    public ReadOnlySpan<byte> ProofScore => _proofScore;
+    public byte[] ProofScore { get; }
 
     /// <summary>
     /// Gets the Merkle root of all included transactions.
     /// </summary>
-    public ReadOnlySpan<byte> TxRoot => _txRoot;
+    public byte[] TxRoot { get; }
 
     /// <summary>
     /// Gets the public key of the winning miner (compressed ECDSA secp256k1).
     /// </summary>
-    public ReadOnlySpan<byte> MinerId => _minerId;
+    public byte[] MinerId { get; }
 
     /// <summary>
-    /// Gets the signature of the block header using miner_id.
+    /// Gets or sets the signature of the block header using miner_id.
     /// </summary>
-    public ReadOnlySpan<byte> Signature => _signature;
+    public byte[] Signature { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BlockHeader"/> class.
@@ -195,17 +187,17 @@ public sealed class BlockHeader
         }
 
         Version = version;
-        _parentHash = parentHash.ToArray();
+        ParentHash = parentHash.ToArray();
         Height = height;
         Timestamp = timestamp;
         Difficulty = difficulty;
         Epoch = epoch;
-        _challenge = challenge.ToArray();
-        _plotRoot = plotRoot.ToArray();
-        _proofScore = proofScore.ToArray();
-        _txRoot = txRoot.ToArray();
-        _minerId = minerId.ToArray();
-        _signature = signature.ToArray();
+        Challenge = challenge.ToArray();
+        PlotRoot = plotRoot.ToArray();
+        ProofScore = proofScore.ToArray();
+        TxRoot = txRoot.ToArray();
+        MinerId = minerId.ToArray();
+        Signature = signature.ToArray();
     }
 
     /// <summary>
@@ -220,14 +212,14 @@ public sealed class BlockHeader
             throw new ArgumentException($"Signature must be {SignatureSize} bytes", nameof(signature));
         }
 
-        _signature = signature.ToArray();
+        Signature = signature.ToArray();
     }
 
     /// <summary>
     /// Checks if this block header has been signed.
     /// </summary>
     /// <returns>True if the header has a signature; otherwise, false.</returns>
-    public bool IsSigned() => _signature.Length == SignatureSize;
+    public bool IsSigned() => Signature.Length == SignatureSize;
 
     /// <summary>
     /// Serializes the header without the signature (for hashing).
@@ -239,16 +231,16 @@ public sealed class BlockHeader
         using var writer = new BinaryWriter(stream);
 
         writer.Write(Version);
-        writer.Write(_parentHash);
+        writer.Write(ParentHash);
         writer.Write(Height);
         writer.Write(Timestamp);
         writer.Write(Difficulty);
         writer.Write(Epoch);
-        writer.Write(_challenge);
-        writer.Write(_plotRoot);
-        writer.Write(_proofScore);
-        writer.Write(_txRoot);
-        writer.Write(_minerId);
+        writer.Write(Challenge);
+        writer.Write(PlotRoot);
+        writer.Write(ProofScore);
+        writer.Write(TxRoot);
+        writer.Write(MinerId);
 
         return stream.ToArray();
     }
@@ -261,6 +253,19 @@ public sealed class BlockHeader
     {
         var data = SerializeWithoutSignature();
         return SHA256.HashData(data);
+    }
+
+    /// <summary>
+    /// Serializes the complete header including signature to a byte array.
+    /// </summary>
+    /// <returns>The serialized header bytes.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when header is not signed.</exception>
+    public byte[] Serialize()
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+        Serialize(writer);
+        return stream.ToArray();
     }
 
     /// <summary>
@@ -279,17 +284,17 @@ public sealed class BlockHeader
         }
 
         writer.Write(Version);
-        writer.Write(_parentHash);
+        writer.Write(ParentHash);
         writer.Write(Height);
         writer.Write(Timestamp);
         writer.Write(Difficulty);
         writer.Write(Epoch);
-        writer.Write(_challenge);
-        writer.Write(_plotRoot);
-        writer.Write(_proofScore);
-        writer.Write(_txRoot);
-        writer.Write(_minerId);
-        writer.Write(_signature);
+        writer.Write(Challenge);
+        writer.Write(PlotRoot);
+        writer.Write(ProofScore);
+        writer.Write(TxRoot);
+        writer.Write(MinerId);
+        writer.Write(Signature);
     }
 
     /// <summary>

@@ -131,9 +131,9 @@ var header = new BlockHeader(
     minerId: minerPublicKey,
     signature: Array.Empty<byte>());
 
-// Sign the header
+// Sign the header (implement your own signing using ECDSA)
 var headerHash = header.ComputeHash();
-var signature = SignWithMinerPrivateKey(headerHash);
+var signature = SignWithEcdsaSecp256k1(headerHash, minerPrivateKey); // User-implemented
 header.SetSignature(signature);
 
 // Create complete block
@@ -156,9 +156,9 @@ if (block.Header.Height != expectedHeight)
 if (!block.Header.ParentHash.SequenceEqual(previousBlockHash))
     throw new InvalidOperationException("Invalid parent hash");
 
-// Verify signature
+// Verify signature (implement your own verification using ECDSA)
 var headerHash = block.Header.ComputeHash();
-if (!VerifySignature(headerHash, block.Header.Signature, block.Header.MinerId))
+if (!VerifyEcdsaSecp256k1(headerHash, block.Header.Signature, block.Header.MinerId)) // User-implemented
     throw new InvalidOperationException("Invalid signature");
 
 // Verify proof (application-specific logic)
