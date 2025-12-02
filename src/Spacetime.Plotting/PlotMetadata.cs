@@ -5,6 +5,7 @@ namespace Spacetime.Plotting;
 /// </summary>
 /// <param name="PlotId">Unique identifier for the plot.</param>
 /// <param name="FilePath">Absolute path to the plot file.</param>
+/// <param name="CacheFilePath">Absolute path to the cache file, if any.</param>
 /// <param name="SpaceAllocatedBytes">Total disk space allocated by the plot file in bytes.</param>
 /// <param name="MerkleRoot">The Merkle root hash of the plot (32 bytes).</param>
 /// <param name="CreatedAtUtc">UTC timestamp when the plot was created.</param>
@@ -12,6 +13,7 @@ namespace Spacetime.Plotting;
 public sealed record PlotMetadata(
     Guid PlotId,
     string FilePath,
+    string? CacheFilePath,
     long SpaceAllocatedBytes,
     byte[] MerkleRoot,
     DateTime CreatedAtUtc,
@@ -29,12 +31,14 @@ public sealed record PlotMetadata(
     /// Creates metadata from a <see cref="PlotLoader"/> instance.
     /// </summary>
     /// <param name="loader">The loaded plot.</param>
+    /// <param name="cacheFilePath">Optional cache file path.</param>
     /// <param name="plotId">Optional plot ID. If not provided, a new GUID is generated.</param>
     /// <param name="createdAtUtc">Optional creation timestamp. If not provided, current UTC time is used.</param>
     /// <returns>A new <see cref="PlotMetadata"/> instance.</returns>
     /// <exception cref="ArgumentNullException">Thrown when loader is null.</exception>
     public static PlotMetadata FromPlotLoader(
         PlotLoader loader,
+        string? cacheFilePath = null,
         Guid? plotId = null,
         DateTime? createdAtUtc = null)
     {
@@ -44,6 +48,7 @@ public sealed record PlotMetadata(
         return new PlotMetadata(
             PlotId: plotId ?? Guid.NewGuid(),
             FilePath: loader.FilePath,
+            CacheFilePath: cacheFilePath,
             SpaceAllocatedBytes: fileInfo.Exists ? fileInfo.Length : 0,
             MerkleRoot: loader.MerkleRoot.ToArray(),
             CreatedAtUtc: createdAtUtc ?? DateTime.UtcNow,

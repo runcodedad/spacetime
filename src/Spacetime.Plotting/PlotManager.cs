@@ -32,7 +32,7 @@ namespace Spacetime.Plotting;
 /// await manager.DisposeAsync();
 /// </code>
 /// </example>
-public sealed class PlotManager : IPlotManager
+public sealed partial class PlotManager : IPlotManager
 {
     private const string _plotFilePattern = "*.plot";
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -120,82 +120,9 @@ public sealed class PlotManager : IPlotManager
     }
 
     /// <inheritdoc />
-    public async Task<int> LoadPlotsAsync(
-        string? plotDirectory = null,
-        IReadOnlyList<string>? additionalPaths = null,
-        IProgress<double>? progress = null,
-        CancellationToken cancellationToken = default)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
-        var hasDirectory = !string.IsNullOrWhiteSpace(plotDirectory);
-        var hasAdditionalPaths = additionalPaths != null && additionalPaths.Count > 0;
-
-        if (!hasDirectory && !hasAdditionalPaths)
-        {
-            throw new ArgumentException("At least one of plotDirectory or additionalPaths must be provided");
-        }
-
-        await _loadLock.WaitAsync(cancellationToken);
-        try
-        {
-            // Load existing metadata if available
-            await LoadMetadataFromFileAsync(cancellationToken);
-
-            // Collect all plot file paths
-            var plotPaths = new List<string>();
-
-            if (hasDirectory && Directory.Exists(plotDirectory))
-            {
-                var directoryFiles = Directory.GetFiles(plotDirectory, _plotFilePattern);
-                plotPaths.AddRange(directoryFiles);
-            }
-
-            if (hasAdditionalPaths)
-            {
-                plotPaths.AddRange(additionalPaths!);
-            }
-
-            // Remove duplicates
-            plotPaths = plotPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
-            if (plotPaths.Count == 0)
-            {
-                progress?.Report(100);
-                return 0;
-            }
-
-            var loadedCount = 0;
-            var processedCount = 0;
-
-            foreach (var path in plotPaths)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var metadata = await LoadSinglePlotAsync(path, cancellationToken);
-                if (metadata != null && metadata.Status == PlotStatus.Valid)
-                {
-                    loadedCount++;
-                }
-
-                processedCount++;
-                progress?.Report((double)processedCount / plotPaths.Count * 100);
-            }
-
-            // Save updated metadata
-            await SaveMetadataAsync(cancellationToken);
-
-            return loadedCount;
-        }
-        finally
-        {
-            _loadLock.Release();
-        }
-    }
-
-    /// <inheritdoc />
     public async Task<PlotMetadata?> AddPlotAsync(
         string filePath,
+        string? cacheFilePath = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
@@ -212,7 +139,7 @@ public sealed class PlotManager : IPlotManager
                 return existingByPath;
             }
 
-            var metadata = await LoadSinglePlotAsync(filePath, cancellationToken);
+            var metadata = await LoadPlotAsync(filePath, cacheFilePath, cancellationToken);
             if (metadata != null)
             {
                 await SaveMetadataAsync(cancellationToken);
@@ -276,8 +203,18 @@ public sealed class PlotManager : IPlotManager
             throw new InvalidOperationException("No valid plots are loaded for proof generation");
         }
 
+        var options = validPlots
+            .Select(loader => new ProofGenerationOptions
+            (
+                PlotLoader: loader,
+                CacheFilePath: _plotMetadata.Values
+                    .FirstOrDefault(m => m.FilePath == loader.FilePath)?
+                    .CacheFilePath
+            ))
+            .ToList();
+
         return await _proofGenerator.GenerateProofFromMultiplePlotsAsync(
-            validPlots,
+            options,
             challenge,
             strategy,
             progress,
@@ -389,7 +326,7 @@ public sealed class PlotManager : IPlotManager
         _loadLock.Dispose();
     }
 
-    private async Task LoadMetadataFromFileAsync(CancellationToken cancellationToken)
+    public async Task LoadMetadataAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(_metadataFilePath))
         {
@@ -416,6 +353,7 @@ public sealed class PlotManager : IPlotManager
                 var metadata = new PlotMetadata(
                     PlotId: item.PlotId,
                     FilePath: item.FilePath,
+                    CacheFilePath: item.CacheFilePath,
                     SpaceAllocatedBytes: item.SpaceAllocatedBytes,
                     MerkleRoot: Convert.FromBase64String(item.MerkleRoot),
                     CreatedAtUtc: item.CreatedAtUtc,
@@ -447,9 +385,10 @@ public sealed class PlotManager : IPlotManager
         }
     }
 
-    private async Task<PlotMetadata?> LoadSinglePlotAsync(
+    private async Task<PlotMetadata?> LoadPlotAsync(
         string filePath,
-        CancellationToken cancellationToken)
+        string? cacheFilePath,
+        CancellationToken cancellationToken = default)
     {
         if (!File.Exists(filePath))
         {
@@ -457,6 +396,7 @@ public sealed class PlotManager : IPlotManager
             var missingMetadata = new PlotMetadata(
                 PlotId: Guid.NewGuid(),
                 FilePath: filePath,
+                CacheFilePath: cacheFilePath,
                 SpaceAllocatedBytes: 0,
                 MerkleRoot: [],
                 CreatedAtUtc: DateTime.UtcNow,
@@ -471,7 +411,7 @@ public sealed class PlotManager : IPlotManager
             var loader = await PlotLoader.LoadAsync(filePath, _hashFunction, cancellationToken);
             var plotId = Guid.NewGuid();
 
-            var metadata = PlotMetadata.FromPlotLoader(loader, plotId);
+            var metadata = PlotMetadata.FromPlotLoader(loader, cacheFilePath, plotId);
             _plotMetadata.TryAdd(plotId, metadata);
             _loadedPlots.TryAdd(plotId, loader);
 
@@ -484,8 +424,9 @@ public sealed class PlotManager : IPlotManager
             var corruptedMetadata = new PlotMetadata(
                 PlotId: Guid.NewGuid(),
                 FilePath: filePath,
+                CacheFilePath: cacheFilePath,
                 SpaceAllocatedBytes: fileInfo.Exists ? fileInfo.Length : 0,
-                MerkleRoot: Array.Empty<byte>(),
+                MerkleRoot: [],
                 CreatedAtUtc: DateTime.UtcNow,
                 Status: PlotStatus.Corrupted);
 
@@ -533,18 +474,5 @@ public sealed class PlotManager : IPlotManager
                 _plotMetadata[plotId] = metadata.WithStatus(PlotStatus.Corrupted);
             }
         }
-    }
-
-    /// <summary>
-    /// Serializable version of PlotMetadata for JSON persistence.
-    /// </summary>
-    private sealed class SerializablePlotMetadata
-    {
-        public Guid PlotId { get; set; }
-        public string FilePath { get; set; } = string.Empty;
-        public long SpaceAllocatedBytes { get; set; }
-        public string MerkleRoot { get; set; } = string.Empty;
-        public DateTime CreatedAtUtc { get; set; }
-        public string Status { get; set; } = string.Empty;
     }
 }

@@ -31,29 +31,16 @@ public interface IPlotManager : IAsyncDisposable
     long TotalSpaceAllocatedBytes { get; }
 
     /// <summary>
-    /// Loads all plots from a directory and/or explicit file paths.
-    /// </summary>
-    /// <param name="plotDirectory">Optional directory containing plot files.</param>
-    /// <param name="additionalPaths">Optional additional plot file paths.</param>
-    /// <param name="progress">Optional progress reporter.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The number of plots successfully loaded.</returns>
-    /// <exception cref="ArgumentException">Thrown when both plotDirectory and additionalPaths are null or empty.</exception>
-    Task<int> LoadPlotsAsync(
-        string? plotDirectory = null,
-        IReadOnlyList<string>? additionalPaths = null,
-        IProgress<double>? progress = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Adds a single plot file to the manager.
     /// </summary>
     /// <param name="filePath">Path to the plot file.</param>
+    /// <param name="cacheFilePath">Optional path to the cache file.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The metadata of the added plot, or null if the plot could not be loaded.</returns>
     /// <exception cref="ArgumentNullException">Thrown when filePath is null or empty.</exception>
     Task<PlotMetadata?> AddPlotAsync(
         string filePath,
+        string? cacheFilePath = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -103,4 +90,11 @@ public interface IPlotManager : IAsyncDisposable
     /// <param name="plotId">The unique identifier of the plot.</param>
     /// <returns>The plot metadata, or null if not found.</returns>
     PlotMetadata? GetPlotMetadata(Guid plotId);
+
+    /// <summary>
+    /// Loads plot metadata from persistent storage.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task LoadMetadataAsync(CancellationToken cancellationToken);
 }
