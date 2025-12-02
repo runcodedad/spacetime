@@ -1,4 +1,5 @@
 using System.Buffers;
+using MerkleTree.Cache;
 using MerkleTree.Core;
 using MerkleTree.Hashing;
 using MerkleTree.Proofs;
@@ -45,6 +46,7 @@ public sealed class ProofGenerator
         PlotLoader plotLoader,
         byte[] challenge,
         IScanningStrategy strategy,
+        string? cacheFilePath = null,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -84,6 +86,7 @@ public sealed class ProofGenerator
         var merkleProof = await GenerateMerkleProofAsync(
             plotLoader,
             bestResult.LeafIndex,
+            cacheFilePath,
             merkleProgress,
             cancellationToken);
 
@@ -112,19 +115,19 @@ public sealed class ProofGenerator
     /// <exception cref="ArgumentNullException">Thrown when required parameters are null</exception>
     /// <exception cref="ArgumentException">Thrown when challenge is not 32 bytes or plotLoaders is empty</exception>
     public async Task<Proof?> GenerateProofFromMultiplePlotsAsync(
-        IReadOnlyList<PlotLoader> plotLoaders,
+        IReadOnlyList<ProofGenerationOptions> options,
         byte[] challenge,
         IScanningStrategy strategy,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(plotLoaders);
+        ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(challenge);
         ArgumentNullException.ThrowIfNull(strategy);
 
-        if (plotLoaders.Count == 0)
+        if (options.Count == 0 || options.Any(o => o.PlotLoader == null))
         {
-            throw new ArgumentException("Must provide at least one plot loader", nameof(plotLoaders));
+            throw new ArgumentException("Options must provide at least one plot loader", nameof(options));
         }
 
         if (challenge.Length != 32)
@@ -137,11 +140,11 @@ public sealed class ProofGenerator
         var bestProofLock = new object();
 
         // Generate proofs from all plots in parallel
-        var tasks = plotLoaders.Select(async loader =>
+        var tasks = options.Select(async options => 
         {
             try
             {
-                var proof = await GenerateProofAsync(loader, challenge, strategy, null, cancellationToken);
+                var proof = await GenerateProofAsync(options.PlotLoader, challenge, strategy, options.CacheFilePath, null, cancellationToken);
                 if (proof != null)
                 {
                     // Update best proof if this one is better
@@ -228,11 +231,19 @@ public sealed class ProofGenerator
     private async Task<MerkleProof> GenerateMerkleProofAsync(
         PlotLoader plotLoader,
         long leafIndex,
+        string? cacheFilePath,
         IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         // Use PlotLoader's optimized sequential read (no seeking between leaves)
         var leavesStream = plotLoader.ReadAllLeavesAsync(progress, cancellationToken);
+
+        CacheData? cacheData = null;
+        if (cacheFilePath != null && File.Exists(cacheFilePath))
+        {
+            // TODO: should this be async?
+            cacheData = CacheFileManager.LoadCache(cacheFilePath);
+        }
 
         // Use MerkleTreeStream to generate proof
         // Note: MerkleTreeStream doesn't support progress reporting yet
@@ -241,7 +252,7 @@ public sealed class ProofGenerator
             leavesStream,
             leafIndex,
             plotLoader.LeafCount,
-            cache: null, // TODO: Support cache if available
+            cache: cacheData,
             cancellationToken);
 
         // Report completion of this phase
@@ -292,3 +303,5 @@ public sealed class ProofGenerator
     /// </summary>
     private sealed record ScanResult(byte[] LeafValue, long LeafIndex, byte[] Score);
 }
+
+public sealed record ProofGenerationOptions(PlotLoader PlotLoader, string? CacheFilePath);

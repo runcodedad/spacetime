@@ -1,4 +1,4 @@
 ﻿using BenchmarkDotNet.Running;
 using Spacetime.Plotting.Benchmarks;
 
-BenchmarkRunner.Run<ProofGenerationBenchmarks>();
+BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);

@@ -232,13 +232,13 @@ public class ProofGeneratorIntegrationTests
             var plotSeed2 = RandomNumberGenerator.GetBytes(32);
             var plotSeed3 = RandomNumberGenerator.GetBytes(32);
             
-            var config1 = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed1, plot1Path);
-            var config2 = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed2, plot2Path);
-            var config3 = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed3, plot3Path);
+            var config1 = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed1, plot1Path, true, 5);
+            var config2 = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed2, plot2Path, true, 5);
+            var config3 = new PlotConfiguration(PlotConfiguration.MinPlotSize, minerKey, plotSeed3, plot3Path, true, 5);
             
-            await creator.CreatePlotAsync(config1);
-            await creator.CreatePlotAsync(config2);
-            await creator.CreatePlotAsync(config3);
+            var result1 = await creator.CreatePlotAsync(config1);
+            var result2 = await creator.CreatePlotAsync(config2);
+            var result3 = await creator.CreatePlotAsync(config3);
 
             var loader1 = await PlotLoader.LoadAsync(plot1Path, _hashFunction);
             var loader2 = await PlotLoader.LoadAsync(plot2Path, _hashFunction);
@@ -246,16 +246,23 @@ public class ProofGeneratorIntegrationTests
 
             try
             {
+                var options = new[]
+                {
+                    new ProofGenerationOptions(loader1, result1.CacheFilePath),
+                    new ProofGenerationOptions(loader2, result2.CacheFilePath),
+                    new ProofGenerationOptions(loader3, result3.CacheFilePath)
+                };
+
                 // Act - generate proofs from all plots in parallel
                 var bestProof = await generator.GenerateProofFromMultiplePlotsAsync(
-                    new[] { loader1, loader2, loader3 },
+                    options,
                     challenge,
                     FullScanStrategy.Instance);
 
                 // Also generate individual proofs to verify best selection
-                var proof1 = await generator.GenerateProofAsync(loader1, challenge, FullScanStrategy.Instance);
-                var proof2 = await generator.GenerateProofAsync(loader2, challenge, FullScanStrategy.Instance);
-                var proof3 = await generator.GenerateProofAsync(loader3, challenge, FullScanStrategy.Instance);
+                var proof1 = await generator.GenerateProofAsync(loader1, challenge, FullScanStrategy.Instance, result1.CacheFilePath);
+                var proof2 = await generator.GenerateProofAsync(loader2, challenge, FullScanStrategy.Instance, result2.CacheFilePath);
+                var proof3 = await generator.GenerateProofAsync(loader3, challenge, FullScanStrategy.Instance, result3.CacheFilePath);
 
                 // Assert
                 Assert.NotNull(bestProof);
