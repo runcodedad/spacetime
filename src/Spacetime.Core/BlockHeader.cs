@@ -97,7 +97,8 @@ public sealed class BlockHeader
     public byte[] MinerId { get; }
 
     /// <summary>
-    /// Gets or sets the signature of the block header using miner_id.
+    /// Gets the signature of the block header using miner_id.
+    /// Use <see cref="SetSignature"/> to set the signature.
     /// </summary>
     public byte[] Signature { get; private set; }
 
