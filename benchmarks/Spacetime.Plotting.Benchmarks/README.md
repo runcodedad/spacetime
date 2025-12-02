@@ -11,42 +11,38 @@ cd benchmarks/Spacetime.Plotting.Benchmarks
 dotnet run -c Release
 ```
 
-To run specific benchmark categories:
+To run specific benchmark classes:
 
 ```bash
 # Run only single-plot benchmarks (8 benchmarks)
-dotnet run -c Release -- --anyCategories Single
+dotnet run -c Release -- --filter *SinglePlotProofGenerationBenchmarks*
 
 # Run only multi-plot benchmarks (6 benchmarks)
-dotnet run -c Release -- --anyCategories MultiPlot
+dotnet run -c Release -- --filter *MultiPlotProofGenerationBenchmarks*
 
-# Run only cached benchmarks (7 benchmarks - single or multi-plot)
-dotnet run -c Release -- --anyCategories WithCache
+# Run specific benchmark categories
+dotnet run -c Release -- --anyCategories WithCache    # All cached benchmarks
+dotnet run -c Release -- --anyCategories NoCache      # All non-cached benchmarks
 
-# Run only non-cached benchmarks (7 benchmarks)
-dotnet run -c Release -- --anyCategories NoCache
-
-# Combine categories with AND logic (e.g., single-plot AND with cache - 4 benchmarks)
-dotnet run -c Release -- --allCategories Single,WithCache
-
-# Combine categories with OR logic (e.g., single-plot OR with cache - 11 benchmarks)
-dotnet run -c Release -- --anyCategories Single,WithCache
-
-# Alternative: Use filter patterns on method names
-dotnet run -c Release -- --filter "*MultiPlot*"      # Multi-plot benchmarks
-dotnet run -c Release -- --filter "*WithCache*"      # Cached benchmarks
-dotnet run -c Release -- --filter "*FullScan*"       # Full scan benchmarks only
+# Run specific methods by pattern
+dotnet run -c Release -- --filter "*FullScan*"        # Full scan benchmarks only
+dotnet run -c Release -- --filter "*Sampling1K*"      # 1K sampling benchmarks only
 ```
 
-**Note**: BenchmarkDotNet will show "Found 14 benchmark(s) in total" initially, but will then list and run only the benchmarks matching your filter/category. Check the benchmark list that follows to confirm which ones will actually run.
+To list available benchmarks without running:
+
+```bash
+dotnet run -c Release -- --list flat
+dotnet run -c Release -- --list tree
+```
 
 ## Benchmarks
 
-### ProofGenerationBenchmarks
+### SinglePlotProofGenerationBenchmarks
 
-Compares proof generation performance with and without Merkle tree caching. Benchmarks are categorized into **Single** (single plot) and **MultiPlot** (4 plots in parallel), each with **NoCache** and **WithCache** variants.
+Compares proof generation performance for single plots with and without Merkle tree caching.
 
-#### Single-Plot Benchmarks (Category: `Single`)
+#### Benchmarks
 
 **Without Cache** (`NoCache`):
 - **Full Scan (no cache)** - Scans every leaf in a minimum-sized plot (100 MB)
@@ -60,9 +56,11 @@ Compares proof generation performance with and without Merkle tree caching. Benc
 - **Sampling 10K (with cache)** - Samples 10,000 leaves with cache
 - **Sampling 100K (with cache)** - Samples 100,000 leaves with cache
 
-#### Multi-Plot Benchmarks (Category: `MultiPlot`)
+### MultiPlotProofGenerationBenchmarks
 
 Tests parallel proof generation across 4 plots simultaneously using `GenerateProofFromMultiplePlotsAsync`.
+
+#### Benchmarks
 
 **Without Cache** (`NoCache`):
 - **Multi-plot 4x full scan (no cache)** - Full scan across 4 plots
@@ -73,6 +71,8 @@ Tests parallel proof generation across 4 plots simultaneously using `GeneratePro
 - **Multi-plot 4x full scan (with cache)** - Full scan across 4 plots with cache
 - **Multi-plot 4x sampling 1K (with cache)** - 1K sampling across 4 plots with cache
 - **Multi-plot 4x sampling 10K (with cache)** - 10K sampling across 4 plots with cache
+
+## What These Benchmarks Measure
 
 These benchmarks help understand:
 - Trade-offs between proof quality (full scan) and generation speed (sampling)
