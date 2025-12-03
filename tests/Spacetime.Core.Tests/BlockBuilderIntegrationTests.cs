@@ -77,14 +77,14 @@ public class BlockBuilderIntegrationTests
     /// </summary>
     private class BasicBlockValidator : IBlockValidator
     {
-        public Task<bool> ValidateBlockAsync(Block block, CancellationToken cancellationToken = default)
+        public async Task<bool> ValidateBlockAsync(Block block, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             // Check block header is signed
             if (!block.Header.IsSigned())
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             // Check all transactions are signed
@@ -92,27 +92,28 @@ public class BlockBuilderIntegrationTests
             {
                 if (!tx.IsSigned() || !tx.ValidateBasicRules())
                 {
-                    return Task.FromResult(false);
+                    return false;
                 }
             }
 
             // Basic structure validation
             if (block.Header.Height < 0 || block.Header.Difficulty < 0 || block.Header.Epoch < 0)
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             // Transaction Merkle root verification
-            var computedTxRoot = ComputeTransactionMerkleRoot(block.Body.Transactions);
+            var computedTxRoot = await ComputeTransactionMerkleRootAsync(block.Body.Transactions)
+                .ConfigureAwait(false);
             if (!block.Header.TxRoot.SequenceEqual(computedTxRoot))
             {
-                return Task.FromResult(false);
+                return false;
             }
 
-            return Task.FromResult(true);
+            return true;
         }
 
-        private static byte[] ComputeTransactionMerkleRoot(IReadOnlyList<Transaction> transactions)
+        private static async Task<byte[]> ComputeTransactionMerkleRootAsync(IReadOnlyList<Transaction> transactions)
         {
             if (transactions.Count == 0)
             {
@@ -123,9 +124,8 @@ public class BlockBuilderIntegrationTests
             var merkleTreeStream = new MerkleTreeStream(hashFunction);
 
             var leaves = GetTransactionHashesAsync(transactions);
-            var metadata = merkleTreeStream.BuildAsync(leaves, cacheConfig: null, CancellationToken.None)
-                .GetAwaiter()
-                .GetResult();
+            var metadata = await merkleTreeStream.BuildAsync(leaves, cacheConfig: null, CancellationToken.None)
+                .ConfigureAwait(false);
 
             return metadata.RootHash;
         }
@@ -136,7 +136,6 @@ public class BlockBuilderIntegrationTests
             {
                 yield return tx.ComputeHash();
             }
-            await Task.CompletedTask;
         }
     }
 

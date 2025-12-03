@@ -136,7 +136,7 @@ public sealed class BlockBuilder
         cancellationToken.ThrowIfCancellationRequested();
 
         // Step 2: Build transaction Merkle tree and compute root
-        var txRoot = ComputeTransactionMerkleRoot(transactions);
+        var txRoot = await ComputeTransactionMerkleRootAsync(transactions, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         // Step 3: Get current timestamp
@@ -188,15 +188,18 @@ public sealed class BlockBuilder
     }
 
     /// <summary>
-    /// Computes the Merkle root of a list of transactions.
+    /// Computes the Merkle root of a list of transactions asynchronously.
     /// </summary>
     /// <param name="transactions">The list of transactions.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The 32-byte Merkle root hash.</returns>
     /// <remarks>
     /// If there are no transactions, returns a zero hash (32 zero bytes).
     /// Uses SHA256 for hashing transaction data.
     /// </remarks>
-    private static byte[] ComputeTransactionMerkleRoot(IReadOnlyList<Transaction> transactions)
+    private static async Task<byte[]> ComputeTransactionMerkleRootAsync(
+        IReadOnlyList<Transaction> transactions,
+        CancellationToken cancellationToken)
     {
         if (transactions.Count == 0)
         {
@@ -210,9 +213,8 @@ public sealed class BlockBuilder
 
         // Convert transactions to async enumerable of hashes
         var leaves = GetTransactionHashesAsync(transactions);
-        var metadata = merkleTreeStream.BuildAsync(leaves, cacheConfig: null, CancellationToken.None)
-            .GetAwaiter()
-            .GetResult();
+        var metadata = await merkleTreeStream.BuildAsync(leaves, cacheConfig: null, cancellationToken)
+            .ConfigureAwait(false);
 
         return metadata.RootHash;
     }
@@ -226,6 +228,5 @@ public sealed class BlockBuilder
         {
             yield return tx.ComputeHash();
         }
-        await Task.CompletedTask;
     }
 }
