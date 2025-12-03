@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using MerkleTree.Core;
 using MerkleTree.Hashing;
 
@@ -158,7 +157,7 @@ public sealed class BlockBuilder
             proofScore: proofScore.Span,
             txRoot: txRoot,
             minerId: minerId,
-            signature: Array.Empty<byte>());
+            signature: []);
 
         cancellationToken.ThrowIfCancellationRequested();
 
