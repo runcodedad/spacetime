@@ -12,6 +12,10 @@ This project provides the fundamental data structures for the Spacetime Proof-of
 - **BlockProof** - Proof-of-Space-Time proof data
 - **BlockPlotMetadata** - Plot file metadata included in proofs
 - **Transaction** - Account-based transaction with sender, recipient, amount, nonce, fee, and signature
+- **BlockBuilder** - Constructs valid blocks when a miner wins (collects transactions, builds Merkle tree, signs)
+- **IMempool** - Interface for accessing pending transactions
+- **IBlockSigner** - Interface for cryptographic block signing
+- **IBlockValidator** - Interface for block validation
 
 ## Block Structure
 
@@ -109,7 +113,45 @@ var hash = blockHeader.ComputeHash();
 
 ## Usage Examples
 
-### Creating a New Block
+### Building a Block (Recommended for Miners)
+
+```csharp
+using Spacetime.Core;
+using System.Security.Cryptography;
+
+// Create implementations of required interfaces (application-specific)
+IMempool mempool = new YourMempoolImplementation();
+IBlockSigner signer = new YourSignerImplementation(minerPrivateKey);
+IBlockValidator validator = new YourValidatorImplementation();
+
+// Create the block builder
+var builder = new BlockBuilder(mempool, signer, validator);
+
+// Create the winning proof
+var proof = new BlockProof(
+    leafValue: winningLeafValue,
+    leafIndex: winningLeafIndex,
+    merkleProofPath: merkleProofSiblings,
+    orientationBits: merkleProofOrientationBits,
+    plotMetadata: plotMetadata);
+
+// Build a complete, signed, and validated block
+var block = await builder.BuildBlockAsync(
+    parentHash: previousBlockHash,
+    height: previousHeight + 1,
+    difficulty: currentDifficulty,
+    epoch: currentEpoch,
+    challenge: currentChallenge,
+    proof: proof,
+    plotRoot: plotMerkleRoot,
+    proofScore: computedProofScore,
+    maxTransactions: 1000);
+
+// Block is ready for broadcast
+var blockBytes = block.Serialize();
+```
+
+### Creating a Block Manually (Low-Level)
 
 ```csharp
 using Spacetime.Core;
@@ -314,10 +356,132 @@ Account state includes:
 
 5. **ReadOnlySpan**: Hash fields are exposed as `ReadOnlySpan<byte>` to prevent modification while avoiding heap allocations. Use `.ToArray()` if you need to store or pass the data to async methods.
 
+## BlockBuilder
+
+The `BlockBuilder` class provides a high-level API for constructing valid blocks when a miner wins the challenge. It automates the entire block building process:
+
+### Features
+
+1. **Transaction Collection**: Automatically collects pending transactions from the mempool
+2. **Merkle Tree Computation**: Builds the transaction Merkle tree using the MerkleTree library
+3. **Header Population**: Populates all block header fields with current values
+4. **Automatic Signing**: Signs the block using the provided signer implementation
+5. **Self-Validation**: Validates the block before returning to ensure correctness
+6. **Cancellation Support**: Respects cancellation tokens throughout the build process
+
+### Required Interfaces
+
+To use the `BlockBuilder`, you must provide implementations of these interfaces:
+
+#### IMempool
+
+Provides access to pending transactions:
+
+```csharp
+public interface IMempool
+{
+    Task<IReadOnlyList<Transaction>> GetPendingTransactionsAsync(
+        int maxCount,
+        CancellationToken cancellationToken = default);
+}
+```
+
+Implementation should:
+- Return transactions in priority order (typically by fee)
+- Ensure all returned transactions are signed and valid
+- Respect the `maxCount` limit
+
+#### IBlockSigner
+
+Provides cryptographic signing for blocks:
+
+```csharp
+public interface IBlockSigner
+{
+    Task<byte[]> SignBlockHeaderAsync(
+        ReadOnlyMemory<byte> headerHash,
+        CancellationToken cancellationToken = default);
+    
+    byte[] GetPublicKey();
+}
+```
+
+Implementation should:
+- Sign the 32-byte header hash using ECDSA with secp256k1
+- Return a 64-byte signature (r, s components)
+- Provide the 33-byte compressed public key
+
+#### IBlockValidator
+
+Validates blocks against consensus rules:
+
+```csharp
+public interface IBlockValidator
+{
+    Task<bool> ValidateBlockAsync(
+        Block block,
+        CancellationToken cancellationToken = default);
+}
+```
+
+Implementation should verify:
+- Block header signature is valid
+- Proof score meets difficulty requirement
+- Transaction Merkle root is correct
+- All transactions are signed and valid
+- Block timestamp is reasonable
+
+### Usage Example
+
+```csharp
+// Setup dependencies
+var mempool = new YourMempoolImplementation();
+var signer = new YourSignerImplementation(minerPrivateKey);
+var validator = new YourValidatorImplementation();
+
+// Create builder
+var builder = new BlockBuilder(mempool, signer, validator);
+
+// Build block when you win
+var block = await builder.BuildBlockAsync(
+    parentHash: previousBlockHash,
+    height: previousHeight + 1,
+    difficulty: currentDifficulty,
+    epoch: currentEpoch,
+    challenge: currentChallenge,
+    proof: winningProof,
+    plotRoot: plotMerkleRoot,
+    proofScore: computedScore,
+    maxTransactions: 1000,
+    cancellationToken: cancellationToken);
+
+// Block is ready for broadcast
+await BroadcastBlockAsync(block);
+```
+
+### Transaction Merkle Root
+
+The BlockBuilder automatically computes the transaction Merkle root using the MerkleTree library:
+
+- If there are no transactions, it produces a zero hash (32 zero bytes)
+- If there are transactions, it builds a Merkle tree from their hashes
+- The Merkle root is placed in the `tx_root` field of the block header
+
+### Validation
+
+The BlockBuilder performs self-validation before returning the block:
+
+- Calls the provided `IBlockValidator` implementation
+- Throws `InvalidOperationException` if validation fails
+- Ensures the block is safe to broadcast
+
 ## Dependencies
 
 - `Spacetime.Common` - Shared utilities
+- `MerkleTree` - Merkle tree construction and verification (v1.0.0-beta.1)
 
 ## Thread Safety
 
 All classes are thread-safe for reading after construction. The `BlockHeader.SetSignature()` and `Transaction.SetSignature()` methods are the only mutation operations and should only be called once before sharing the objects across threads.
+
+The `BlockBuilder` itself is thread-safe and can be shared across multiple threads, but each block building operation should be independent.
