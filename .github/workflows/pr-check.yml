@@ -11,6 +11,9 @@ on:
       - 'src/**'
       - 'tests/**'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
