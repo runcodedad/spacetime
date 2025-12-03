@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  unit-tests:
     runs-on: ubuntu-latest
     
     steps:
@@ -33,33 +33,6 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release
     
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-artifacts
-        path: |
-          src/**/bin/Release/**
-          tests/**/bin/Release/**
-        retention-days: 1
-
-  unit-tests:
-    needs: build
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '10.0.x'
-    
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifacts
-    
     - name: Run unit tests
       run: |
         dotnet test tests/Spacetime.Common.Tests/Spacetime.Common.Tests.csproj --no-build --configuration Release --verbosity normal
@@ -67,7 +40,6 @@ jobs:
         dotnet test tests/Spacetime.Plotting.Tests/Spacetime.Plotting.Tests.csproj --no-build --configuration Release --verbosity normal
 
   integration-tests:
-    needs: build
     runs-on: ubuntu-latest
     
     steps:
@@ -79,10 +51,11 @@ jobs:
       with:
         dotnet-version: '10.0.x'
     
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifacts
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
     
     - name: Run integration tests
       run: dotnet test tests/Spacetime.Plotting.IntegrationTests/Spacetime.Plotting.IntegrationTests.csproj --no-build --configuration Release --verbosity normal
