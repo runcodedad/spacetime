@@ -11,6 +11,7 @@ This project provides the fundamental data structures for the Spacetime Proof-of
 - **BlockBody** - Transactions and PoST proof
 - **BlockProof** - Proof-of-Space-Time proof data
 - **BlockPlotMetadata** - Plot file metadata included in proofs
+- **Transaction** - Account-based transaction with sender, recipient, amount, nonce, fee, and signature
 
 ## Block Structure
 
@@ -37,8 +38,24 @@ This project provides the fundamental data structures for the Spacetime Proof-of
 
 | Field | Type | Description |
 |-------|------|-------------|
-| transactions[] | byte[][] | List of transactions (length-prefixed) |
+| transactions[] | Transaction[] | List of transactions (length-prefixed) |
 | proof | BlockProof | The winning PoST proof |
+
+### Transaction (155 bytes)
+
+| Field | Type | Size (bytes) | Description |
+|-------|------|--------------|-------------|
+| version | byte | 1 | Transaction format version |
+| sender | bytes | 33 | Public key of the sender (compressed ECDSA secp256k1) |
+| recipient | bytes | 33 | Public key of the recipient (compressed ECDSA secp256k1) |
+| amount | long | 8 | Amount to transfer (must be positive) |
+| nonce | long | 8 | Nonce for replay protection (sequential per account) |
+| fee | long | 8 | Transaction fee paid to miner |
+| signature | bytes | 64 | ECDSA signature of the transaction (without signature field) |
+
+**Transaction Hash**: `SHA256(serialize(transaction_without_signature))`
+
+**Transaction Model**: Spacetime uses an **account-based** transaction model for extensibility and future smart contract support.
 
 ### Block Proof (variable size)
 
@@ -165,6 +182,126 @@ if (!VerifyEcdsaSecp256k1(headerHash, block.Header.Signature, block.Header.Miner
 // ...
 ```
 
+### Creating and Signing a Transaction
+
+```csharp
+using Spacetime.Core;
+using System.Security.Cryptography;
+
+// Create an unsigned transaction
+var tx = new Transaction(
+    sender: senderPublicKey,        // 33-byte compressed ECDSA secp256k1 public key
+    recipient: recipientPublicKey,  // 33-byte compressed ECDSA secp256k1 public key
+    amount: 1000,                   // Transfer 1000 units
+    nonce: 5,                       // Account nonce (must be sequential)
+    fee: 10,                        // Pay 10 units as transaction fee
+    signature: Array.Empty<byte>()); // Empty signature for unsigned tx
+
+// Compute transaction hash (for signing)
+var txHash = tx.ComputeHash();
+
+// Sign the transaction (implement your own signing using ECDSA)
+var signature = SignWithEcdsaSecp256k1(txHash, senderPrivateKey); // User-implemented
+tx.SetSignature(signature);
+
+// Serialize for network transmission
+var txBytes = tx.Serialize();
+
+// Or create block with transactions
+var transactions = new[] { tx };
+var body = new BlockBody(transactions, proof);
+```
+
+### Validating a Transaction
+
+```csharp
+// Deserialize received transaction
+var tx = Transaction.Deserialize(receivedBytes);
+
+// Basic validation (structure and rules)
+if (!tx.ValidateBasicRules())
+    throw new InvalidOperationException("Transaction failed basic validation");
+
+// Verify signature (implement your own verification using ECDSA)
+var txHash = tx.ComputeHash();
+if (!VerifyEcdsaSecp256k1(txHash, tx.Signature, tx.Sender)) // User-implemented
+    throw new InvalidOperationException("Invalid transaction signature");
+
+// Verify sender has sufficient balance (application-specific state check)
+var senderBalance = GetAccountBalance(tx.Sender); // User-implemented
+if (senderBalance < tx.Amount + tx.Fee)
+    throw new InvalidOperationException("Insufficient balance");
+
+// Verify nonce is correct (prevents replay attacks)
+var expectedNonce = GetAccountNonce(tx.Sender); // User-implemented
+if (tx.Nonce != expectedNonce)
+    throw new InvalidOperationException("Invalid nonce");
+
+// Transaction is valid - apply state changes
+```
+
+### Working with Block Transactions
+
+```csharp
+// Create block with typed transactions
+var transactions = new Transaction[]
+{
+    new Transaction(sender1, recipient1, 1000, 1, 10, signature1),
+    new Transaction(sender2, recipient2, 2000, 2, 20, signature2)
+};
+var body = new BlockBody(transactions, proof);
+
+// Retrieve transactions from block body
+var txList = body.Transactions;
+foreach (var tx in txList)
+{
+    Console.WriteLine($"Amount: {tx.Amount}, Fee: {tx.Fee}, Nonce: {tx.Nonce}");
+}
+```
+
+## Transaction Validation Rules
+
+The `Transaction.ValidateBasicRules()` method performs basic structural validation:
+
+1. **Signature Required**: Transaction must be signed (64-byte signature present)
+2. **Positive Amount**: Amount must be greater than zero
+3. **Non-negative Fee**: Fee must be zero or positive
+4. **Non-negative Nonce**: Nonce must be zero or positive
+5. **Distinct Parties**: Sender and recipient must be different
+
+Additional validation (requiring state access) must be performed by the caller:
+
+- **Signature Verification**: Verify the signature matches the sender's public key
+- **Balance Check**: Verify sender has sufficient balance (amount + fee)
+- **Nonce Check**: Verify nonce matches expected sequential value for the account
+- **Account Existence**: Verify accounts exist or handle account creation
+
+## Transaction Model: Account-Based
+
+Spacetime uses an **account-based** transaction model (similar to Ethereum) rather than UTXO (like Bitcoin):
+
+### Why Account-Based?
+
+1. **Extensibility**: Easier to add smart contracts and complex state transitions in the future
+2. **Simplicity**: Simpler to track balances and state per account
+3. **Efficiency**: No need to track and validate multiple UTXOs per transaction
+
+### Nonce for Replay Protection
+
+Each account maintains a sequential nonce counter:
+- First transaction from an account has nonce = 0
+- Each subsequent transaction increments the nonce by 1
+- Transactions must be processed in nonce order
+- Prevents replay attacks where an old signed transaction is resubmitted
+
+### State Management
+
+Account state includes:
+- **Balance**: Current account balance
+- **Nonce**: Next expected transaction nonce
+- Optionally: **Code** (for smart contracts, future feature)
+- Optionally: **Storage** (for contract state, future feature)
+
 ## Design Decisions
 
 1. **Immutability**: All fields are read-only after construction, except for the signature which can be set once.
@@ -183,4 +320,4 @@ if (!VerifyEcdsaSecp256k1(headerHash, block.Header.Signature, block.Header.Miner
 
 ## Thread Safety
 
-All classes are thread-safe for reading after construction. The `BlockHeader.SetSignature()` method is the only mutation operation and should only be called once before sharing the header across threads.
+All classes are thread-safe for reading after construction. The `BlockHeader.SetSignature()` and `Transaction.SetSignature()` methods are the only mutation operations and should only be called once before sharing the objects across threads.

@@ -5,21 +5,17 @@ namespace Spacetime.Core;
 /// </summary>
 /// <remarks>
 /// The block body contains:
-/// - List of transactions (currently as raw byte arrays)
+/// - List of transactions (as Transaction objects)
 /// - The winning PoST proof from the miner
 /// </remarks>
 public sealed class BlockBody
 {
-    private readonly List<byte[]> _transactions;
+    private readonly List<Transaction> _transactions;
 
     /// <summary>
     /// Gets the list of transactions in this block.
     /// </summary>
-    /// <remarks>
-    /// Transactions are currently represented as raw byte arrays.
-    /// This will be replaced with a proper Transaction class in the future.
-    /// </remarks>
-    public IReadOnlyList<byte[]> Transactions => _transactions;
+    public IReadOnlyList<Transaction> Transactions => _transactions;
 
     /// <summary>
     /// Gets the winning PoST proof for this block.
@@ -32,20 +28,27 @@ public sealed class BlockBody
     /// <param name="transactions">The list of transactions.</param>
     /// <param name="proof">The PoST proof.</param>
     /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-    public BlockBody(IReadOnlyList<byte[]> transactions, BlockProof proof)
+    public BlockBody(IReadOnlyList<Transaction> transactions, BlockProof proof)
     {
         ArgumentNullException.ThrowIfNull(transactions);
         ArgumentNullException.ThrowIfNull(proof);
 
-        // Validate and copy transactions
-        _transactions = new List<byte[]>(transactions.Count);
+        // Validate and store transactions
+        _transactions = new List<Transaction>(transactions.Count);
+        
         foreach (var tx in transactions)
         {
             if (tx == null)
             {
                 throw new ArgumentException("Transactions cannot contain null entries", nameof(transactions));
             }
-            _transactions.Add((byte[])tx.Clone());
+            
+            if (!tx.IsSigned())
+            {
+                throw new ArgumentException("All transactions must be signed", nameof(transactions));
+            }
+            
+            _transactions.Add(tx);
         }
 
         Proof = proof;
@@ -64,8 +67,9 @@ public sealed class BlockBody
         writer.Write(_transactions.Count);
         foreach (var tx in _transactions)
         {
-            writer.Write(tx.Length);
-            writer.Write(tx);
+            var txBytes = tx.Serialize();
+            writer.Write(txBytes.Length);
+            writer.Write(txBytes);
         }
 
         // Write proof
@@ -90,7 +94,7 @@ public sealed class BlockBody
             throw new InvalidOperationException("Invalid transaction count");
         }
 
-        var transactions = new List<byte[]>(txCount);
+        var transactions = new List<Transaction>(txCount);
         for (var i = 0; i < txCount; i++)
         {
             var txLength = reader.ReadInt32();
@@ -99,12 +103,13 @@ public sealed class BlockBody
                 throw new InvalidOperationException("Invalid transaction length");
             }
 
-            var tx = reader.ReadBytes(txLength);
-            if (tx.Length != txLength)
+            var txBytes = reader.ReadBytes(txLength);
+            if (txBytes.Length != txLength)
             {
                 throw new InvalidOperationException("Failed to read transaction: unexpected end of stream");
             }
-            transactions.Add(tx);
+            
+            transactions.Add(Transaction.Deserialize(txBytes));
         }
 
         // Read proof
