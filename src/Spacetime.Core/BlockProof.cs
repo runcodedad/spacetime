@@ -19,7 +19,7 @@ public sealed class BlockProof
     /// <summary>
     /// Size of hash values in bytes (SHA256).
     /// </summary>
-    private const int HashSize = 32;
+    private const int _hashSize = 32;
 
     private readonly byte[] _leafValue;
     private readonly List<byte[]> _merkleProofPath;
@@ -78,9 +78,9 @@ public sealed class BlockProof
         ArgumentNullException.ThrowIfNull(orientationBits);
         ArgumentNullException.ThrowIfNull(plotMetadata);
 
-        if (leafValue.Length != HashSize)
+        if (leafValue.Length != _hashSize)
         {
-            throw new ArgumentException($"Leaf value must be {HashSize} bytes", nameof(leafValue));
+            throw new ArgumentException($"Leaf value must be {_hashSize} bytes", nameof(leafValue));
         }
 
         if (leafIndex < 0)
@@ -97,10 +97,10 @@ public sealed class BlockProof
 
         foreach (var hash in merkleProofPath)
         {
-            if (hash == null || hash.Length != HashSize)
+            if (hash == null || hash.Length != _hashSize)
             {
                 throw new ArgumentException(
-                    $"All Merkle proof hashes must be {HashSize} bytes",
+                    $"All Merkle proof hashes must be {_hashSize} bytes",
                     nameof(merkleProofPath));
             }
         }
@@ -158,8 +158,8 @@ public sealed class BlockProof
         ArgumentNullException.ThrowIfNull(reader);
 
         // Read leaf value
-        var leafValue = reader.ReadBytes(HashSize);
-        if (leafValue.Length != HashSize)
+        var leafValue = reader.ReadBytes(_hashSize);
+        if (leafValue.Length != _hashSize)
         {
             throw new InvalidOperationException("Failed to read leaf value: unexpected end of stream");
         }
@@ -177,8 +177,8 @@ public sealed class BlockProof
         var merkleProofPath = new List<byte[]>(proofPathCount);
         for (var i = 0; i < proofPathCount; i++)
         {
-            var hash = reader.ReadBytes(HashSize);
-            if (hash.Length != HashSize)
+            var hash = reader.ReadBytes(_hashSize);
+            if (hash.Length != _hashSize)
             {
                 throw new InvalidOperationException("Failed to read Merkle proof hash: unexpected end of stream");
             }
