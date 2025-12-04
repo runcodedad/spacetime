@@ -276,7 +276,7 @@ public class EpochBlockProductionTests
         for (var i = 0; i < 10; i++)
         {
             var blockHash = blockHashes[i];
-            tasks.Add(Task.Run(async () =>
+            tasks.Add(Task.Run(() =>
             {
                 try
                 {
