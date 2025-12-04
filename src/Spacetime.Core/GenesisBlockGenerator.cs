@@ -144,8 +144,9 @@ public sealed class GenesisBlockGenerator : IGenesisBlockGenerator
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A list of signed premine transactions.</returns>
     /// <remarks>
-    /// Premine transactions use a special sender address (all zeros) to indicate they are coinbase/premine transactions.
-    /// This distinguishes them from regular user-to-user transfers.
+    /// Premine transactions use a special sender address (all zeros) to indicate they create new coins from nothing.
+    /// This is called a "coinbase transaction" in blockchain terminology (the term comes from Bitcoin, not the company).
+    /// This distinguishes them from regular user-to-user transfers where coins move between existing accounts.
     /// </remarks>
     private static async Task<IReadOnlyList<Transaction>> CreatePremineTransactionsAsync(
         GenesisConfig config,
@@ -154,8 +155,9 @@ public sealed class GenesisBlockGenerator : IGenesisBlockGenerator
     {
         var transactions = new List<Transaction>();
 
-        // Special coinbase sender address (all zeros) to indicate this is a premine allocation
-        var coinbaseSender = new byte[33];
+        // Special sender address (all zeros) indicates this transaction creates new coins (a "coinbase" transaction)
+        // Note: "coinbase" is blockchain terminology for transactions that mint new coins, not related to Coinbase the company
+        var mintSender = new byte[33];
 
         // Create a transaction for each premine allocation
         foreach (var allocation in config.PreminedAllocations)
@@ -172,14 +174,14 @@ public sealed class GenesisBlockGenerator : IGenesisBlockGenerator
             }
 
             // Create premine transaction
-            // Sender: all zeros (coinbase address)
+            // Sender: all zeros (indicates new coin creation)
             // Recipient: allocation recipient
             // Amount: allocation amount
             // Nonce: 0 (first transaction)
             // Fee: 0 (no fee for premine)
             // Signature: empty initially
             var tx = new Transaction(
-                sender: coinbaseSender,
+                sender: mintSender,
                 recipient: recipientPublicKey,
                 amount: allocation.Value,
                 nonce: 0,

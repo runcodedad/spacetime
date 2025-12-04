@@ -166,9 +166,11 @@ Genesis blocks can include premine transactions to allocate initial balances to 
 
 ### How Premine Works
 
-- Premine transactions use a special **coinbase sender address** (all zeros, 33 bytes) to indicate they are not regular user transactions
+- Premine transactions use a special **sender address of all zeros** (33 bytes) to indicate they create new coins from nothing
+  - This is called a "coinbase transaction" in blockchain terminology (the term originates from Bitcoin, not the company)
+  - The all-zeros sender distinguishes coin creation from regular user-to-user transfers
 - Each premine allocation creates a signed transaction:
-  - **Sender**: All zeros (coinbase address)
+  - **Sender**: All zeros (indicates new coin creation)
   - **Recipient**: The public key from the allocation
   - **Amount**: The allocation amount
   - **Nonce**: 0 (first transaction)
