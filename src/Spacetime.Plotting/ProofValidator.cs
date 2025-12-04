@@ -9,7 +9,7 @@ namespace Spacetime.Plotting;
 /// <remarks>
 /// The proof validator performs the following checks:
 /// 1. Recalculates score = H(challenge || leaf) and verifies it matches
-/// 2. Compares score against difficulty target (score &lt; target)
+/// 2. Compares score against difficulty target (score less than target)
 /// 3. Verifies Merkle path using the MerkleTree library
 /// 4. Verifies plot root matches known plot identity
 /// 5. Verifies challenge matches expected challenge
@@ -69,7 +69,7 @@ public sealed class ProofValidator
     /// </summary>
     /// <param name="score">The 32-byte proof score to check.</param>
     /// <param name="difficultyTarget">The 32-byte difficulty target.</param>
-    /// <returns>True if the score meets the target (score &lt; target); otherwise, false.</returns>
+    /// <returns>True if the score meets the target (score is less than target); otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when arguments are null.</exception>
     /// <exception cref="ArgumentException">Thrown when arguments have invalid sizes.</exception>
     /// <remarks>
@@ -235,7 +235,7 @@ public sealed class ProofValidator
     }
 
     /// <summary>
-    /// Compares two scores. Returns negative if score1 &lt; score2, zero if equal, positive if score1 &gt; score2.
+    /// Compares two scores. Returns negative if score1 is less than score2, zero if equal, positive if score1 is greater than score2.
     /// </summary>
     /// <remarks>
     /// Scores are compared as big-endian unsigned integers (byte-by-byte from left to right).
