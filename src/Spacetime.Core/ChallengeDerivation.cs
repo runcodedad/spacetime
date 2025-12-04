@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 
 namespace Spacetime.Core;
@@ -53,17 +54,7 @@ public static class ChallengeDerivation
         previousBlockHash.CopyTo(combined);
         
         // Write epoch number in little-endian format for cross-platform consistency
-        if (BitConverter.IsLittleEndian)
-        {
-            BitConverter.TryWriteBytes(combined[ChallengeSize..], epochNumber);
-        }
-        else
-        {
-            // Convert to little-endian on big-endian systems
-            var epochBytes = BitConverter.GetBytes(epochNumber);
-            Array.Reverse(epochBytes);
-            epochBytes.CopyTo(combined[ChallengeSize..]);
-        }
+        BinaryPrimitives.WriteInt64LittleEndian(combined[ChallengeSize..], epochNumber);
 
         // Return SHA256 hash as the challenge
         return SHA256.HashData(combined);

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 
 namespace Spacetime.Plotting;
@@ -163,15 +164,15 @@ public sealed class PlotHeader
         offset += _hashSize;
 
         // Leaf count
-        BitConverter.TryWriteBytes(buffer.AsSpan(offset), LeafCount);
+        BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(offset), LeafCount);
         offset += sizeof(long);
 
         // Leaf size
-        BitConverter.TryWriteBytes(buffer.AsSpan(offset), LeafSize);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan(offset), LeafSize);
         offset += sizeof(int);
 
         // Tree height
-        BitConverter.TryWriteBytes(buffer.AsSpan(offset), TreeHeight);
+        BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(offset), TreeHeight);
         offset += sizeof(long);
 
         // Merkle root
@@ -231,15 +232,15 @@ public sealed class PlotHeader
         offset += _hashSize;
 
         // Read leaf count
-        var leafCount = BitConverter.ToInt64(data[offset..]);
+        var leafCount = BinaryPrimitives.ReadInt64LittleEndian(data[offset..]);
         offset += sizeof(long);
 
         // Read leaf size
-        var leafSize = BitConverter.ToInt32(data[offset..]);
+        var leafSize = BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
         offset += sizeof(int);
 
         // Read tree height
-        var treeHeight = BitConverter.ToInt64(data[offset..]);
+        var treeHeight = BinaryPrimitives.ReadInt64LittleEndian(data[offset..]);
         offset += sizeof(long);
 
         // Read Merkle root

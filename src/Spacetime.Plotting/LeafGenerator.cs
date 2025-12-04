@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 
 namespace Spacetime.Plotting;
@@ -57,7 +58,7 @@ public static class LeafGenerator
         plotSeed.CopyTo(input.AsSpan(offset));
         offset += 32;
 
-        BitConverter.TryWriteBytes(input.AsSpan(offset), nonce);
+        BinaryPrimitives.WriteInt64LittleEndian(input.AsSpan(offset), nonce);
 
         // Hash to produce leaf
         using var sha256 = SHA256.Create();
