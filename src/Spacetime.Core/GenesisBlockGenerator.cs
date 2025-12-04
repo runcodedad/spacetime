@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using MerkleTree.Core;
+using MerkleTree.Hashing;
 
 namespace Spacetime.Core;
 
@@ -63,7 +65,7 @@ public sealed class GenesisBlockGenerator : IGenesisBlockGenerator
         cancellationToken.ThrowIfCancellationRequested();
 
         // Create premine transactions
-        var transactions = await CreatePremineTransactionsAsync(config, cancellationToken);
+        var transactions = await CreatePremineTransactionsAsync(config, _signer, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -138,13 +140,22 @@ public sealed class GenesisBlockGenerator : IGenesisBlockGenerator
     /// Creates premine transactions from the genesis configuration.
     /// </summary>
     /// <param name="config">The genesis configuration.</param>
+    /// <param name="signer">The signer for signing the premine transactions.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>A list of premine transactions.</returns>
+    /// <returns>A list of signed premine transactions.</returns>
+    /// <remarks>
+    /// Premine transactions use a special sender address (all zeros) to indicate they are coinbase/premine transactions.
+    /// This distinguishes them from regular user-to-user transfers.
+    /// </remarks>
     private static async Task<IReadOnlyList<Transaction>> CreatePremineTransactionsAsync(
         GenesisConfig config,
+        IBlockSigner signer,
         CancellationToken cancellationToken)
     {
         var transactions = new List<Transaction>();
+
+        // Special coinbase sender address (all zeros) to indicate this is a premine allocation
+        var coinbaseSender = new byte[33];
 
         // Create a transaction for each premine allocation
         foreach (var allocation in config.PreminedAllocations)
@@ -161,14 +172,28 @@ public sealed class GenesisBlockGenerator : IGenesisBlockGenerator
             }
 
             // Create premine transaction
-            // Note: In a real implementation, this would use a proper Transaction constructor
-            // For now, we'll create an empty list since Transaction structure may need to be updated
-            // to support coinbase/premine transactions
+            // Sender: all zeros (coinbase address)
+            // Recipient: allocation recipient
+            // Amount: allocation amount
+            // Nonce: 0 (first transaction)
+            // Fee: 0 (no fee for premine)
+            // Signature: empty initially
+            var tx = new Transaction(
+                sender: coinbaseSender,
+                recipient: recipientPublicKey,
+                amount: allocation.Value,
+                nonce: 0,
+                fee: 0,
+                signature: []);
+
+            // Sign the transaction with genesis signer
+            var txHash = tx.ComputeHash();
+            var txSignature = await signer.SignBlockHeaderAsync(txHash, cancellationToken);
+            tx.SetSignature(txSignature);
+
+            transactions.Add(tx);
         }
 
-        // Return empty list for now - premine transactions will be added in a future update
-        // when the Transaction class is extended to support coinbase transactions
-        await Task.CompletedTask;
         return transactions;
     }
 
@@ -178,6 +203,10 @@ public sealed class GenesisBlockGenerator : IGenesisBlockGenerator
     /// <param name="transactions">The list of transactions.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The 32-byte Merkle root hash.</returns>
+    /// <remarks>
+    /// If there are no transactions, returns a zero hash (32 zero bytes).
+    /// Uses SHA256 for hashing transaction data via the MerkleTree library.
+    /// </remarks>
     private static async Task<byte[]> ComputeTransactionMerkleRootAsync(
         IReadOnlyList<Transaction> transactions,
         CancellationToken cancellationToken)
@@ -185,13 +214,30 @@ public sealed class GenesisBlockGenerator : IGenesisBlockGenerator
         if (transactions.Count == 0)
         {
             // Empty transaction list produces zero hash
-            await Task.CompletedTask;
             return new byte[32];
         }
 
-        // For now, return zero hash since we don't have transactions yet
-        // In future, this will use MerkleTree library
-        return new byte[32];
+        // Build Merkle tree using the MerkleTree library
+        var hashFunction = new Sha256HashFunction();
+        var merkleTreeStream = new MerkleTreeStream(hashFunction);
+
+        // Convert transactions to async enumerable of hashes
+        var leaves = GetTransactionHashesAsync(transactions);
+        var metadata = await merkleTreeStream.BuildAsync(leaves, cacheConfig: null, cancellationToken)
+            .ConfigureAwait(false);
+
+        return metadata.RootHash;
+    }
+
+    /// <summary>
+    /// Converts a list of transactions to an async enumerable of transaction hashes.
+    /// </summary>
+    private static async IAsyncEnumerable<byte[]> GetTransactionHashesAsync(IReadOnlyList<Transaction> transactions)
+    {
+        foreach (var tx in transactions)
+        {
+            yield return tx.ComputeHash();
+        }
     }
 
     /// <summary>

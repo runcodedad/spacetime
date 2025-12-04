@@ -158,6 +158,44 @@ A valid genesis block has the following properties:
 - **Difficulty**: Matches configuration
 - **Epoch**: Matches configuration (typically 0)
 - **Signature**: Valid ECDSA signature from genesis signer
+- **Transactions**: Contains premine transactions (if configured)
+
+## Premine Transactions
+
+Genesis blocks can include premine transactions to allocate initial balances to specific addresses:
+
+### How Premine Works
+
+- Premine transactions use a special **coinbase sender address** (all zeros, 33 bytes) to indicate they are not regular user transactions
+- Each premine allocation creates a signed transaction:
+  - **Sender**: All zeros (coinbase address)
+  - **Recipient**: The public key from the allocation
+  - **Amount**: The allocation amount
+  - **Nonce**: 0 (first transaction)
+  - **Fee**: 0 (no fee for premine)
+  - **Signature**: Signed by genesis signer
+
+### Example
+
+```csharp
+// Create config with premine allocations
+var premine = new Dictionary<string, long>
+{
+    ["03a1b2c3d4e5f6..."] = 1_000_000, // Allocate 1M to this address
+    ["02f1e2d3c4b5a6..."] = 500_000    // Allocate 500K to this address
+};
+
+var config = GenesisConfigs.CreateCustom(
+    networkId: "my-network",
+    preminedAllocations: premine);
+
+// Generate genesis block - will include 2 premine transactions
+var generator = new GenesisBlockGenerator(signer);
+var genesisBlock = await generator.GenerateGenesisBlockAsync(config);
+
+// The block body contains the premine transactions
+Console.WriteLine($"Premine transactions: {genesisBlock.Body.Transactions.Count}");
+```
 
 ## Security Considerations
 
@@ -176,8 +214,10 @@ A valid genesis block has the following properties:
 
 ### 3. Initial Difficulty
 
-- Mainnet: High difficulty for security (≥1,000,000)
-- Testnet: Moderate difficulty for testing (≥10,000)
+**Understanding Difficulty**: Higher difficulty values make it harder to produce valid blocks. The difficulty parameter sets the threshold that proof scores must meet.
+
+- Mainnet: High difficulty for security (≥1,000,000) - More secure but slower mining
+- Testnet: Moderate difficulty for testing (≥10,000) - Balanced for testing scenarios
 - Devnet: Low difficulty for development (≥100)
 
 ### 4. Premine Allocations
