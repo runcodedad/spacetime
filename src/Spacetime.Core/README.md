@@ -16,6 +16,10 @@ This project provides the fundamental data structures for the Spacetime Proof-of
 - **IMempool** - Interface for accessing pending transactions
 - **IBlockSigner** - Interface for cryptographic block signing
 - **IBlockValidator** - Interface for block validation
+- **EpochManager** - Manages epoch transitions and challenge generation
+- **ChallengeDerivation** - Deterministic challenge derivation from block hash
+- **EpochConfig** - Configuration for epoch timing and challenge windows
+- **IEpochManager** - Interface for epoch management abstraction
 
 ## Block Structure
 
@@ -551,6 +555,178 @@ A valid genesis block must have:
 - Valid signature from genesis signer
 
 For detailed documentation, see [Genesis Configuration Guide](../../docs/genesis-configuration.md).
+
+## Epoch Management and Challenge System
+
+The epoch management system handles the timing and challenge derivation for Spacetime's Proof-of-Space-Time consensus.
+
+### What is an Epoch?
+
+An epoch is one full challenge cycle:
+1. Network issues a challenge
+2. Miners compute and submit proofs
+3. Network evaluates proofs
+4. If a valid proof meets difficulty → block is produced
+5. Otherwise → epoch ends with no block
+
+The **challenge window** defines how long miners have to submit proofs. Many epochs may occur before a block is produced.
+
+### Epoch Configuration
+
+```csharp
+// Create epoch configuration
+var config = new EpochConfig(epochDurationSeconds: 10); // 10 second challenge window
+
+// Or use default (10 seconds)
+var defaultConfig = EpochConfig.Default();
+```
+
+Configuration options:
+- **EpochDurationSeconds**: Duration of each epoch (challenge window) in seconds
+- **Default**: 10 seconds
+- **Range**: 1-3600 seconds
+
+### Challenge Derivation
+
+Challenges are derived deterministically from the previous block hash to ensure:
+- **Determinism**: All nodes derive the same challenge
+- **Uniqueness**: Each epoch has a unique challenge (anti-replay)
+- **Unpredictability**: Miners cannot pre-compute challenges
+
+```csharp
+// Derive challenge for a specific epoch
+var blockHash = previousBlock.ComputeHash();
+var epochNumber = 10;
+var challenge = ChallengeDerivation.DeriveChallenge(blockHash, epochNumber);
+
+// Verify a challenge
+bool isValid = ChallengeDerivation.VerifyChallenge(challenge, blockHash, epochNumber);
+
+// Derive genesis challenge (for first epoch)
+var genesisChallenge = ChallengeDerivation.DeriveGenesisChallenge("mainnet");
+bool isGenesisValid = ChallengeDerivation.VerifyGenesisChallenge(genesisChallenge, "mainnet");
+```
+
+### Using the Epoch Manager
+
+The `EpochManager` tracks the current epoch and manages transitions:
+
+```csharp
+// Create epoch manager
+var config = new EpochConfig(10);
+var epochManager = new EpochManager(config);
+
+// Advance to next epoch when a block is produced
+var newBlockHash = block.ComputeHash();
+epochManager.AdvanceEpoch(newBlockHash);
+
+// Access current epoch state
+var currentEpoch = epochManager.CurrentEpoch;
+var currentChallenge = epochManager.CurrentChallenge;
+var epochStartTime = epochManager.EpochStartTime;
+var timeRemaining = epochManager.TimeRemainingInEpoch;
+var isExpired = epochManager.IsEpochExpired;
+
+// Validate a challenge for a specific epoch
+bool isValid = epochManager.ValidateChallengeForEpoch(
+    challenge, 
+    epochNumber, 
+    previousBlockHash);
+
+// Reset to specific state (e.g., after chain reorganization)
+epochManager.Reset(epochNumber: 5, challenge, startTime);
+```
+
+### Epoch Lifecycle Example
+
+```csharp
+// Initialize epoch manager
+var epochManager = new EpochManager(new EpochConfig(10));
+var genesisHash = genesisBlock.ComputeHash();
+
+// Start first epoch after genesis
+epochManager.AdvanceEpoch(genesisHash);
+
+// Miners derive challenge deterministically from the block hash
+var challenge = epochManager.CurrentChallenge;
+// ... miners scan plots and submit proofs ...
+
+// After challenge window expires
+if (epochManager.IsEpochExpired)
+{
+    // Check if any valid proofs were received
+    if (HasValidProof())
+    {
+        // Produce block with winning proof
+        var newBlock = await BuildBlockAsync(/*...*/);
+        
+        // Advance to next epoch with new block hash
+        epochManager.AdvanceEpoch(newBlock.ComputeHash());
+    }
+    else
+    {
+        // No winner, advance epoch without block production
+        epochManager.AdvanceEpoch(genesisHash); // Use same parent
+    }
+}
+```
+
+### Epoch and Block Production Integration
+
+```csharp
+// Full node workflow
+var epochManager = new EpochManager(new EpochConfig(10));
+var lastBlockHash = GetLatestBlockHash();
+
+while (true)
+{
+    // Advance to next epoch
+    epochManager.AdvanceEpoch(lastBlockHash);
+    
+    // Miners can derive challenge deterministically from lastBlockHash and epoch number
+    // No broadcast needed - all nodes compute the same challenge
+    var challenge = ChallengeDerivation.DeriveChallenge(lastBlockHash, epochManager.CurrentEpoch);
+    
+    // Wait for challenge window
+    await Task.Delay(TimeSpan.FromSeconds(10));
+    
+    // Collect and evaluate proofs
+    var winningProof = EvaluateProofs(receivedProofs);
+    
+    if (winningProof != null)
+    {
+        // Build and broadcast block
+        var newBlock = await BuildBlockWithProof(winningProof);
+        await BroadcastBlock(newBlock);
+        
+        // Update last block hash for next epoch
+        lastBlockHash = newBlock.ComputeHash();
+    }
+    // If no winner, lastBlockHash stays the same
+}
+```
+
+### Thread Safety
+
+- `EpochManager` is fully thread-safe
+- All property accesses are protected by internal locking
+- Multiple threads can safely call `AdvanceEpoch` concurrently
+- Challenge derivation functions are stateless and thread-safe
+
+### Anti-Replay Protection
+
+Each challenge is unique to its epoch:
+- Challenge = SHA256(previousBlockHash || epochNumber)
+- Old challenges cannot be reused in new epochs
+- Proofs from expired epochs are rejected
+
+```csharp
+// Challenge from epoch 5 is invalid for epoch 6
+var epoch5Challenge = ChallengeDerivation.DeriveChallenge(blockHash, 5);
+var isValidForEpoch6 = epochManager.ValidateChallengeForEpoch(
+    epoch5Challenge, 6, blockHash);
+// Returns false - prevents replay attacks
+```
 
 ## Dependencies
 

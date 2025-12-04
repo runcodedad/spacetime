@@ -77,6 +77,13 @@ Spacetime: Proof-of-Space-Time blockchain in C# / .NET 10. Energy-efficient, dis
 - Always specify little-endian explicitly
 - Always version serialization formats
 
+### Byte Order (Endianness)
+- Always use `BinaryPrimitives` from `System.Buffers.Binary` for reading/writing numeric types
+- Always specify little-endian explicitly: `WriteInt64LittleEndian`, `ReadInt32LittleEndian`, etc.
+- Never use `BitConverter` (platform-dependent endianness)
+- Always ensure cross-platform compatibility for binary formats (plots, blocks, network messages)
+- Always use little-endian for all serialized numeric data
+
 ### Large Files (Plots)
 - Always stream large files, never load into memory
 - Always use 81920 byte (80 KB) or larger buffers
