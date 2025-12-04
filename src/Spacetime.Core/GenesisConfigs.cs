@@ -18,13 +18,12 @@ public static class GenesisConfigs
     /// - No premine allocations
     /// - 30-second target block time
     /// - 30-second epoch duration
-    /// Note: Timestamp is set to current time when accessed. For a real mainnet launch,
-    /// this should be replaced with a hardcoded timestamp at deployment time.
+    /// - Fixed timestamp ensures all nodes agree on identical genesis block
     /// </remarks>
     public static GenesisConfig Mainnet => new()
     {
         NetworkId = "spacetime-mainnet-v1",
-        InitialTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+        InitialTimestamp = 1704067200, // January 1, 2024 00:00:00 UTC
         InitialDifficulty = 1_000_000,
         InitialEpoch = 0,
         EpochDurationSeconds = 30,
