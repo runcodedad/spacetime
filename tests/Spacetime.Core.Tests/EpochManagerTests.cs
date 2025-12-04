@@ -4,6 +4,9 @@ namespace Spacetime.Core.Tests;
 
 public class EpochManagerTests
 {
+    private const int SmallDelayMs = 10;
+    private const int MediumDelayMs = 100;
+    private const int EpochExpiryWaitMs = 1100; // Slightly longer than 1 second epoch
     [Fact]
     public void Constructor_WithConfig_InitializesEpochManager()
     {
@@ -78,7 +81,7 @@ public class EpochManagerTests
         var previousStartTime = manager.EpochStartTime;
 
         // Wait a small amount to ensure time difference
-        await Task.Delay(10);
+        await Task.Delay(SmallDelayMs);
 
         // Act
         await manager.AdvanceEpochAsync(blockHash);
@@ -155,7 +158,7 @@ public class EpochManagerTests
         var initialRemaining = manager.TimeRemainingInEpoch;
 
         // Act
-        await Task.Delay(100);
+        await Task.Delay(MediumDelayMs);
         var laterRemaining = manager.TimeRemainingInEpoch;
 
         // Assert
@@ -184,7 +187,7 @@ public class EpochManagerTests
         var manager = new EpochManager(config);
 
         // Act
-        await Task.Delay(1100); // Wait slightly longer than epoch duration
+        await Task.Delay(EpochExpiryWaitMs); // Wait slightly longer than epoch duration
         var isExpired = manager.IsEpochExpired;
 
         // Assert

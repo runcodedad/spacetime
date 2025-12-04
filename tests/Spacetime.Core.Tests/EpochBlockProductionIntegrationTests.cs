@@ -7,6 +7,7 @@ namespace Spacetime.Core.Tests;
 /// </summary>
 public class EpochBlockProductionIntegrationTests
 {
+    private const int EpochExpiryWaitMs = 1100; // Slightly longer than 1 second epoch
     private static BlockProof CreateMockProof()
     {
         var leafValue = RandomNumberGenerator.GetBytes(32);
@@ -127,7 +128,7 @@ public class EpochBlockProductionIntegrationTests
         var isExpiredImmediately = epochManager.IsEpochExpired;
         
         // Wait for epoch to expire
-        await Task.Delay(1100);
+        await Task.Delay(EpochExpiryWaitMs);
         var isExpiredAfterDelay = epochManager.IsEpochExpired;
 
         // Assert
@@ -245,7 +246,7 @@ public class EpochBlockProductionIntegrationTests
         var epochBeforeExpiry = epochManager.CurrentEpoch;
 
         // Act - Wait for epoch to expire
-        await Task.Delay(1100);
+        await Task.Delay(EpochExpiryWaitMs);
 
         // Simulate receiving a proof for expired epoch
         var isExpired = epochManager.IsEpochExpired;
