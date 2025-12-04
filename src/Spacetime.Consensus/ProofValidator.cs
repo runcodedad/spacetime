@@ -1,20 +1,52 @@
 using MerkleTree.Hashing;
 using MerkleTree.Proofs;
+using Spacetime.Plotting;
 
-namespace Spacetime.Plotting;
+namespace Spacetime.Consensus;
 
 /// <summary>
 /// Validates cryptographic proofs from plot files.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The proof validator performs the following checks:
 /// 1. Recalculates score = H(challenge || leaf) and verifies it matches
 /// 2. Compares score against difficulty target (score less than target)
 /// 3. Verifies Merkle path using the MerkleTree library
 /// 4. Verifies plot root matches known plot identity
 /// 5. Verifies challenge matches expected challenge
-/// 
-/// All validation failures include detailed error messages.
+/// </para>
+/// <para>
+/// <strong>Difficulty System:</strong>
+/// </para>
+/// <para>
+/// The blockchain uses a two-level difficulty system:
+/// </para>
+/// <list type="number">
+/// <item>
+/// <description>
+/// <strong>Difficulty Integer</strong> (stored in blocks/genesis): A positive integer where 
+/// higher values = more difficult. This is human-readable and matches Bitcoin's convention.
+/// Mainnet typically uses large values (e.g., 1,000,000), testnet uses smaller values (e.g., 10,000).
+/// </description>
+/// </item>
+/// <item>
+/// <description>
+/// <strong>Difficulty Target</strong> (32-byte hash): The maximum score value that can be considered 
+/// valid. A proof score must be strictly less than this target. Lower targets = more difficult because 
+/// fewer hash values satisfy the constraint. This target is derived from the difficulty integer using 
+/// a conversion formula (to be implemented in difficulty adjustment logic).
+/// </description>
+/// </item>
+/// </list>
+/// <para>
+/// <strong>Note:</strong> This validator works with the 32-byte difficulty target directly. 
+/// Conversion from difficulty integer to target hash should be handled by the difficulty adjustment 
+/// system in the consensus layer.
+/// </para>
+/// <para>
+/// All validation failures include detailed error messages with hex-encoded values for debugging.
+/// </para>
 /// </remarks>
 public sealed class ProofValidator
 {

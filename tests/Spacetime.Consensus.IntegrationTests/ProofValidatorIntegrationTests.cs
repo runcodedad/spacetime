@@ -1,7 +1,8 @@
 using System.Security.Cryptography;
 using MerkleTree.Hashing;
+using Spacetime.Plotting;
 
-namespace Spacetime.Plotting.Tests;
+namespace Spacetime.Consensus.Tests;
 
 /// <summary>
 /// Integration tests for proof validation with the MerkleTree library.

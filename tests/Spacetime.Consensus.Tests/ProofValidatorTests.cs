@@ -1,7 +1,8 @@
 using System.Security.Cryptography;
 using MerkleTree.Hashing;
+using Spacetime.Plotting;
 
-namespace Spacetime.Plotting.Tests;
+namespace Spacetime.Consensus.Tests;
 
 /// <summary>
 /// Unit tests for the ProofValidator class.

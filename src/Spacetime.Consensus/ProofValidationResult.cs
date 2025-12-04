@@ -1,4 +1,4 @@
-namespace Spacetime.Plotting;
+namespace Spacetime.Consensus;
 
 /// <summary>
 /// Represents the result of proof validation.
