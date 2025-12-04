@@ -475,6 +475,83 @@ The BlockBuilder performs self-validation before returning the block:
 - Throws `InvalidOperationException` if validation fails
 - Ensures the block is safe to broadcast
 
+## Genesis Block Configuration
+
+The genesis block is the first block in a blockchain and defines the initial state and parameters for a network. Spacetime provides comprehensive genesis block support.
+
+### Predefined Network Configurations
+
+```csharp
+// Mainnet - Production network
+var mainnetConfig = GenesisConfigs.Mainnet;
+
+// Testnet - Test network
+var testnetConfig = GenesisConfigs.Testnet;
+
+// Development - Local development
+var devnetConfig = GenesisConfigs.Development;
+```
+
+### Creating a Custom Genesis Configuration
+
+```csharp
+var config = GenesisConfigs.CreateCustom(
+    networkId: "my-custom-network",
+    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+    difficulty: 5000,
+    epochDuration: 30,
+    targetBlockTime: 30,
+    preminedAllocations: new Dictionary<string, long>
+    {
+        ["03a1b2c3d4e5f6..."] = 1_000_000
+    });
+```
+
+### Generating a Genesis Block
+
+```csharp
+// Create signer
+IBlockSigner signer = new YourBlockSigner(privateKey);
+
+// Generate genesis block
+var generator = new GenesisBlockGenerator(signer);
+var genesisBlock = await generator.GenerateGenesisBlockAsync(config);
+
+// Genesis block has:
+// - Height: 0
+// - Parent hash: all zeros
+// - Challenge: SHA256(networkId)
+// - Plot root: all zeros
+// - Proof score: all zeros
+```
+
+### Validating a Genesis Block
+
+```csharp
+var validator = new GenesisBlockValidator();
+bool isValid = await validator.ValidateGenesisBlockAsync(genesisBlock, config);
+
+if (!isValid)
+{
+    throw new InvalidOperationException("Invalid genesis block");
+}
+```
+
+### Genesis Block Properties
+
+A valid genesis block must have:
+- Height = 0
+- Parent hash = all zeros (32 bytes)
+- Challenge = SHA256(networkId)
+- Plot root = all zeros (32 bytes)
+- Proof score = all zeros (32 bytes)
+- Timestamp matches configuration
+- Difficulty matches configuration
+- Epoch matches configuration
+- Valid signature from genesis signer
+
+For detailed documentation, see [Genesis Configuration Guide](../../docs/genesis-configuration.md).
+
 ## Dependencies
 
 - `Spacetime.Common` - Shared utilities
