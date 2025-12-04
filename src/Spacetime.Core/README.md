@@ -20,7 +20,6 @@ This project provides the fundamental data structures for the Spacetime Proof-of
 - **ChallengeDerivation** - Deterministic challenge derivation from block hash
 - **EpochConfig** - Configuration for epoch timing and challenge windows
 - **IEpochManager** - Interface for epoch management abstraction
-- **IChallengeProvider** - Interface for challenge broadcasting to miners
 
 ## Block Structure
 
@@ -619,7 +618,7 @@ var epochManager = new EpochManager(config);
 
 // Advance to next epoch when a block is produced
 var newBlockHash = block.ComputeHash();
-await epochManager.AdvanceEpochAsync(newBlockHash);
+epochManager.AdvanceEpoch(newBlockHash);
 
 // Access current epoch state
 var currentEpoch = epochManager.CurrentEpoch;
@@ -638,43 +637,6 @@ bool isValid = epochManager.ValidateChallengeForEpoch(
 epochManager.Reset(epochNumber: 5, challenge, startTime);
 ```
 
-### Challenge Broadcasting
-
-The `IChallengeProvider` interface defines how challenges are broadcast to miners:
-
-```csharp
-public interface IChallengeProvider
-{
-    Task BroadcastChallengeAsync(
-        ReadOnlyMemory<byte> challenge, 
-        long epochNumber, 
-        CancellationToken cancellationToken = default);
-        
-    event EventHandler<ChallengeEventArgs>? ChallengeAvailable;
-}
-
-// Implement in networking layer
-public class NetworkChallengeProvider : IChallengeProvider
-{
-    public async Task BroadcastChallengeAsync(
-        ReadOnlyMemory<byte> challenge, 
-        long epochNumber, 
-        CancellationToken cancellationToken = default)
-    {
-        // Broadcast to all connected miners via P2P network
-        await _network.BroadcastAsync(new ChallengeMessage(challenge, epochNumber));
-        
-        // Raise event for local miners
-        ChallengeAvailable?.Invoke(this, new ChallengeEventArgs(
-            challenge, 
-            epochNumber, 
-            DateTimeOffset.UtcNow));
-    }
-    
-    public event EventHandler<ChallengeEventArgs>? ChallengeAvailable;
-}
-```
-
 ### Epoch Lifecycle Example
 
 ```csharp
@@ -683,9 +645,9 @@ var epochManager = new EpochManager(new EpochConfig(10));
 var genesisHash = genesisBlock.ComputeHash();
 
 // Start first epoch after genesis
-await epochManager.AdvanceEpochAsync(genesisHash);
+epochManager.AdvanceEpoch(genesisHash);
 
-// Miners receive challenge and compute proofs
+// Miners derive challenge deterministically from the block hash
 var challenge = epochManager.CurrentChallenge;
 // ... miners scan plots and submit proofs ...
 
@@ -699,12 +661,12 @@ if (epochManager.IsEpochExpired)
         var newBlock = await BuildBlockAsync(/*...*/);
         
         // Advance to next epoch with new block hash
-        await epochManager.AdvanceEpochAsync(newBlock.ComputeHash());
+        epochManager.AdvanceEpoch(newBlock.ComputeHash());
     }
     else
     {
         // No winner, advance epoch without block production
-        await epochManager.AdvanceEpochAsync(genesisHash); // Use same parent
+        epochManager.AdvanceEpoch(genesisHash); // Use same parent
     }
 }
 ```
@@ -719,12 +681,11 @@ var lastBlockHash = GetLatestBlockHash();
 while (true)
 {
     // Advance to next epoch
-    await epochManager.AdvanceEpochAsync(lastBlockHash);
+    epochManager.AdvanceEpoch(lastBlockHash);
     
-    // Broadcast challenge to miners
-    await challengeProvider.BroadcastChallengeAsync(
-        epochManager.CurrentChallenge,
-        epochManager.CurrentEpoch);
+    // Miners can derive challenge deterministically from lastBlockHash and epoch number
+    // No broadcast needed - all nodes compute the same challenge
+    var challenge = ChallengeDerivation.DeriveChallenge(lastBlockHash, epochManager.CurrentEpoch);
     
     // Wait for challenge window
     await Task.Delay(TimeSpan.FromSeconds(10));
@@ -749,7 +710,7 @@ while (true)
 
 - `EpochManager` is fully thread-safe
 - All property accesses are protected by internal locking
-- Multiple threads can safely call `AdvanceEpochAsync` concurrently
+- Multiple threads can safely call `AdvanceEpoch` concurrently
 - Challenge derivation functions are stateless and thread-safe
 
 ### Anti-Replay Protection

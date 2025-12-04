@@ -49,7 +49,7 @@ public class EpochManagerTests
         var blockHash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        await manager.AdvanceEpochAsync(blockHash);
+        manager.AdvanceEpoch(blockHash);
 
         // Assert
         Assert.Equal(1, manager.CurrentEpoch);
@@ -65,7 +65,7 @@ public class EpochManagerTests
         var previousChallenge = manager.CurrentChallenge.ToArray();
 
         // Act
-        await manager.AdvanceEpochAsync(blockHash);
+        manager.AdvanceEpoch(blockHash);
 
         // Assert
         Assert.NotEqual(previousChallenge, manager.CurrentChallenge.ToArray());
@@ -84,22 +84,22 @@ public class EpochManagerTests
         await Task.Delay(SmallDelayMs);
 
         // Act
-        await manager.AdvanceEpochAsync(blockHash);
+        manager.AdvanceEpoch(blockHash);
 
         // Assert
         Assert.True(manager.EpochStartTime > previousStartTime);
     }
 
     [Fact]
-    public async Task AdvanceEpochAsync_WithInvalidHashSize_ThrowsArgumentException()
+    public void AdvanceEpoch_WithInvalidHashSize_ThrowsArgumentException()
     {
         // Arrange
         var manager = new EpochManager();
         var invalidHash = RandomNumberGenerator.GetBytes(16);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
-            manager.AdvanceEpochAsync(invalidHash));
+        var exception = Assert.Throws<ArgumentException>(() => 
+            manager.AdvanceEpoch(invalidHash));
         Assert.Contains("must be 32 bytes", exception.Message);
     }
 
@@ -111,7 +111,7 @@ public class EpochManagerTests
         var blockHash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        await manager.AdvanceEpochAsync(blockHash);
+        manager.AdvanceEpoch(blockHash);
 
         // Assert
         var expectedChallenge = ChallengeDerivation.DeriveChallenge(blockHash, 1);
@@ -126,9 +126,9 @@ public class EpochManagerTests
         var blockHash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        await manager.AdvanceEpochAsync(blockHash);
-        await manager.AdvanceEpochAsync(blockHash);
-        await manager.AdvanceEpochAsync(blockHash);
+        manager.AdvanceEpoch(blockHash);
+        manager.AdvanceEpoch(blockHash);
+        manager.AdvanceEpoch(blockHash);
 
         // Assert
         Assert.Equal(3, manager.CurrentEpoch);
@@ -325,7 +325,7 @@ public class EpochManagerTests
         // Act
         for (var i = 0; i < 10; i++)
         {
-            tasks.Add(manager.AdvanceEpochAsync(blockHash));
+            tasks.Add(Task.Run(() => manager.AdvanceEpoch(blockHash)));
         }
         await Task.WhenAll(tasks);
 

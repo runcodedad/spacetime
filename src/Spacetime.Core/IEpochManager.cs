@@ -42,10 +42,8 @@ public interface IEpochManager
     /// Advances to the next epoch.
     /// </summary>
     /// <param name="previousBlockHash">The hash of the previous block (or genesis challenge base).</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when previousBlockHash has invalid size.</exception>
-    Task AdvanceEpochAsync(ReadOnlyMemory<byte> previousBlockHash, CancellationToken cancellationToken = default);
+    void AdvanceEpoch(ReadOnlyMemory<byte> previousBlockHash);
 
     /// <summary>
     /// Validates if a challenge is valid for a specific epoch.

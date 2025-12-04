@@ -48,9 +48,22 @@ public static class ChallengeDerivation
         }
 
         // Combine previous block hash and epoch number
+        // Use little-endian explicitly to ensure consistency across different systems
         Span<byte> combined = stackalloc byte[ChallengeSize + sizeof(long)];
         previousBlockHash.CopyTo(combined);
-        BitConverter.TryWriteBytes(combined[ChallengeSize..], epochNumber);
+        
+        // Write epoch number in little-endian format for cross-platform consistency
+        if (BitConverter.IsLittleEndian)
+        {
+            BitConverter.TryWriteBytes(combined[ChallengeSize..], epochNumber);
+        }
+        else
+        {
+            // Convert to little-endian on big-endian systems
+            var epochBytes = BitConverter.GetBytes(epochNumber);
+            Array.Reverse(epochBytes);
+            epochBytes.CopyTo(combined[ChallengeSize..]);
+        }
 
         // Return SHA256 hash as the challenge
         return SHA256.HashData(combined);

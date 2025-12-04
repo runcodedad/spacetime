@@ -5,7 +5,7 @@ namespace Spacetime.Core.Tests;
 /// <summary>
 /// Integration tests for epoch management with block production.
 /// </summary>
-public class EpochBlockProductionIntegrationTests
+public class EpochBlockProductionTests
 {
     private const int EpochExpiryWaitMs = 1100; // Slightly longer than 1 second epoch
     private static BlockProof CreateMockProof()
@@ -35,7 +35,7 @@ public class EpochBlockProductionIntegrationTests
         var genesisBlockHash = RandomNumberGenerator.GetBytes(32);
 
         // Act - Advance to epoch 1
-        await epochManager.AdvanceEpochAsync(genesisBlockHash);
+        epochManager.AdvanceEpoch(genesisBlockHash);
         var epoch1Challenge = epochManager.CurrentChallenge.ToArray();
         var epoch1Number = epochManager.CurrentEpoch;
 
@@ -43,7 +43,7 @@ public class EpochBlockProductionIntegrationTests
         var block1Hash = RandomNumberGenerator.GetBytes(32);
 
         // Advance to epoch 2
-        await epochManager.AdvanceEpochAsync(block1Hash);
+        epochManager.AdvanceEpoch(block1Hash);
         var epoch2Challenge = epochManager.CurrentChallenge.ToArray();
         var epoch2Number = epochManager.CurrentEpoch;
 
@@ -64,7 +64,7 @@ public class EpochBlockProductionIntegrationTests
         var previousBlockHash = RandomNumberGenerator.GetBytes(32);
 
         // Advance epoch
-        await epochManager.AdvanceEpochAsync(previousBlockHash);
+        epochManager.AdvanceEpoch(previousBlockHash);
         var currentEpoch = epochManager.CurrentEpoch;
         var currentChallenge = epochManager.CurrentChallenge.ToArray();
 
@@ -100,7 +100,7 @@ public class EpochBlockProductionIntegrationTests
         // Act - Simulate multiple epochs without block production
         for (var i = 0; i < 5; i++)
         {
-            await epochManager.AdvanceEpochAsync(blockHash);
+            epochManager.AdvanceEpoch(blockHash);
             challenges.Add(epochManager.CurrentChallenge.ToArray());
         }
 
@@ -144,7 +144,7 @@ public class EpochBlockProductionIntegrationTests
         var blockHash = RandomNumberGenerator.GetBytes(32);
         
         // Advance to epoch 1
-        await epochManager.AdvanceEpochAsync(blockHash);
+        epochManager.AdvanceEpoch(blockHash);
         var correctChallenge = epochManager.CurrentChallenge.ToArray();
         var wrongChallenge = RandomNumberGenerator.GetBytes(32);
 
@@ -170,20 +170,20 @@ public class EpochBlockProductionIntegrationTests
         var block2Hash = RandomNumberGenerator.GetBytes(32);
 
         // Act - Both managers follow the same chain
-        await epochManager1.AdvanceEpochAsync(genesisHash);
-        await epochManager2.AdvanceEpochAsync(genesisHash);
+        epochManager1.AdvanceEpoch(genesisHash);
+        epochManager2.AdvanceEpoch(genesisHash);
         
         var challenge1_manager1 = epochManager1.CurrentChallenge.ToArray();
         var challenge1_manager2 = epochManager2.CurrentChallenge.ToArray();
 
-        await epochManager1.AdvanceEpochAsync(block1Hash);
-        await epochManager2.AdvanceEpochAsync(block1Hash);
+        epochManager1.AdvanceEpoch(block1Hash);
+        epochManager2.AdvanceEpoch(block1Hash);
         
         var challenge2_manager1 = epochManager1.CurrentChallenge.ToArray();
         var challenge2_manager2 = epochManager2.CurrentChallenge.ToArray();
 
-        await epochManager1.AdvanceEpochAsync(block2Hash);
-        await epochManager2.AdvanceEpochAsync(block2Hash);
+        epochManager1.AdvanceEpoch(block2Hash);
+        epochManager2.AdvanceEpoch(block2Hash);
         
         var challenge3_manager1 = epochManager1.CurrentChallenge.ToArray();
         var challenge3_manager2 = epochManager2.CurrentChallenge.ToArray();
@@ -220,10 +220,10 @@ public class EpochBlockProductionIntegrationTests
         var blockHash2 = RandomNumberGenerator.GetBytes(32);
 
         // Act - Advance through multiple epochs
-        await epochManager.AdvanceEpochAsync(blockHash1);
+        epochManager.AdvanceEpoch(blockHash1);
         var epoch1Challenge = epochManager.CurrentChallenge.ToArray();
         
-        await epochManager.AdvanceEpochAsync(blockHash2);
+        epochManager.AdvanceEpoch(blockHash2);
         var epoch2Challenge = epochManager.CurrentChallenge.ToArray();
 
         // Try to validate epoch 1 challenge for epoch 2
@@ -241,7 +241,7 @@ public class EpochBlockProductionIntegrationTests
         var epochManager = new EpochManager(config);
         var blockHash = RandomNumberGenerator.GetBytes(32);
         
-        await epochManager.AdvanceEpochAsync(blockHash);
+        epochManager.AdvanceEpoch(blockHash);
         var challengeBeforeExpiry = epochManager.CurrentChallenge.ToArray();
         var epochBeforeExpiry = epochManager.CurrentEpoch;
 
@@ -280,7 +280,7 @@ public class EpochBlockProductionIntegrationTests
             {
                 try
                 {
-                    await epochManager.AdvanceEpochAsync(blockHash);
+                    epochManager.AdvanceEpoch(blockHash);
                     var _ = epochManager.CurrentEpoch;
                     var __ = epochManager.CurrentChallenge;
                     var ___ = epochManager.IsEpochExpired;
@@ -332,7 +332,7 @@ public class EpochBlockProductionIntegrationTests
         // Advance to epoch 5
         for (var i = 0; i < 5; i++)
         {
-            await epochManager.AdvanceEpochAsync(blockHash);
+            epochManager.AdvanceEpoch(blockHash);
         }
         
         Assert.Equal(5, epochManager.CurrentEpoch);

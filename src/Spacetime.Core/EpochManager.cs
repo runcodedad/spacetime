@@ -119,10 +119,8 @@ public sealed class EpochManager : IEpochManager
     /// Advances to the next epoch.
     /// </summary>
     /// <param name="previousBlockHash">The hash of the previous block (or genesis challenge base).</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when previousBlockHash has invalid size.</exception>
-    public Task AdvanceEpochAsync(ReadOnlyMemory<byte> previousBlockHash, CancellationToken cancellationToken = default)
+    public void AdvanceEpoch(ReadOnlyMemory<byte> previousBlockHash)
     {
         if (previousBlockHash.Length != ChallengeDerivation.ChallengeSize)
         {
@@ -131,16 +129,12 @@ public sealed class EpochManager : IEpochManager
                 nameof(previousBlockHash));
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-
         lock (_lock)
         {
             _currentEpoch++;
             _currentChallenge = ChallengeDerivation.DeriveChallenge(previousBlockHash.Span, _currentEpoch);
             _epochStartTime = DateTimeOffset.UtcNow;
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>
