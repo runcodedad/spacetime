@@ -75,13 +75,7 @@ public sealed class DifficultyAdjuster
     /// <summary>
     /// Maximum value for a 256-bit number (2^256 - 1).
     /// </summary>
-    private static readonly BigInteger MaxTarget = BigInteger.Pow(2, 256) - 1;
-
-    /// <summary>
-    /// Base difficulty value used for target calculation.
-    /// This represents difficulty=1, which corresponds to the maximum possible target.
-    /// </summary>
-    private const long BaseDifficulty = 1;
+    private static readonly BigInteger _maxTarget = BigInteger.Pow(2, 256) - 1;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DifficultyAdjuster"/> class.
@@ -163,7 +157,7 @@ public sealed class DifficultyAdjuster
         // Calculate the raw adjustment: newDifficulty = currentDifficulty * targetTime / actualTime
         // If actualTime < targetTime (blocks too fast), difficulty increases
         // If actualTime > targetTime (blocks too slow), difficulty decreases
-        double rawDifficulty = (double)currentDifficulty * targetTime / actualTime;
+        var rawDifficulty = (double)currentDifficulty * targetTime / actualTime;
 
         // Apply dampening factor to smooth the adjustment
         // newDifficulty = currentDifficulty + (rawDifficulty - currentDifficulty) / dampeningFactor
@@ -227,7 +221,7 @@ public sealed class DifficultyAdjuster
         }
 
         // Calculate target = maxTarget / difficulty
-        var target = MaxTarget / difficulty;
+        var target = _maxTarget / difficulty;
 
         // Convert to 32-byte array (big-endian)
         var targetBytes = target.ToByteArray(isUnsigned: true, isBigEndian: true);
@@ -291,7 +285,7 @@ public sealed class DifficultyAdjuster
         }
 
         // Calculate difficulty = maxTarget / target
-        var difficulty = MaxTarget / targetValue;
+        var difficulty = _maxTarget / targetValue;
 
         // Ensure difficulty fits in long range
         if (difficulty > long.MaxValue)
