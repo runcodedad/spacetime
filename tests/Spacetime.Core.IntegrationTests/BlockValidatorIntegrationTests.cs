@@ -353,7 +353,9 @@ public class BlockValidatorIntegrationTests
         return (new Block(header, body), plotProof);
     }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators - required for IAsyncEnumerable
     private static async IAsyncEnumerable<byte[]> GetTransactionHashesAsync(IEnumerable<Transaction> transactions)
+#pragma warning restore CS1998
     {
         foreach (var tx in transactions)
         {

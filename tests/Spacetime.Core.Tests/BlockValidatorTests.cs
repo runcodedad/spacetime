@@ -360,11 +360,11 @@ public class BlockValidatorTests
 
     private Block CreateValidBlock()
     {
-        var chainTipHash = _chainState.GetChainTipHashAsync().Result ?? RandomNumberGenerator.GetBytes(32);
-        var chainTipHeight = _chainState.GetChainTipHeightAsync().Result;
-        var difficulty = _chainState.GetExpectedDifficultyAsync().Result;
-        var epoch = _chainState.GetExpectedEpochAsync().Result;
-        var challenge = _chainState.GetExpectedChallengeAsync().Result ?? RandomNumberGenerator.GetBytes(32);
+        var chainTipHash = _chainState.GetChainTipHashAsync().GetAwaiter().GetResult() ?? RandomNumberGenerator.GetBytes(32);
+        var chainTipHeight = _chainState.GetChainTipHeightAsync().GetAwaiter().GetResult();
+        var difficulty = _chainState.GetExpectedDifficultyAsync().GetAwaiter().GetResult();
+        var epoch = _chainState.GetExpectedEpochAsync().GetAwaiter().GetResult();
+        var challenge = _chainState.GetExpectedChallengeAsync().GetAwaiter().GetResult() ?? RandomNumberGenerator.GetBytes(32);
 
         var header = new BlockHeader(
             version: BlockHeader.CurrentVersion,
@@ -388,11 +388,11 @@ public class BlockValidatorTests
 
     private Block CreateValidBlockWithTransactions(IReadOnlyList<Transaction> transactions)
     {
-        var chainTipHash = _chainState.GetChainTipHashAsync().Result ?? RandomNumberGenerator.GetBytes(32);
-        var chainTipHeight = _chainState.GetChainTipHeightAsync().Result;
-        var difficulty = _chainState.GetExpectedDifficultyAsync().Result;
-        var epoch = _chainState.GetExpectedEpochAsync().Result;
-        var challenge = _chainState.GetExpectedChallengeAsync().Result ?? RandomNumberGenerator.GetBytes(32);
+        var chainTipHash = _chainState.GetChainTipHashAsync().GetAwaiter().GetResult() ?? RandomNumberGenerator.GetBytes(32);
+        var chainTipHeight = _chainState.GetChainTipHeightAsync().GetAwaiter().GetResult();
+        var difficulty = _chainState.GetExpectedDifficultyAsync().GetAwaiter().GetResult();
+        var epoch = _chainState.GetExpectedEpochAsync().GetAwaiter().GetResult();
+        var challenge = _chainState.GetExpectedChallengeAsync().GetAwaiter().GetResult() ?? RandomNumberGenerator.GetBytes(32);
 
         // Compute transaction root
         var hashFunction = new MerkleTree.Hashing.Sha256HashFunction();
@@ -423,7 +423,9 @@ public class BlockValidatorTests
         return new Block(header, body);
     }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators - required for IAsyncEnumerable
     private static async IAsyncEnumerable<byte[]> GetTransactionHashesAsync(IReadOnlyList<Transaction> transactions)
+#pragma warning restore CS1998
     {
         foreach (var tx in transactions)
         {

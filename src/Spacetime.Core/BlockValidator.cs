@@ -438,7 +438,9 @@ public sealed class BlockValidator : IBlockValidator
     /// <summary>
     /// Converts a list of transactions to an async enumerable of transaction hashes.
     /// </summary>
+#pragma warning disable CS1998 // Async method lacks 'await' operators - required for IAsyncEnumerable
     private static async IAsyncEnumerable<byte[]> GetTransactionHashesAsync(IReadOnlyList<Transaction> transactions)
+#pragma warning restore CS1998
     {
         foreach (var tx in transactions)
         {
@@ -489,7 +491,6 @@ public sealed class BlockValidator : IBlockValidator
                     proofResult.ErrorMessage ?? "Proof validation failed"));
             }
 
-            await Task.CompletedTask;
             return BlockValidationResult.Success();
         }
         catch (Exception ex)
