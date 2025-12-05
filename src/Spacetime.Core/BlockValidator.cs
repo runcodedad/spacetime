@@ -252,8 +252,8 @@ public sealed class BlockValidator : IBlockValidator
             var headerHash = block.Header.ComputeHash();
             var isValid = _signatureVerifier.VerifySignature(
                 headerHash,
-                block.Header.Signature,
-                block.Header.MinerId);
+                block.Header.Signature.ToArray(),
+                block.Header.MinerId.ToArray());
 
             if (!isValid)
             {
@@ -362,8 +362,8 @@ public sealed class BlockValidator : IBlockValidator
                 var txHash = tx.ComputeHash();
                 var isValid = _signatureVerifier.VerifySignature(
                     txHash,
-                    tx.Signature,
-                    tx.Sender);
+                    tx.Signature.ToArray(),
+                    tx.Sender.ToArray());
 
                 if (!isValid)
                 {

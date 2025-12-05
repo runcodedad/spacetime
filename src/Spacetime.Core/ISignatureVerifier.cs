@@ -21,5 +21,5 @@ public interface ISignatureVerifier
     /// The signature format is (r, s) components concatenated (32 + 32 = 64 bytes).
     /// The public key format is compressed secp256k1 (33 bytes).
     /// </remarks>
-    bool VerifySignature(ReadOnlySpan<byte> hash, ReadOnlySpan<byte> signature, ReadOnlySpan<byte> publicKey);
+    bool VerifySignature(byte[] hash, byte[] signature, byte[] publicKey);
 }
