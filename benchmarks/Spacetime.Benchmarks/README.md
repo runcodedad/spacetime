@@ -1,13 +1,13 @@
-# Spacetime.Plotting.Benchmarks
+# Spacetime.Benchmarks
 
-Performance benchmarks for the Spacetime.Plotting library using BenchmarkDotNet.
+Performance benchmarks for Spacetime components using BenchmarkDotNet.
 
 ## Running Benchmarks
 
 To run all benchmarks:
 
 ```bash
-cd benchmarks/Spacetime.Plotting.Benchmarks
+cd benchmarks/Spacetime.Benchmarks
 dotnet run -c Release
 ```
 

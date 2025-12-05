@@ -17,7 +17,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spacetime.Common.Tests", "t
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", "{66320409-64EC-F7C5-3DEF-65E7510DAAD1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spacetime.Plotting.Benchmarks", "benchmarks\Spacetime.Plotting.Benchmarks\Spacetime.Plotting.Benchmarks.csproj", "{A8A52727-C985-424A-8E4D-BE355076DA78}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spacetime.Benchmarks", "benchmarks\Spacetime.Benchmarks\Spacetime.Benchmarks.csproj", "{A8A52727-C985-424A-8E4D-BE355076DA78}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spacetime.Core", "src\Spacetime.Core\Spacetime.Core.csproj", "{098E0BB7-76B9-4E41-965E-217DB5C64356}"
 EndProject

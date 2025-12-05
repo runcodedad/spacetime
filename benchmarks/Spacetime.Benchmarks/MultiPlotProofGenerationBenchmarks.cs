@@ -2,8 +2,9 @@ using System.Security.Cryptography;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using MerkleTree.Hashing;
+using Spacetime.Plotting;
 
-namespace Spacetime.Plotting.Benchmarks;
+namespace Spacetime.Benchmarks;
 
 /// <summary>
 /// Performance benchmarks for multi-plot proof generation operations.
