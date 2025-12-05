@@ -1,0 +1,17 @@
+recently_closed_days: 10
+
+weights:
+  impact: 30
+  urgency: 20
+  effort: 10
+  dependency: 15
+  value: 20
+  risk: 5
+
+# Optional: profile label to pick other presets (e.g., "balanced", "reliability", "speed")
+profile: "balanced"
+
+# Validation hints
+constraints:
+  min_recently_closed_days: 0
+  max_recently_closed_days: 365
