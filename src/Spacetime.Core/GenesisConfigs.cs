@@ -14,11 +14,14 @@ public static class GenesisConfigs
     /// </summary>
     /// <remarks>
     /// Mainnet configuration with production parameters:
-    /// - Higher initial difficulty for security
+    /// - Higher initial difficulty for security (1,000,000 = harder mining)
     /// - No premine allocations
     /// - 30-second target block time
     /// - 30-second epoch duration
     /// - Fixed timestamp ensures all nodes agree on identical genesis block
+    /// 
+    /// Note: Difficulty is an integer where higher values = more difficult. This will be converted
+    /// to a 32-byte target hash by the consensus layer, where higher difficulty → lower target.
     /// </remarks>
     public static GenesisConfig Mainnet => new()
     {
@@ -37,10 +40,13 @@ public static class GenesisConfigs
     /// </summary>
     /// <remarks>
     /// Testnet configuration with relaxed parameters for testing:
-    /// - Lower initial difficulty for easier testing
+    /// - Lower initial difficulty for easier testing (10,000 = easier than mainnet)
     /// - Optional premine for test accounts
     /// - 30-second target block time
     /// - 30-second epoch duration
+    /// 
+    /// Note: Difficulty is an integer where higher values = more difficult. This will be converted
+    /// to a 32-byte target hash by the consensus layer, where higher difficulty → lower target.
     /// </remarks>
     public static GenesisConfig Testnet => new()
     {
@@ -59,10 +65,13 @@ public static class GenesisConfigs
     /// </summary>
     /// <remarks>
     /// Development configuration with minimal parameters for rapid iteration:
-    /// - Very low initial difficulty for instant mining
+    /// - Very low initial difficulty for instant mining (100 = easiest)
     /// - Shorter epoch duration for faster testing
     /// - 10-second target block time
     /// - 10-second epoch duration
+    /// 
+    /// Note: Difficulty is an integer where higher values = more difficult. This will be converted
+    /// to a 32-byte target hash by the consensus layer, where higher difficulty → lower target.
     /// </remarks>
     public static GenesisConfig Development => new()
     {

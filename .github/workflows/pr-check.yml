@@ -27,17 +27,8 @@ jobs:
       with:
         dotnet-version: '10.0.x'
     
-    - name: Restore dependencies
-      run: dotnet restore
-    
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
-    
     - name: Run unit tests
-      run: |
-        dotnet test tests/Spacetime.Common.Tests/Spacetime.Common.Tests.csproj --no-build --configuration Release --verbosity normal
-        dotnet test tests/Spacetime.Core.Tests/Spacetime.Core.Tests.csproj --no-build --configuration Release --verbosity normal
-        dotnet test tests/Spacetime.Plotting.Tests/Spacetime.Plotting.Tests.csproj --no-build --configuration Release --verbosity normal
+      run: make unit
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -51,13 +42,5 @@ jobs:
       with:
         dotnet-version: '10.0.x'
     
-    - name: Restore dependencies
-      run: dotnet restore
-    
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
-    
     - name: Run integration tests
-      run: | 
-        dotnet test tests/Spacetime.Plotting.IntegrationTests/Spacetime.Plotting.IntegrationTests.csproj --no-build --configuration Release --verbosity normal
-        dotnet test tests/Spacetime.Core.IntegrationTests/Spacetime.Core.IntegrationTests.csproj --no-build --configuration Release --verbosity normal
+      run: make integration
