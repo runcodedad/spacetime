@@ -1,4 +1,4 @@
 ﻿using BenchmarkDotNet.Running;
-using Spacetime.Plotting.Benchmarks;
+using Spacetime.Benchmarks;
 
 BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);

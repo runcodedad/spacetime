@@ -108,4 +108,4 @@ The instructions help Copilot understand:
 - **[Copilot Instructions](.github/copilot-instructions.md)** - AI-assisted development guidelines
 
 ### Performance Benchmarks
-- **[Spacetime.Plotting.Benchmarks](benchmarks/Spacetime.Plotting.Benchmarks/README.md)** - Performance benchmarks using BenchmarkDotNet
+- **[Spacetime.Benchmarks](benchmarks/Spacetime.Benchmarks/README.md)** - Performance benchmarks using BenchmarkDotNet
