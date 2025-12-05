@@ -8,7 +8,8 @@ This project contains the core consensus mechanisms for the Spacetime Proof-of-S
 
 - **Proof Validation**: Cryptographic verification of miner proofs
 - **Score Calculation**: Computing proof scores from challenges and plot leaves
-- **Difficulty Target Management**: Validation against difficulty thresholds
+- **Difficulty Adjustment**: Automatic difficulty recalculation to maintain target block time
+- **Difficulty Target Management**: Conversion between difficulty integers and 32-byte targets
 - **Merkle Path Verification**: Integration with MerkleTree library for proof paths
 
 ## Architecture
@@ -141,12 +142,64 @@ bool meetsTarget = validator.IsScoreBelowTarget(score, difficultyTarget);
 // Returns true if score < target
 ```
 
+## Difficulty Adjustment
+
+The `DifficultyAdjuster` class implements automatic difficulty adjustment to maintain target block time:
+
+```csharp
+using Spacetime.Consensus;
+
+// Configure difficulty adjustment
+var config = new DifficultyAdjustmentConfig(
+    targetBlockTimeSeconds: 10,
+    adjustmentIntervalBlocks: 100,
+    dampeningFactor: 4,
+    minimumDifficulty: 1,
+    maximumDifficulty: long.MaxValue);
+
+var adjuster = new DifficultyAdjuster(config);
+
+// Check if difficulty should adjust at this height
+if (adjuster.ShouldAdjustDifficulty(currentHeight))
+{
+    // Calculate new difficulty based on actual vs target block times
+    long newDifficulty = adjuster.CalculateNextDifficulty(
+        currentDifficulty,
+        currentHeight,
+        currentTimestamp,
+        intervalStartTimestamp);
+}
+
+// Convert difficulty to 32-byte target for validation
+byte[] target = DifficultyAdjuster.DifficultyToTarget(newDifficulty);
+
+// Use target with ProofValidator
+var validator = new ProofValidator(hashFunction);
+var result = validator.ValidateProof(proof, challenge, plotRoot, target);
+```
+
+### Adjustment Algorithm
+
+The algorithm maintains target block time by:
+1. Calculating actual time taken for N blocks (adjustment interval)
+2. Comparing to expected time (N × target block time)
+3. Adjusting difficulty proportionally: `newDifficulty = currentDifficulty × targetTime / actualTime`
+4. Applying dampening factor to smooth adjustments: `adjustment = adjustment / dampeningFactor`
+5. Enforcing minimum and maximum bounds
+
+### Difficulty-to-Target Conversion
+
+- **Formula**: `target = (2^256 - 1) / difficulty`
+- **Properties**:
+  - Higher difficulty → lower target → harder to mine
+  - `difficulty = 1` → maximum target (easiest)
+  - Target is 32-byte big-endian value for comparison with proof scores
+
 ## Future Development
 
-- **Difficulty Adjustment Algorithm**: Implement conversion from integer difficulty to 32-byte target
-- **Dynamic Difficulty**: Adjust difficulty based on block time and network hash rate
 - **Consensus Rules**: Additional validation rules for block acceptance
 - **Fork Choice**: Logic for selecting the canonical chain
+- **Difficulty History**: Store and query historical difficulty values
 
 ## Dependencies
 
@@ -156,5 +209,9 @@ bool meetsTarget = validator.IsScoreBelowTarget(score, difficultyTarget);
 
 ## Testing
 
-- **Unit Tests**: `tests/Spacetime.Consensus.Tests/` - 34 tests covering score calculation, target comparison, validation logic
+- **Unit Tests**: `tests/Spacetime.Consensus.Tests/` - 100 tests covering:
+  - Score calculation and target comparison (34 tests)
+  - Difficulty adjustment algorithm (54 tests)
+  - Difficulty adjustment configuration (42 tests)
+  - Simulation tests with various mining scenarios (12 tests)
 - **Integration Tests**: `tests/Spacetime.Consensus.IntegrationTests/` - 9 tests with real plot generation and end-to-end validation
