@@ -26,7 +26,7 @@ unit: build
 	@test -n "$(UNIT_PROJS)" || (echo "No unit test projects found." && exit 0)
 	@for proj in $(UNIT_PROJS); do \
 	  echo "==> $$proj"; \
-	  $(DOTNET) test "$$proj" --no-build --verbosity minimal || exit $$?; \
+	  $(DOTNET) test "$$proj" --no-build -c Release --verbosity minimal || exit $$?; \
 	done
 
 integration: build
@@ -34,7 +34,7 @@ integration: build
 	@test -n "$(INT_PROJS)" || (echo "No integration test projects found." && exit 0)
 	@for proj in $(INT_PROJS); do \
 	  echo "==> $$proj"; \
-	  $(DOTNET) test "$$proj" --no-build --verbosity minimal || exit $$?; \
+	  $(DOTNET) test "$$proj" --no-build -c Release --verbosity minimal || exit $$?; \
 	done
 
 all: unit integration
