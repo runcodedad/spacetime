@@ -148,7 +148,7 @@ public class ProofValidatorTests
         target[0] = 0xFF;
 
         // Act
-        var result = _validator.IsScoreBelowTarget(score, target);
+        var result = ProofValidator.IsScoreBelowTarget(score, target);
 
         // Assert
         Assert.True(result);
@@ -162,7 +162,7 @@ public class ProofValidatorTests
         var target = (byte[])score.Clone();
 
         // Act
-        var result = _validator.IsScoreBelowTarget(score, target);
+        var result = ProofValidator.IsScoreBelowTarget(score, target);
 
         // Assert
         Assert.False(result);
@@ -179,7 +179,7 @@ public class ProofValidatorTests
         target[0] = 0x01;
 
         // Act
-        var result = _validator.IsScoreBelowTarget(score, target);
+        var result = ProofValidator.IsScoreBelowTarget(score, target);
 
         // Assert
         Assert.False(result);
@@ -195,7 +195,7 @@ public class ProofValidatorTests
         target[31] = 0x01; // Any non-zero target
 
         // Act
-        var result = _validator.IsScoreBelowTarget(score, target);
+        var result = ProofValidator.IsScoreBelowTarget(score, target);
 
         // Assert
         Assert.True(result);
@@ -212,7 +212,7 @@ public class ProofValidatorTests
         Array.Fill(target, (byte)0xFF);
 
         // Act
-        var result = _validator.IsScoreBelowTarget(score, target);
+        var result = ProofValidator.IsScoreBelowTarget(score, target);
 
         // Assert
         Assert.False(result); // Equal, not less than
@@ -225,7 +225,7 @@ public class ProofValidatorTests
         var target = RandomNumberGenerator.GetBytes(32);
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => _validator.IsScoreBelowTarget(null!, target));
+        Assert.Throws<ArgumentNullException>(() => ProofValidator.IsScoreBelowTarget(null!, target));
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public class ProofValidatorTests
         var score = RandomNumberGenerator.GetBytes(32);
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => _validator.IsScoreBelowTarget(score, null!));
+        Assert.Throws<ArgumentNullException>(() => ProofValidator.IsScoreBelowTarget(score, null!));
     }
 
     [Fact]
@@ -246,7 +246,7 @@ public class ProofValidatorTests
         var target = RandomNumberGenerator.GetBytes(32);
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _validator.IsScoreBelowTarget(score, target));
+        var exception = Assert.Throws<ArgumentException>(() => ProofValidator.IsScoreBelowTarget(score, target));
         Assert.Contains("32 bytes", exception.Message);
     }
 
@@ -258,7 +258,7 @@ public class ProofValidatorTests
         var target = RandomNumberGenerator.GetBytes(16); // Wrong size
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _validator.IsScoreBelowTarget(score, target));
+        var exception = Assert.Throws<ArgumentException>(() => ProofValidator.IsScoreBelowTarget(score, target));
         Assert.Contains("32 bytes", exception.Message);
     }
 

@@ -108,7 +108,7 @@ public sealed class ProofValidator
     /// A proof is valid when its score is strictly less than the difficulty target.
     /// Scores are compared as big-endian unsigned integers.
     /// </remarks>
-    public bool IsScoreBelowTarget(byte[] score, byte[] difficultyTarget)
+    public static bool IsScoreBelowTarget(byte[] score, byte[] difficultyTarget)
     {
         ArgumentNullException.ThrowIfNull(score);
         ArgumentNullException.ThrowIfNull(difficultyTarget);
@@ -241,8 +241,8 @@ public sealed class ProofValidator
                 proof.LeafValue,
                 proof.LeafIndex,
                 height,
-                proof.SiblingHashes.ToArray(),
-                proof.OrientationBits.ToArray());
+                [.. proof.SiblingHashes],
+                [.. proof.OrientationBits]);
 
             // Verify using the MerkleTree library
             var isValid = merkleProof.Verify(proof.MerkleRoot, _hashFunction);
