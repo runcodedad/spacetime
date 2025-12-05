@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Spacetime.Common\Spacetime.Common.csproj" />
-    <ProjectReference Include="..\Spacetime.Consensus\Spacetime.Consensus.csproj" />
   </ItemGroup>
 
   <ItemGroup>

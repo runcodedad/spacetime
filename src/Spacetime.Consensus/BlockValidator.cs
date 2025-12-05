@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using MerkleTree.Core;
 using MerkleTree.Hashing;
-using Spacetime.Consensus;
+using Spacetime.Core;
 
-namespace Spacetime.Core;
+namespace Spacetime.Consensus;
 
 /// <summary>
 /// Validates blocks according to consensus rules.

@@ -1,4 +1,4 @@
-namespace Spacetime.Core;
+namespace Spacetime.Consensus;
 
 /// <summary>
 /// Provides access to the current blockchain state for validation.

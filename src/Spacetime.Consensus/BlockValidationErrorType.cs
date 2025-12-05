@@ -1,4 +1,4 @@
-namespace Spacetime.Core;
+namespace Spacetime.Consensus;
 
 /// <summary>
 /// Specifies the type of block validation error.
