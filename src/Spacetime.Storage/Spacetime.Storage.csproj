@@ -7,13 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="RocksDbNative" Version="6.2.2" />
-    <PackageReference Include="RocksDbSharp" Version="6.2.2" />
+    <ProjectReference Include="..\Spacetime.Core\Spacetime.Core.csproj" />
+    <ProjectReference Include="..\Spacetime.Common\Spacetime.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Spacetime.Core\Spacetime.Core.csproj" />
-    <ProjectReference Include="..\Spacetime.Common\Spacetime.Common.csproj" />
+    <PackageReference Include="RocksDB" Version="10.4.2.62659" />
   </ItemGroup>
 
 </Project>

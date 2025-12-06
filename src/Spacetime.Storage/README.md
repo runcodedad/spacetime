@@ -154,23 +154,10 @@ All data is serialized using little-endian binary format for:
 ### NuGet Packages
 
 ```xml
-<PackageReference Include="RocksDbSharp" Version="6.2.2" />
-<PackageReference Include="RocksDbNative" Version="6.2.2" />
+<PackageReference Include="RocksDB" Version="10.4.2.62659" />
 ```
 
-### System Requirements
-
-RocksDB requires native C++ libraries. On Linux:
-
-```bash
-# Ubuntu/Debian
-sudo apt-get install libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev
-
-# Fedora/RHEL
-sudo dnf install snappy-devel zlib-devel bzip2-devel libzstd-devel
-```
-
-On Windows and macOS, native libraries are included in the NuGet package.
+This package includes both the C# bindings and native RocksDB libraries for all platforms (Windows, Linux, macOS).
 
 ## Usage Example
 
