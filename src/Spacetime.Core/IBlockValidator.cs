@@ -14,7 +14,7 @@ public interface IBlockValidator
     /// </summary>
     /// <param name="block">The block to validate.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>True if the block is valid; otherwise, false.</returns>
+    /// <returns>A detailed validation result including any errors.</returns>
     /// <remarks>
     /// Validation should include:
     /// - Block header signature verification
@@ -24,5 +24,5 @@ public interface IBlockValidator
     /// - Block timestamp must be reasonable
     /// - Parent block must exist (if not genesis)
     /// </remarks>
-    Task<bool> ValidateBlockAsync(Block block, CancellationToken cancellationToken = default);
+    Task<BlockValidationResult> ValidateBlockAsync(Block block, CancellationToken cancellationToken = default);
 }

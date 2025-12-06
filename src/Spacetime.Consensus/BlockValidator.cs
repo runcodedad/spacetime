@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using MerkleTree.Core;
-using MerkleTree.Hashing;
 using Spacetime.Core;
 
 namespace Spacetime.Consensus;
@@ -45,6 +44,7 @@ public sealed class BlockValidator : IBlockValidator
     private readonly ISignatureVerifier _signatureVerifier;
     private readonly ProofValidator _proofValidator;
     private readonly IChainState _chainState;
+    private readonly MerkleTree.Hashing.IHashFunction _hashFunction;
 
     /// <summary>
     /// Maximum allowed timestamp skew in seconds (blocks can't be too far in the future).
@@ -57,19 +57,23 @@ public sealed class BlockValidator : IBlockValidator
     /// <param name="signatureVerifier">The signature verifier for block and transaction signatures.</param>
     /// <param name="proofValidator">The proof validator for PoST proofs.</param>
     /// <param name="chainState">The chain state for accessing current blockchain information.</param>
+    /// <param name="hashFunction">The hash function for computing Merkle roots.</param>
     /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
     public BlockValidator(
         ISignatureVerifier signatureVerifier,
         ProofValidator proofValidator,
-        IChainState chainState)
+        IChainState chainState,
+        MerkleTree.Hashing.IHashFunction hashFunction)
     {
         ArgumentNullException.ThrowIfNull(signatureVerifier);
         ArgumentNullException.ThrowIfNull(proofValidator);
         ArgumentNullException.ThrowIfNull(chainState);
+        ArgumentNullException.ThrowIfNull(hashFunction);
 
         _signatureVerifier = signatureVerifier;
         _proofValidator = proofValidator;
         _chainState = chainState;
+        _hashFunction = hashFunction;
     }
 
     /// <summary>
@@ -77,24 +81,9 @@ public sealed class BlockValidator : IBlockValidator
     /// </summary>
     /// <param name="block">The block to validate.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>True if the block is valid; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when block is null.</exception>
-    public async Task<bool> ValidateBlockAsync(Block block, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(block);
-
-        var result = await ValidateBlockDetailedAsync(block, cancellationToken);
-        return result.IsValid;
-    }
-
-    /// <summary>
-    /// Validates a block and returns detailed validation results.
-    /// </summary>
-    /// <param name="block">The block to validate.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A detailed validation result including any errors.</returns>
     /// <exception cref="ArgumentNullException">Thrown when block is null.</exception>
-    public async Task<BlockValidationResult> ValidateBlockDetailedAsync(
+    public async Task<BlockValidationResult> ValidateBlockAsync(
         Block block,
         CancellationToken cancellationToken = default)
     {
@@ -146,7 +135,7 @@ public sealed class BlockValidator : IBlockValidator
             cancellationToken.ThrowIfCancellationRequested();
 
             // 6. Validate transaction Merkle root
-            var merkleRootValidation = ValidateTransactionMerkleRoot(block);
+            var merkleRootValidation = await ValidateTransactionMerkleRoot(block);
             if (!merkleRootValidation.IsValid)
             {
                 return merkleRootValidation;
@@ -342,9 +331,8 @@ public sealed class BlockValidator : IBlockValidator
     {
         var transactions = block.Body.Transactions;
 
-        // Note: Genesis blocks or empty blocks might have no transactions
-        // For now, we allow empty transaction lists
-        // In a real implementation, you might require at least a coinbase transaction
+        // Empty blocks are allowed - they are expected for newer or less used blockchains
+        // No coinbase transaction is required as we don't want to mint new coins for every empty block
 
         foreach (var tx in transactions)
         {
@@ -386,7 +374,7 @@ public sealed class BlockValidator : IBlockValidator
     /// <summary>
     /// Validates the transaction Merkle root.
     /// </summary>
-    private BlockValidationResult ValidateTransactionMerkleRoot(Block block)
+    private async Task<BlockValidationResult> ValidateTransactionMerkleRoot(Block block)
     {
         try
         {
@@ -403,16 +391,14 @@ public sealed class BlockValidator : IBlockValidator
             else
             {
                 // Build Merkle tree using the MerkleTree library
-                var hashFunction = new Sha256HashFunction();
-                var merkleTreeStream = new MerkleTreeStream(hashFunction);
+                // Note: We use the in-memory approach as suggested, building from transaction hashes
+                var txHashes = transactions
+                    .Select(tx => tx.ComputeHash())
+                    .ToList();
 
-                // Convert transactions to async enumerable of hashes
-                var leaves = GetTransactionHashesAsync(transactions);
-                var metadata = merkleTreeStream.BuildAsync(leaves, cacheConfig: null, CancellationToken.None)
-                    .ConfigureAwait(false)
-                    .GetAwaiter()
-                    .GetResult();
-
+                var merkleTreeStream = new MerkleTreeStream(_hashFunction);
+                var leaves = ToAsyncEnumerable(txHashes);
+                var metadata = await merkleTreeStream.BuildAsync(leaves, cacheConfig: null, CancellationToken.None);
                 computedRoot = metadata.RootHash;
             }
 
@@ -436,16 +422,15 @@ public sealed class BlockValidator : IBlockValidator
     }
 
     /// <summary>
-    /// Converts a list of transactions to an async enumerable of transaction hashes.
+    /// Converts a list to an async enumerable.
     /// </summary>
-#pragma warning disable CS1998 // Async method lacks 'await' operators - required for IAsyncEnumerable
-    private static async IAsyncEnumerable<byte[]> GetTransactionHashesAsync(IReadOnlyList<Transaction> transactions)
-#pragma warning restore CS1998
+    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
     {
-        foreach (var tx in transactions)
+        foreach (var item in items)
         {
-            yield return tx.ComputeHash();
+            yield return item;
         }
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -457,15 +442,11 @@ public sealed class BlockValidator : IBlockValidator
     {
         try
         {
-            // Convert BlockProof to Plotting.Proof format
-            var proof = new Spacetime.Plotting.Proof(
-                block.Body.Proof.LeafValue.ToArray(),
-                block.Body.Proof.LeafIndex,
-                block.Body.Proof.MerkleProofPath,
-                block.Body.Proof.OrientationBits,
-                block.Header.PlotRoot.ToArray(),
-                block.Header.Challenge.ToArray(),
-                block.Header.ProofScore.ToArray());
+            // Convert BlockProof to Plotting.Proof format using extension method
+            var proof = block.Body.Proof.ToPlottingProof(
+                block.Header.Challenge,
+                block.Header.PlotRoot,
+                block.Header.ProofScore);
 
             // Convert difficulty to target
             var difficultyTarget = DifficultyAdjuster.DifficultyToTarget(block.Header.Difficulty);

@@ -16,7 +16,8 @@ public class BlockValidatorTests
         _signatureVerifier = Substitute.For<ISignatureVerifier>();
         _proofValidator = new ProofValidator(new MerkleTree.Hashing.Sha256HashFunction());
         _chainState = Substitute.For<IChainState>();
-        _validator = new BlockValidator(_signatureVerifier, _proofValidator, _chainState);
+        var hashFunction = new MerkleTree.Hashing.Sha256HashFunction();
+        _validator = new BlockValidator(_signatureVerifier, _proofValidator, _chainState, hashFunction);
 
         // Setup default chain state
         _chainState.GetChainTipHashAsync(Arg.Any<CancellationToken>())
@@ -47,14 +48,6 @@ public class BlockValidatorTests
     }
 
     [Fact]
-    public async Task ValidateBlockDetailedAsync_WithNullBlock_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _validator.ValidateBlockDetailedAsync(null!));
-    }
-
-    [Fact]
     public async Task ValidateBlockAsync_WithUnsupportedVersion_ReturnsFalse()
     {
         // Arrange
@@ -75,7 +68,7 @@ public class BlockValidatorTests
         var invalidBlock = new Block(invalidHeader, block.Body);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(invalidBlock);
+        var result = await _validator.ValidateBlockAsync(invalidBlock);
 
         // Assert
         Assert.False(result.IsValid);
@@ -105,7 +98,7 @@ public class BlockValidatorTests
         var unsignedBlock = new Block(unsignedHeader, block.Body);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(unsignedBlock);
+        var result = await _validator.ValidateBlockAsync(unsignedBlock);
 
         // Assert
         Assert.False(result.IsValid);
@@ -136,7 +129,7 @@ public class BlockValidatorTests
         var invalidBlock = new Block(invalidHeader, block.Body);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(invalidBlock);
+        var result = await _validator.ValidateBlockAsync(invalidBlock);
 
         // Assert
         Assert.False(result.IsValid);
@@ -157,7 +150,7 @@ public class BlockValidatorTests
             .Returns(false);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(block);
+        var result = await _validator.ValidateBlockAsync(block);
 
         // Assert
         Assert.False(result.IsValid);
@@ -190,7 +183,7 @@ public class BlockValidatorTests
         var invalidBlock = new Block(invalidHeader, block.Body);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(invalidBlock);
+        var result = await _validator.ValidateBlockAsync(invalidBlock);
 
         // Assert
         Assert.False(result.IsValid);
@@ -221,7 +214,7 @@ public class BlockValidatorTests
         var invalidBlock = new Block(invalidHeader, block.Body);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(invalidBlock);
+        var result = await _validator.ValidateBlockAsync(invalidBlock);
 
         // Assert
         Assert.False(result.IsValid);
@@ -252,7 +245,7 @@ public class BlockValidatorTests
         var invalidBlock = new Block(invalidHeader, block.Body);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(invalidBlock);
+        var result = await _validator.ValidateBlockAsync(invalidBlock);
 
         // Assert
         Assert.False(result.IsValid);
@@ -283,7 +276,7 @@ public class BlockValidatorTests
         var invalidBlock = new Block(invalidHeader, block.Body);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(invalidBlock);
+        var result = await _validator.ValidateBlockAsync(invalidBlock);
 
         // Assert
         Assert.False(result.IsValid);
@@ -316,7 +309,7 @@ public class BlockValidatorTests
         var invalidBlock = new Block(invalidHeader, block.Body);
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(invalidBlock);
+        var result = await _validator.ValidateBlockAsync(invalidBlock);
 
         // Assert
         Assert.False(result.IsValid);
@@ -349,7 +342,7 @@ public class BlockValidatorTests
             });
 
         // Act
-        var result = await _validator.ValidateBlockDetailedAsync(block);
+        var result = await _validator.ValidateBlockAsync(block);
 
         // Assert
         Assert.False(result.IsValid);
@@ -396,8 +389,9 @@ public class BlockValidatorTests
 
         // Compute transaction root
         var hashFunction = new MerkleTree.Hashing.Sha256HashFunction();
+        var txHashes = transactions.Select(tx => tx.ComputeHash()).ToList();
         var merkleTreeStream = new MerkleTree.Core.MerkleTreeStream(hashFunction);
-        var leaves = GetTransactionHashesAsync(transactions);
+        var leaves = ToAsyncEnumerable(txHashes);
         var metadata = merkleTreeStream.BuildAsync(leaves, cacheConfig: null, CancellationToken.None)
             .ConfigureAwait(false)
             .GetAwaiter()
@@ -423,14 +417,13 @@ public class BlockValidatorTests
         return new Block(header, body);
     }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators - required for IAsyncEnumerable
-    private static async IAsyncEnumerable<byte[]> GetTransactionHashesAsync(IReadOnlyList<Transaction> transactions)
-#pragma warning restore CS1998
+    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
     {
-        foreach (var tx in transactions)
+        foreach (var item in items)
         {
-            yield return tx.ComputeHash();
+            yield return item;
         }
+        await Task.CompletedTask;
     }
 
     private Transaction CreateValidTransaction()

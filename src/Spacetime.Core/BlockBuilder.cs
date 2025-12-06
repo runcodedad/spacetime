@@ -177,10 +177,11 @@ public sealed class BlockBuilder
         cancellationToken.ThrowIfCancellationRequested();
 
         // Step 9: Validate block before returning
-        var isValid = await _validator.ValidateBlockAsync(block, cancellationToken);
-        if (!isValid)
+        var validationResult = await _validator.ValidateBlockAsync(block, cancellationToken);
+        if (!validationResult.IsValid)
         {
-            throw new InvalidOperationException("Block failed validation after construction");
+            throw new InvalidOperationException(
+                $"Block failed validation after construction: {validationResult.ErrorMessage}");
         }
 
         return block;

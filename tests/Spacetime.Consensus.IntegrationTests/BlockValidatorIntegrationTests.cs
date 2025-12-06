@@ -1,10 +1,10 @@
 using NSubstitute;
 using System.Security.Cryptography;
 using MerkleTree.Hashing;
-using Spacetime.Consensus;
+using Spacetime.Core;
 using Spacetime.Plotting;
 
-namespace Spacetime.Core.IntegrationTests;
+namespace Spacetime.Consensus.IntegrationTests;
 
 /// <summary>
 /// Integration tests for the BlockValidator that test the full validation pipeline.
@@ -18,14 +18,14 @@ public class BlockValidatorIntegrationTests
         var signatureVerifier = CreateMockSignatureVerifier();
         var proofValidator = new ProofValidator(new Sha256HashFunction());
         var chainState = CreateMockChainState();
-        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState);
+        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState, new Sha256HashFunction());
 
         // Create a simple block with no transactions that passes basic validation
         var block = await CreateSimpleValidBlockAsync(chainState);
 
         // Act - This will fail at proof validation because we can't create real Merkle proofs
         // But it should pass all the other validation steps
-        var result = await validator.ValidateBlockDetailedAsync(block);
+        var result = await validator.ValidateBlockAsync(block);
 
         // Assert - We expect it to fail at proof validation, but all previous steps should pass
         // This tests that our validation order is correct and early validations work
@@ -40,13 +40,13 @@ public class BlockValidatorIntegrationTests
         var signatureVerifier = CreateMockSignatureVerifier();
         var proofValidator = new ProofValidator(new Sha256HashFunction());
         var chainState = CreateMockChainState();
-        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState);
+        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState, new Sha256HashFunction());
 
         // Create a block with proof score that doesn't meet difficulty
         var (block, _) = await CreateValidBlockWithInvalidProofScoreAsync(chainState);
 
         // Act
-        var result = await validator.ValidateBlockDetailedAsync(block);
+        var result = await validator.ValidateBlockAsync(block);
 
         // Assert
         Assert.False(result.IsValid);
@@ -60,13 +60,13 @@ public class BlockValidatorIntegrationTests
         var signatureVerifier = CreateMockSignatureVerifier();
         var proofValidator = new ProofValidator(new Sha256HashFunction());
         var chainState = CreateMockChainState();
-        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState);
+        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState, new Sha256HashFunction());
 
         // Create a block with transactions but wrong Merkle root
         var (block, _) = await CreateBlockWithInvalidTxRootAsync(chainState);
 
         // Act
-        var result = await validator.ValidateBlockDetailedAsync(block);
+        var result = await validator.ValidateBlockAsync(block);
 
         // Assert
         Assert.False(result.IsValid);
@@ -80,7 +80,7 @@ public class BlockValidatorIntegrationTests
         var signatureVerifier = CreateMockSignatureVerifier();
         var proofValidator = new ProofValidator(new Sha256HashFunction());
         var chainState = CreateMockChainState();
-        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState);
+        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState, new Sha256HashFunction());
 
         // Create a block with multiple transactions and correct Merkle root
         var transactions = new List<Transaction>
@@ -93,7 +93,7 @@ public class BlockValidatorIntegrationTests
         var (block, _) = await CreateValidBlockWithTransactionsAsync(chainState, transactions);
 
         // Act
-        var result = await validator.ValidateBlockDetailedAsync(block);
+        var result = await validator.ValidateBlockAsync(block);
 
         // Assert - Should pass all checks up to proof validation
         // Merkle root validation should pass since we computed it correctly
@@ -109,7 +109,7 @@ public class BlockValidatorIntegrationTests
         var signatureVerifier = CreateMockSignatureVerifier();
         var proofValidator = new ProofValidator(new Sha256HashFunction());
         var chainState = CreateMockChainState();
-        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState);
+        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState, new Sha256HashFunction());
 
         // Create a block that matches chain state expectations
         var chainTipHash = await chainState.GetChainTipHashAsync();
@@ -127,7 +127,7 @@ public class BlockValidatorIntegrationTests
             expectedChallenge);
 
         // Act
-        var result = await validator.ValidateBlockDetailedAsync(block);
+        var result = await validator.ValidateBlockAsync(block);
 
         // Assert - Should pass all chain state checks and fail at proof validation
         Assert.False(result.IsValid);
@@ -301,8 +301,9 @@ public class BlockValidatorIntegrationTests
 
         // Compute correct transaction Merkle root
         var hashFunction = new Sha256HashFunction();
+        var txHashes = transactions.Select(tx => tx.ComputeHash()).ToList();
         var merkleTreeStream = new MerkleTree.Core.MerkleTreeStream(hashFunction);
-        var leaves = GetTransactionHashesAsync(transactions);
+        var leaves = ToAsyncEnumerable(txHashes);
         var metadata = await merkleTreeStream.BuildAsync(leaves, cacheConfig: null, CancellationToken.None);
 
         var (proof, plotProof) = CreateValidProofWithGoodScore(challenge!, difficulty);
@@ -353,14 +354,13 @@ public class BlockValidatorIntegrationTests
         return (new Block(header, body), plotProof);
     }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators - required for IAsyncEnumerable
-    private static async IAsyncEnumerable<byte[]> GetTransactionHashesAsync(IEnumerable<Transaction> transactions)
-#pragma warning restore CS1998
+    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
     {
-        foreach (var tx in transactions)
+        foreach (var item in items)
         {
-            yield return tx.ComputeHash();
+            yield return item;
         }
+        await Task.CompletedTask;
     }
 
     private (BlockProof, Spacetime.Plotting.Proof) CreateValidProofWithGoodScore(byte[] challenge, long difficulty)

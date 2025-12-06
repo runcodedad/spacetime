@@ -77,14 +77,15 @@ public class BlockBuilderIntegrationTests
     /// </summary>
     private class BasicBlockValidator : IBlockValidator
     {
-        public async Task<bool> ValidateBlockAsync(Block block, CancellationToken cancellationToken = default)
+        public async Task<BlockValidationResult> ValidateBlockAsync(Block block, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             // Check block header is signed
             if (!block.Header.IsSigned())
             {
-                return false;
+                return BlockValidationResult.Failure(new BlockValidationError(
+                    BlockValidationErrorType.HeaderNotSigned, "Block header must be signed"));
             }
 
             // Check all transactions are signed
@@ -92,14 +93,16 @@ public class BlockBuilderIntegrationTests
             {
                 if (!tx.IsSigned() || !tx.ValidateBasicRules())
                 {
-                    return false;
+                    return BlockValidationResult.Failure(new BlockValidationError(
+                        BlockValidationErrorType.InvalidTransaction, "Transaction failed basic validation"));
                 }
             }
 
             // Basic structure validation
             if (block.Header.Height < 0 || block.Header.Difficulty < 0 || block.Header.Epoch < 0)
             {
-                return false;
+                return BlockValidationResult.Failure(new BlockValidationError(
+                    BlockValidationErrorType.InvalidHeight, "Invalid header values"));
             }
 
             // Transaction Merkle root verification
@@ -107,10 +110,11 @@ public class BlockBuilderIntegrationTests
                 .ConfigureAwait(false);
             if (!block.Header.TxRoot.SequenceEqual(computedTxRoot))
             {
-                return false;
+                return BlockValidationResult.Failure(new BlockValidationError(
+                    BlockValidationErrorType.InvalidTransactionRoot, "Transaction Merkle root mismatch"));
             }
 
-            return true;
+            return BlockValidationResult.Success();
         }
 
         private static async Task<byte[]> ComputeTransactionMerkleRootAsync(IReadOnlyList<Transaction> transactions)
@@ -257,8 +261,8 @@ public class BlockBuilderIntegrationTests
             proofScore: RandomNumberGenerator.GetBytes(32));
 
         // Assert - validator should verify tx root matches
-        var isValid = await validator.ValidateBlockAsync(block);
-        Assert.True(isValid);
+        var validationResult = await validator.ValidateBlockAsync(block);
+        Assert.True(validationResult.IsValid);
     }
 
     [Fact]

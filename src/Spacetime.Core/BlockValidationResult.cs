@@ -1,4 +1,4 @@
-namespace Spacetime.Consensus;
+namespace Spacetime.Core;
 
 /// <summary>
 /// Represents the result of block validation.
