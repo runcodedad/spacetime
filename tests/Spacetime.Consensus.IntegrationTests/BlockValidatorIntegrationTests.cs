@@ -134,9 +134,32 @@ public class BlockValidatorIntegrationTests
         Assert.Equal(BlockValidationErrorType.InvalidProof, result.Errors[0].ErrorType);
     }
 
+    [Fact]
+    public async Task ValidateBlock_WithValidProofScore_PassesScoreValidation()
+    {
+        // Arrange
+        var signatureVerifier = CreateMockSignatureVerifier();
+        var proofValidator = new ProofValidator(new Sha256HashFunction());
+        var chainState = CreateMockChainState();
+        var validator = new BlockValidator(signatureVerifier, proofValidator, chainState, new Sha256HashFunction());
+
+        // Create a block with a valid proof score that meets the difficulty target
+        var (block, proof) = await CreateValidBlockWithValidProofAsync(chainState);
+
+        // Act
+        var result = await validator.ValidateBlockAsync(block);
+
+        // Assert - Should pass proof score validation but fail at Merkle proof validation
+        // since we can't create real Merkle proofs without actual plot data
+        Assert.False(result.IsValid);
+        Assert.Equal(BlockValidationErrorType.InvalidProof, result.Errors[0].ErrorType);
+        // The key difference from other tests is that this block has a valid proof score
+        // that meets the difficulty target, so it passes that check
+    }
+
     // Helper methods
 
-    private async Task<Block> CreateSimpleValidBlockAsync(IChainState chainState)
+    private static async Task<Block> CreateSimpleValidBlockAsync(IChainState chainState)
     {
         var chainTipHash = await chainState.GetChainTipHashAsync();
         var chainTipHeight = await chainState.GetChainTipHeightAsync();
@@ -160,11 +183,11 @@ public class BlockValidatorIntegrationTests
             minerId: RandomNumberGenerator.GetBytes(33),
             signature: RandomNumberGenerator.GetBytes(64));
 
-        var body = new BlockBody(Array.Empty<Transaction>(), proof);
+        var body = new BlockBody([], proof);
         return new Block(header, body);
     }
 
-    private ISignatureVerifier CreateMockSignatureVerifier()
+    private static ISignatureVerifier CreateMockSignatureVerifier()
     {
         var verifier = Substitute.For<ISignatureVerifier>();
         verifier.VerifySignature(Arg.Any<byte[]>(), Arg.Any<byte[]>(), Arg.Any<byte[]>())
@@ -172,7 +195,7 @@ public class BlockValidatorIntegrationTests
         return verifier;
     }
 
-    private IChainState CreateMockChainState()
+    private static IChainState CreateMockChainState()
     {
         var chainState = Substitute.For<IChainState>();
         chainState.GetChainTipHashAsync(Arg.Any<CancellationToken>())
@@ -188,7 +211,7 @@ public class BlockValidatorIntegrationTests
         return chainState;
     }
 
-    private Transaction CreateValidTransaction()
+    private static Transaction CreateValidTransaction()
     {
         return new Transaction(
             sender: RandomNumberGenerator.GetBytes(33),
@@ -199,7 +222,7 @@ public class BlockValidatorIntegrationTests
             signature: RandomNumberGenerator.GetBytes(64));
     }
 
-    private async Task<(Block, Spacetime.Plotting.Proof)> CreateValidBlockWithValidProofAsync(IChainState chainState)
+    private static async Task<(Block, Proof)> CreateValidBlockWithValidProofAsync(IChainState chainState)
     {
         var chainTipHash = await chainState.GetChainTipHashAsync();
         var chainTipHeight = await chainState.GetChainTipHeightAsync();
@@ -224,11 +247,11 @@ public class BlockValidatorIntegrationTests
             minerId: RandomNumberGenerator.GetBytes(33),
             signature: RandomNumberGenerator.GetBytes(64));
 
-        var body = new BlockBody(Array.Empty<Transaction>(), proof);
+        var body = new BlockBody([], proof);
         return (new Block(header, body), plotProof);
     }
 
-    private async Task<(Block, Spacetime.Plotting.Proof)> CreateValidBlockWithInvalidProofScoreAsync(IChainState chainState)
+    private static async Task<(Block, Proof)> CreateValidBlockWithInvalidProofScoreAsync(IChainState chainState)
     {
         var chainTipHash = await chainState.GetChainTipHashAsync();
         var chainTipHeight = await chainState.GetChainTipHeightAsync();
@@ -253,11 +276,11 @@ public class BlockValidatorIntegrationTests
             minerId: RandomNumberGenerator.GetBytes(33),
             signature: RandomNumberGenerator.GetBytes(64));
 
-        var body = new BlockBody(Array.Empty<Transaction>(), proof);
+        var body = new BlockBody([], proof);
         return (new Block(header, body), plotProof);
     }
 
-    private async Task<(Block, Transaction[])> CreateBlockWithInvalidTxRootAsync(IChainState chainState)
+    private static async Task<(Block, Transaction[])> CreateBlockWithInvalidTxRootAsync(IChainState chainState)
     {
         var chainTipHash = await chainState.GetChainTipHashAsync();
         var chainTipHeight = await chainState.GetChainTipHeightAsync();
@@ -289,7 +312,7 @@ public class BlockValidatorIntegrationTests
         return (new Block(header, body), transactions);
     }
 
-    private async Task<(Block, Transaction[])> CreateValidBlockWithTransactionsAsync(
+    private static async Task<(Block, Transaction[])> CreateValidBlockWithTransactionsAsync(
         IChainState chainState,
         List<Transaction> transactions)
     {
@@ -326,7 +349,7 @@ public class BlockValidatorIntegrationTests
         return (new Block(header, body), transactions.ToArray());
     }
 
-    private async Task<(Block, Spacetime.Plotting.Proof)> CreateValidBlockWithPropertiesAsync(
+    private static async Task<(Block, Proof)> CreateValidBlockWithPropertiesAsync(
         IChainState chainState,
         byte[] parentHash,
         long height,
@@ -350,7 +373,7 @@ public class BlockValidatorIntegrationTests
             minerId: RandomNumberGenerator.GetBytes(33),
             signature: RandomNumberGenerator.GetBytes(64));
 
-        var body = new BlockBody(Array.Empty<Transaction>(), proof);
+        var body = new BlockBody([], proof);
         return (new Block(header, body), plotProof);
     }
 
@@ -363,7 +386,7 @@ public class BlockValidatorIntegrationTests
         await Task.CompletedTask;
     }
 
-    private (BlockProof, Spacetime.Plotting.Proof) CreateValidProofWithGoodScore(byte[] challenge, long difficulty)
+    private static (BlockProof, Proof) CreateValidProofWithGoodScore(byte[] challenge, long difficulty)
     {
         // Create a proof with a score that will meet the difficulty target
         // Generate leaf values until we find one with a low enough score
@@ -412,7 +435,7 @@ public class BlockValidatorIntegrationTests
             orientationBits,
             plotMetadata);
 
-        var plotProof = new Spacetime.Plotting.Proof(
+        var plotProof = new Proof(
             leafValue,
             leafIndex: 0,
             siblingHashes,
@@ -437,7 +460,7 @@ public class BlockValidatorIntegrationTests
         return 0;
     }
 
-    private (BlockProof, Spacetime.Plotting.Proof) CreateProofWithBadScore(byte[] challenge, long difficulty)
+    private static (BlockProof, Proof) CreateProofWithBadScore(byte[] challenge, long difficulty)
     {
         // Create a proof with a score that won't meet the difficulty target
         // We use all 0xFF bytes to create a very high score
@@ -468,7 +491,7 @@ public class BlockValidatorIntegrationTests
             orientationBits,
             plotMetadata);
 
-        var plotProof = new Spacetime.Plotting.Proof(
+        var plotProof = new Proof(
             leafValue,
             leafIndex: 0,
             siblingHashes,

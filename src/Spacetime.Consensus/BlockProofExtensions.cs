@@ -1,4 +1,5 @@
 using Spacetime.Core;
+using Spacetime.Plotting;
 
 namespace Spacetime.Consensus;
 
@@ -15,7 +16,7 @@ public static class BlockProofExtensions
     /// <param name="plotRoot">The Merkle root of the plot.</param>
     /// <param name="proofScore">The computed proof score.</param>
     /// <returns>A Plotting.Proof instance.</returns>
-    public static Spacetime.Plotting.Proof ToPlottingProof(
+    public static Proof ToPlottingProof(
         this BlockProof blockProof,
         ReadOnlySpan<byte> challenge,
         ReadOnlySpan<byte> plotRoot,
@@ -23,7 +24,7 @@ public static class BlockProofExtensions
     {
         ArgumentNullException.ThrowIfNull(blockProof);
 
-        return new Spacetime.Plotting.Proof(
+        return new Proof(
             blockProof.LeafValue.ToArray(),
             blockProof.LeafIndex,
             blockProof.MerkleProofPath,

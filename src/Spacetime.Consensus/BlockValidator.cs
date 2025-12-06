@@ -1,5 +1,5 @@
-using System.Security.Cryptography;
-using MerkleTree.Core;
+using MerkleTreeInMemory = MerkleTree.Core.MerkleTree;
+using MerkleTree.Hashing;
 using Spacetime.Core;
 
 namespace Spacetime.Consensus;
@@ -44,12 +44,12 @@ public sealed class BlockValidator : IBlockValidator
     private readonly ISignatureVerifier _signatureVerifier;
     private readonly ProofValidator _proofValidator;
     private readonly IChainState _chainState;
-    private readonly MerkleTree.Hashing.IHashFunction _hashFunction;
+    private readonly IHashFunction _hashFunction;
 
     /// <summary>
     /// Maximum allowed timestamp skew in seconds (blocks can't be too far in the future).
     /// </summary>
-    private const long MaxTimestampSkewSeconds = 120; // 2 minutes
+    private const long _maxTimestampSkewSeconds = 120; // 2 minutes
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BlockValidator"/> class.
@@ -63,7 +63,7 @@ public sealed class BlockValidator : IBlockValidator
         ISignatureVerifier signatureVerifier,
         ProofValidator proofValidator,
         IChainState chainState,
-        MerkleTree.Hashing.IHashFunction hashFunction)
+        IHashFunction hashFunction)
     {
         ArgumentNullException.ThrowIfNull(signatureVerifier);
         ArgumentNullException.ThrowIfNull(proofValidator);
@@ -144,7 +144,7 @@ public sealed class BlockValidator : IBlockValidator
             cancellationToken.ThrowIfCancellationRequested();
 
             // 7. Validate proof
-            var proofValidation = await ValidateProofAsync(block, cancellationToken);
+            var proofValidation = await ValidateProofAsync(block);
             if (!proofValidation.IsValid)
             {
                 return proofValidation;
@@ -167,7 +167,7 @@ public sealed class BlockValidator : IBlockValidator
     /// <summary>
     /// Validates the basic structure of the block header.
     /// </summary>
-    private BlockValidationResult ValidateHeaderStructure(BlockHeader header)
+    private static BlockValidationResult ValidateHeaderStructure(BlockHeader header)
     {
         // Check version
         if (header.Version != BlockHeader.CurrentVersion)
@@ -207,10 +207,10 @@ public sealed class BlockValidator : IBlockValidator
     /// <summary>
     /// Validates the block timestamp.
     /// </summary>
-    private BlockValidationResult ValidateTimestamp(BlockHeader header)
+    private static BlockValidationResult ValidateTimestamp(BlockHeader header)
     {
         var currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var maxAllowedTime = currentTime + MaxTimestampSkewSeconds;
+        var maxAllowedTime = currentTime + _maxTimestampSkewSeconds;
 
         if (header.Timestamp > maxAllowedTime)
         {
@@ -390,16 +390,12 @@ public sealed class BlockValidator : IBlockValidator
             }
             else
             {
-                // Build Merkle tree using the MerkleTree library
-                // Note: We use the in-memory approach as suggested, building from transaction hashes
                 var txHashes = transactions
                     .Select(tx => tx.ComputeHash())
                     .ToList();
 
-                var merkleTreeStream = new MerkleTreeStream(_hashFunction);
-                var leaves = ToAsyncEnumerable(txHashes);
-                var metadata = await merkleTreeStream.BuildAsync(leaves, cacheConfig: null, CancellationToken.None);
-                computedRoot = metadata.RootHash;
+                var merkleTree = new MerkleTreeInMemory(txHashes, _hashFunction);
+                computedRoot = merkleTree.Root.Hash ?? new byte[32];
             }
 
             // Compare with header's transaction root
@@ -422,23 +418,9 @@ public sealed class BlockValidator : IBlockValidator
     }
 
     /// <summary>
-    /// Converts a list to an async enumerable.
-    /// </summary>
-    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
-    {
-        foreach (var item in items)
-        {
-            yield return item;
-        }
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
     /// Validates the Proof-of-Space-Time proof.
     /// </summary>
-    private async Task<BlockValidationResult> ValidateProofAsync(
-        Block block,
-        CancellationToken cancellationToken)
+    private async Task<BlockValidationResult> ValidateProofAsync(Block block)
     {
         try
         {
