@@ -78,16 +78,16 @@ Stores account state for the account model.
 ```csharp
 // Store account state
 var account = new AccountState(Balance: 1000, Nonce: 1);
-await storage.Accounts.StoreAccountAsync(address, account);
+storage.Accounts.StoreAccount(address, account);
 
 // Retrieve account
-var account = await storage.Accounts.GetAccountAsync(address);
+var account = storage.Accounts.GetAccount(address);
 
 // Check existence
-bool exists = await storage.Accounts.ExistsAsync(address);
+bool exists = storage.Accounts.Exists(address);
 
 // Delete account
-await storage.Accounts.DeleteAccountAsync(address);
+storage.Accounts.DeleteAccount(address);
 ```
 
 #### IChainMetadata
@@ -187,7 +187,7 @@ try
     
     // Update account states
     var account = new AccountState(Balance: 1000, Nonce: 1);
-    await storage.Accounts.StoreAccountAsync(minerAddress, account);
+    storage.Accounts.StoreAccount(minerAddress, account);
     
     // Update chain metadata
     await storage.Metadata.SetBestBlockHashAsync(block.Header.ComputeHash());
@@ -196,7 +196,7 @@ try
     // Retrieve data
     var retrievedBlock = await storage.Blocks.GetBlockByHeightAsync(block.Header.Height);
     var tx = await storage.Transactions.GetTransactionAsync(txHash);
-    var account = await storage.Accounts.GetAccountAsync(minerAddress);
+    var retrievedAccount = storage.Accounts.GetAccount(minerAddress);
 }
 finally
 {
@@ -208,7 +208,8 @@ finally
 
 - **Batch writes**: Use `IWriteBatch` for multiple operations
 - **Column families**: Data is organized for optimal access patterns
-- **Async operations**: All I/O is async to avoid blocking
+- **Synchronous account operations**: Account storage operations are synchronous as RocksDB operations are inherently synchronous
+- **Async block/transaction operations**: Block and transaction operations remain async for consistency with existing patterns
 - **Disposal**: Always dispose storage to flush data and release resources
 - **Compaction**: Periodically compact to reclaim space and improve performance
 

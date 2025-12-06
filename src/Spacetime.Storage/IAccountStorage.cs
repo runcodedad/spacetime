@@ -14,31 +14,27 @@ public interface IAccountStorage
     /// </summary>
     /// <param name="address">The account address.</param>
     /// <param name="account">The account state.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task StoreAccountAsync(ReadOnlyMemory<byte> address, AccountState account, CancellationToken cancellationToken = default);
+    void StoreAccount(ReadOnlyMemory<byte> address, AccountState account);
 
     /// <summary>
     /// Retrieves an account state by address.
     /// </summary>
     /// <param name="address">The account address.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The account state, or null if not found.</returns>
-    Task<AccountState?> GetAccountAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default);
+    AccountState? GetAccount(ReadOnlyMemory<byte> address);
 
     /// <summary>
     /// Checks if an account exists.
     /// </summary>
     /// <param name="address">The account address.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the account exists, false otherwise.</returns>
-    Task<bool> ExistsAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default);
+    bool Exists(ReadOnlyMemory<byte> address);
 
     /// <summary>
     /// Deletes an account.
     /// </summary>
     /// <param name="address">The account address.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task DeleteAccountAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default);
+    void DeleteAccount(ReadOnlyMemory<byte> address);
 }
 
 /// <summary>

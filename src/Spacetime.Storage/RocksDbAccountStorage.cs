@@ -22,62 +22,54 @@ internal sealed class RocksDbAccountStorage : IAccountStorage
         _accountsCf = columnFamilies[AccountsColumnFamily];
     }
 
-    public Task StoreAccountAsync(ReadOnlyMemory<byte> address, AccountState account, CancellationToken cancellationToken = default)
+    public void StoreAccount(ReadOnlyMemory<byte> address, AccountState account)
     {
         ArgumentNullException.ThrowIfNull(account);
         if (address.Length == 0)
         {
             throw new ArgumentException("Address cannot be empty.", nameof(address));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var value = SerializeAccount(account);
         _db.Put(address.Span.ToArray(), value, _accountsCf);
-
-        return Task.CompletedTask;
     }
 
-    public Task<AccountState?> GetAccountAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default)
+    public AccountState? GetAccount(ReadOnlyMemory<byte> address)
     {
         if (address.Length == 0)
         {
             throw new ArgumentException("Address cannot be empty.", nameof(address));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var value = _db.Get(address.Span.ToArray(), _accountsCf);
 
         if (value == null)
         {
-            return Task.FromResult<AccountState?>(null);
+            return null;
         }
 
-        var account = DeserializeAccount(value);
-        return Task.FromResult<AccountState?>(account);
+        return DeserializeAccount(value);
     }
 
-    public Task<bool> ExistsAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default)
+    public bool Exists(ReadOnlyMemory<byte> address)
     {
         if (address.Length == 0)
         {
             throw new ArgumentException("Address cannot be empty.", nameof(address));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var value = _db.Get(address.Span.ToArray(), _accountsCf);
-        return Task.FromResult(value != null);
+        return value != null;
     }
 
-    public Task DeleteAccountAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default)
+    public void DeleteAccount(ReadOnlyMemory<byte> address)
     {
         if (address.Length == 0)
         {
             throw new ArgumentException("Address cannot be empty.", nameof(address));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         _db.Remove(address.Span.ToArray(), _accountsCf);
-        return Task.CompletedTask;
     }
 
     private static byte[] SerializeAccount(AccountState account)

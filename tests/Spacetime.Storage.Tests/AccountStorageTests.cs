@@ -23,145 +23,145 @@ public class AccountStorageTests : IDisposable
     }
 
     [Fact]
-    public async Task StoreAccountAsync_WithValidAccount_StoresSuccessfully()
+    public void StoreAccount_WithValidAccount_StoresSuccessfully()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
         var account = new AccountState(1000, 1);
 
         // Act
-        await _storage.Accounts.StoreAccountAsync(address, account);
+        _storage.Accounts.StoreAccount(address, account);
 
         // Assert
-        var retrieved = await _storage.Accounts.GetAccountAsync(address);
+        var retrieved = _storage.Accounts.GetAccount(address);
         Assert.NotNull(retrieved);
         Assert.Equal(account.Balance, retrieved.Balance);
         Assert.Equal(account.Nonce, retrieved.Nonce);
     }
 
     [Fact]
-    public async Task StoreAccountAsync_WithNullAccount_ThrowsArgumentNullException()
+    public void StoreAccount_WithNullAccount_ThrowsArgumentNullException()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
         AccountState account = null!;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _storage.Accounts.StoreAccountAsync(address, account));
+        Assert.Throws<ArgumentNullException>(() => _storage.Accounts.StoreAccount(address, account));
     }
 
     [Fact]
-    public async Task StoreAccountAsync_WithEmptyAddress_ThrowsArgumentException()
+    public void StoreAccount_WithEmptyAddress_ThrowsArgumentException()
     {
         // Arrange
         var address = Array.Empty<byte>();
         var account = new AccountState(1000, 1);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Accounts.StoreAccountAsync(address, account));
+        Assert.Throws<ArgumentException>(() => _storage.Accounts.StoreAccount(address, account));
     }
 
     [Fact]
-    public async Task GetAccountAsync_WithNonExistentAccount_ReturnsNull()
+    public void GetAccount_WithNonExistentAccount_ReturnsNull()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
 
         // Act
-        var result = await _storage.Accounts.GetAccountAsync(address);
+        var result = _storage.Accounts.GetAccount(address);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetAccountAsync_WithEmptyAddress_ThrowsArgumentException()
+    public void GetAccount_WithEmptyAddress_ThrowsArgumentException()
     {
         // Arrange
         var address = Array.Empty<byte>();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Accounts.GetAccountAsync(address));
+        Assert.Throws<ArgumentException>(() => _storage.Accounts.GetAccount(address));
     }
 
     [Fact]
-    public async Task ExistsAsync_WithExistingAccount_ReturnsTrue()
+    public void Exists_WithExistingAccount_ReturnsTrue()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
         var account = new AccountState(1000, 1);
-        await _storage.Accounts.StoreAccountAsync(address, account);
+        _storage.Accounts.StoreAccount(address, account);
 
         // Act
-        var exists = await _storage.Accounts.ExistsAsync(address);
+        var exists = _storage.Accounts.Exists(address);
 
         // Assert
         Assert.True(exists);
     }
 
     [Fact]
-    public async Task ExistsAsync_WithNonExistentAccount_ReturnsFalse()
+    public void Exists_WithNonExistentAccount_ReturnsFalse()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
 
         // Act
-        var exists = await _storage.Accounts.ExistsAsync(address);
+        var exists = _storage.Accounts.Exists(address);
 
         // Assert
         Assert.False(exists);
     }
 
     [Fact]
-    public async Task ExistsAsync_WithEmptyAddress_ThrowsArgumentException()
+    public void Exists_WithEmptyAddress_ThrowsArgumentException()
     {
         // Arrange
         var address = Array.Empty<byte>();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Accounts.ExistsAsync(address));
+        Assert.Throws<ArgumentException>(() => _storage.Accounts.Exists(address));
     }
 
     [Fact]
-    public async Task DeleteAccountAsync_WithExistingAccount_DeletesSuccessfully()
+    public void DeleteAccount_WithExistingAccount_DeletesSuccessfully()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
         var account = new AccountState(1000, 1);
-        await _storage.Accounts.StoreAccountAsync(address, account);
+        _storage.Accounts.StoreAccount(address, account);
 
         // Act
-        await _storage.Accounts.DeleteAccountAsync(address);
+        _storage.Accounts.DeleteAccount(address);
 
         // Assert
-        var exists = await _storage.Accounts.ExistsAsync(address);
+        var exists = _storage.Accounts.Exists(address);
         Assert.False(exists);
     }
 
     [Fact]
-    public async Task DeleteAccountAsync_WithEmptyAddress_ThrowsArgumentException()
+    public void DeleteAccount_WithEmptyAddress_ThrowsArgumentException()
     {
         // Arrange
         var address = Array.Empty<byte>();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Accounts.DeleteAccountAsync(address));
+        Assert.Throws<ArgumentException>(() => _storage.Accounts.DeleteAccount(address));
     }
 
     [Fact]
-    public async Task StoreAccountAsync_UpdatesExistingAccount()
+    public void StoreAccount_UpdatesExistingAccount()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
         var account1 = new AccountState(1000, 1);
         var account2 = new AccountState(2000, 2);
-        await _storage.Accounts.StoreAccountAsync(address, account1);
+        _storage.Accounts.StoreAccount(address, account1);
 
         // Act
-        await _storage.Accounts.StoreAccountAsync(address, account2);
+        _storage.Accounts.StoreAccount(address, account2);
 
         // Assert
-        var retrieved = await _storage.Accounts.GetAccountAsync(address);
+        var retrieved = _storage.Accounts.GetAccount(address);
         Assert.NotNull(retrieved);
         Assert.Equal(account2.Balance, retrieved.Balance);
         Assert.Equal(account2.Nonce, retrieved.Nonce);
