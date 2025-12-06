@@ -28,10 +28,9 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
         _heightsCf = columnFamilies[HeightsColumnFamily];
     }
 
-    public Task StoreHeaderAsync(BlockHeader header, CancellationToken cancellationToken = default)
+    public void StoreHeader(BlockHeader header)
     {
         ArgumentNullException.ThrowIfNull(header);
-        cancellationToken.ThrowIfCancellationRequested();
 
         var hash = header.ComputeHash();
         var key = MakeHeaderKey(hash);
@@ -42,67 +41,58 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
         // Also store height-to-hash mapping
         var heightKey = MakeHeightKey(header.Height);
         _db.Put(heightKey, hash, _heightsCf);
-
-        return Task.CompletedTask;
     }
 
-    public Task StoreBodyAsync(ReadOnlyMemory<byte> hash, BlockBody body, CancellationToken cancellationToken = default)
+    public void StoreBody(ReadOnlyMemory<byte> hash, BlockBody body)
     {
         ArgumentNullException.ThrowIfNull(body);
         if (hash.Length != 32)
         {
             throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var key = MakeBodyKey(hash.Span);
         var value = SerializeBody(body);
 
         _db.Put(key, value, _blocksCf);
-
-        return Task.CompletedTask;
     }
 
-    public async Task StoreBlockAsync(Block block, CancellationToken cancellationToken = default)
+    public void StoreBlock(Block block)
     {
         ArgumentNullException.ThrowIfNull(block);
-        cancellationToken.ThrowIfCancellationRequested();
 
         var hash = block.Header.ComputeHash();
         
-        await StoreHeaderAsync(block.Header, cancellationToken);
-        await StoreBodyAsync(hash, block.Body, cancellationToken);
+        StoreHeader(block.Header);
+        StoreBody(hash, block.Body);
     }
 
-    public Task<BlockHeader?> GetHeaderByHashAsync(ReadOnlyMemory<byte> hash, CancellationToken cancellationToken = default)
+    public BlockHeader? GetHeaderByHash(ReadOnlyMemory<byte> hash)
     {
         if (hash.Length != 32)
         {
             throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var key = MakeHeaderKey(hash.Span);
         var value = _db.Get(key, _blocksCf);
 
         if (value == null)
         {
-            return Task.FromResult<BlockHeader?>(null);
+            return null;
         }
 
         using var ms = new MemoryStream(value);
         using var reader = new BinaryReader(ms);
-        var header = BlockHeader.Deserialize(reader);
-        return Task.FromResult<BlockHeader?>(header);
+        return BlockHeader.Deserialize(reader);
     }
 
-    public async Task<BlockHeader?> GetHeaderByHeightAsync(long height, CancellationToken cancellationToken = default)
+    public BlockHeader? GetHeaderByHeight(long height)
     {
         if (height < 0)
         {
             throw new ArgumentException("Height must be non-negative.", nameof(height));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var heightKey = MakeHeightKey(height);
         var hash = _db.Get(heightKey, _heightsCf);
@@ -112,44 +102,41 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
             return null;
         }
 
-        return await GetHeaderByHashAsync(hash, cancellationToken);
+        return GetHeaderByHash(hash);
     }
 
-    public Task<BlockBody?> GetBodyByHashAsync(ReadOnlyMemory<byte> hash, CancellationToken cancellationToken = default)
+    public BlockBody? GetBodyByHash(ReadOnlyMemory<byte> hash)
     {
         if (hash.Length != 32)
         {
             throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var key = MakeBodyKey(hash.Span);
         var value = _db.Get(key, _blocksCf);
 
         if (value == null)
         {
-            return Task.FromResult<BlockBody?>(null);
+            return null;
         }
 
-        var body = DeserializeBody(value);
-        return Task.FromResult<BlockBody?>(body);
+        return DeserializeBody(value);
     }
 
-    public async Task<Block?> GetBlockByHashAsync(ReadOnlyMemory<byte> hash, CancellationToken cancellationToken = default)
+    public Block? GetBlockByHash(ReadOnlyMemory<byte> hash)
     {
         if (hash.Length != 32)
         {
             throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
-        var header = await GetHeaderByHashAsync(hash, cancellationToken);
+        var header = GetHeaderByHash(hash);
         if (header == null)
         {
             return null;
         }
 
-        var body = await GetBodyByHashAsync(hash, cancellationToken);
+        var body = GetBodyByHash(hash);
         if (body == null)
         {
             return null;
@@ -158,22 +145,21 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
         return new Block(header, body);
     }
 
-    public async Task<Block?> GetBlockByHeightAsync(long height, CancellationToken cancellationToken = default)
+    public Block? GetBlockByHeight(long height)
     {
         if (height < 0)
         {
             throw new ArgumentException("Height must be non-negative.", nameof(height));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
-        var header = await GetHeaderByHeightAsync(height, cancellationToken);
+        var header = GetHeaderByHeight(height);
         if (header == null)
         {
             return null;
         }
 
         var hash = header.ComputeHash();
-        var body = await GetBodyByHashAsync(hash, cancellationToken);
+        var body = GetBodyByHash(hash);
         if (body == null)
         {
             return null;
@@ -182,18 +168,17 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
         return new Block(header, body);
     }
 
-    public Task<bool> ExistsAsync(ReadOnlyMemory<byte> hash, CancellationToken cancellationToken = default)
+    public bool Exists(ReadOnlyMemory<byte> hash)
     {
         if (hash.Length != 32)
         {
             throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var key = MakeHeaderKey(hash.Span);
         var value = _db.Get(key, _blocksCf);
 
-        return Task.FromResult(value != null);
+        return value != null;
     }
 
     private static byte[] MakeHeaderKey(ReadOnlySpan<byte> hash)

@@ -24,7 +24,7 @@ public class TransactionIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task IndexTransactionAsync_WithValidData_IndexesSuccessfully()
+    public void IndexTransactionAsync_WithValidData_IndexesSuccessfully()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(32);
@@ -33,89 +33,89 @@ public class TransactionIndexTests : IDisposable
         var txIndex = 0;
 
         // Act
-        await _storage.Transactions.IndexTransactionAsync(txHash, blockHash, blockHeight, txIndex);
+        _storage.Transactions.IndexTransaction(txHash, blockHash, blockHeight, txIndex);
 
         // Assert
-        var location = await _storage.Transactions.GetTransactionLocationAsync(txHash);
+        var location = _storage.Transactions.GetTransactionLocation(txHash);
         Assert.NotNull(location);
         Assert.Equal(blockHeight, location.BlockHeight);
         Assert.Equal(txIndex, location.TransactionIndex);
     }
 
     [Fact]
-    public async Task IndexTransactionAsync_WithInvalidTxHashSize_ThrowsArgumentException()
+    public void IndexTransactionAsync_WithInvalidTxHashSize_ThrowsArgumentException()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(16);
         var blockHash = RandomNumberGenerator.GetBytes(32);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _storage.Transactions.IndexTransactionAsync(txHash, blockHash, 100, 0));
+        Assert.Throws<ArgumentException>(() =>
+            _storage.Transactions.IndexTransaction(txHash, blockHash, 100, 0));
     }
 
     [Fact]
-    public async Task IndexTransactionAsync_WithInvalidBlockHashSize_ThrowsArgumentException()
+    public void IndexTransactionAsync_WithInvalidBlockHashSize_ThrowsArgumentException()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(32);
         var blockHash = RandomNumberGenerator.GetBytes(16);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _storage.Transactions.IndexTransactionAsync(txHash, blockHash, 100, 0));
+        Assert.Throws<ArgumentException>(() =>
+            _storage.Transactions.IndexTransaction(txHash, blockHash, 100, 0));
     }
 
     [Fact]
-    public async Task IndexTransactionAsync_WithNegativeHeight_ThrowsArgumentException()
+    public void IndexTransactionAsync_WithNegativeHeight_ThrowsArgumentException()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(32);
         var blockHash = RandomNumberGenerator.GetBytes(32);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _storage.Transactions.IndexTransactionAsync(txHash, blockHash, -1, 0));
+        Assert.Throws<ArgumentException>(() =>
+            _storage.Transactions.IndexTransaction(txHash, blockHash, -1, 0));
     }
 
     [Fact]
-    public async Task IndexTransactionAsync_WithNegativeTxIndex_ThrowsArgumentException()
+    public void IndexTransactionAsync_WithNegativeTxIndex_ThrowsArgumentException()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(32);
         var blockHash = RandomNumberGenerator.GetBytes(32);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _storage.Transactions.IndexTransactionAsync(txHash, blockHash, 100, -1));
+        Assert.Throws<ArgumentException>(() =>
+            _storage.Transactions.IndexTransaction(txHash, blockHash, 100, -1));
     }
 
     [Fact]
-    public async Task GetTransactionLocationAsync_WithNonExistentHash_ReturnsNull()
+    public void GetTransactionLocationAsync_WithNonExistentHash_ReturnsNull()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        var location = await _storage.Transactions.GetTransactionLocationAsync(txHash);
+        var location = _storage.Transactions.GetTransactionLocation(txHash);
 
         // Assert
         Assert.Null(location);
     }
 
     [Fact]
-    public async Task GetTransactionLocationAsync_WithInvalidHashSize_ThrowsArgumentException()
+    public void GetTransactionLocationAsync_WithInvalidHashSize_ThrowsArgumentException()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(16);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _storage.Transactions.GetTransactionLocationAsync(txHash));
+        Assert.Throws<ArgumentException>(() =>
+            _storage.Transactions.GetTransactionLocation(txHash));
     }
 
     [Fact]
-    public async Task GetTransactionAsync_WithExistingTransaction_ReturnsTransaction()
+    public void GetTransactionAsync_WithExistingTransaction_ReturnsTransaction()
     {
         // Arrange
         var tx = new Transaction(
@@ -157,13 +157,13 @@ public class TransactionIndexTests : IDisposable
         var block = new Block(header, body);
         var blockHash = header.ComputeHash();
         
-        await _storage.Blocks.StoreBlockAsync(block);
+        _storage.Blocks.StoreBlock(block);
         
         var txHash = tx.ComputeHash();
-        await _storage.Transactions.IndexTransactionAsync(txHash, blockHash, header.Height, 0);
+        _storage.Transactions.IndexTransaction(txHash, blockHash, header.Height, 0);
 
         // Act
-        var retrieved = await _storage.Transactions.GetTransactionAsync(txHash);
+        var retrieved = _storage.Transactions.GetTransaction(txHash);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -171,26 +171,26 @@ public class TransactionIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetTransactionAsync_WithNonExistentHash_ReturnsNull()
+    public void GetTransactionAsync_WithNonExistentHash_ReturnsNull()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        var result = await _storage.Transactions.GetTransactionAsync(txHash);
+        var result = _storage.Transactions.GetTransaction(txHash);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetTransactionAsync_WithInvalidHashSize_ThrowsArgumentException()
+    public void GetTransactionAsync_WithInvalidHashSize_ThrowsArgumentException()
     {
         // Arrange
         var txHash = RandomNumberGenerator.GetBytes(16);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _storage.Transactions.GetTransactionAsync(txHash));
+        Assert.Throws<ArgumentException>(() =>
+            _storage.Transactions.GetTransaction(txHash));
     }
 }

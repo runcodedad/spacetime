@@ -29,12 +29,11 @@ internal sealed class RocksDbTransactionIndex : ITransactionIndex
         _blockStorage = blockStorage;
     }
 
-    public Task IndexTransactionAsync(
+    public void IndexTransaction(
         ReadOnlyMemory<byte> txHash,
         ReadOnlyMemory<byte> blockHash,
         long blockHeight,
-        int txIndex,
-        CancellationToken cancellationToken = default)
+        int txIndex)
     {
         if (txHash.Length != 32)
         {
@@ -52,52 +51,42 @@ internal sealed class RocksDbTransactionIndex : ITransactionIndex
         {
             throw new ArgumentException("Transaction index must be non-negative.", nameof(txIndex));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var value = SerializeLocation(blockHash, blockHeight, txIndex);
         _db.Put(txHash.Span.ToArray(), value, _transactionsCf);
-
-        return Task.CompletedTask;
     }
 
-    public Task<TransactionLocation?> GetTransactionLocationAsync(
-        ReadOnlyMemory<byte> txHash,
-        CancellationToken cancellationToken = default)
+    public TransactionLocation? GetTransactionLocation(ReadOnlyMemory<byte> txHash)
     {
         if (txHash.Length != 32)
         {
             throw new ArgumentException("Transaction hash must be 32 bytes.", nameof(txHash));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var value = _db.Get(txHash.Span.ToArray(), _transactionsCf);
 
         if (value == null)
         {
-            return Task.FromResult<TransactionLocation?>(null);
+            return null;
         }
 
-        var location = DeserializeLocation(value);
-        return Task.FromResult<TransactionLocation?>(location);
+        return DeserializeLocation(value);
     }
 
-    public async Task<Transaction?> GetTransactionAsync(
-        ReadOnlyMemory<byte> txHash,
-        CancellationToken cancellationToken = default)
+    public Transaction? GetTransaction(ReadOnlyMemory<byte> txHash)
     {
         if (txHash.Length != 32)
         {
             throw new ArgumentException("Transaction hash must be 32 bytes.", nameof(txHash));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
-        var location = await GetTransactionLocationAsync(txHash, cancellationToken);
+        var location = GetTransactionLocation(txHash);
         if (location == null)
         {
             return null;
         }
 
-        var body = await _blockStorage.GetBodyByHashAsync(location.BlockHash, cancellationToken);
+        var body = _blockStorage.GetBodyByHash(location.BlockHash);
         if (body == null)
         {
             return null;

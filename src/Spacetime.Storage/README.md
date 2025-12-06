@@ -35,8 +35,8 @@ Main storage interface providing access to all sub-storages and atomic operation
 
 ```csharp
 var storage = RocksDbChainStorage.Open("/path/to/db");
-await storage.Blocks.StoreBlockAsync(block);
-await storage.Accounts.StoreAccountAsync(address, account);
+storage.Blocks.StoreBlock(block);
+storage.Accounts.StoreAccount(address, account);
 await storage.DisposeAsync();
 ```
 
@@ -45,16 +45,16 @@ Stores and retrieves blocks, headers, and bodies.
 
 ```csharp
 // Store a complete block
-await storage.Blocks.StoreBlockAsync(block);
+storage.Blocks.StoreBlock(block);
 
 // Retrieve by hash
-var block = await storage.Blocks.GetBlockByHashAsync(blockHash);
+var block = storage.Blocks.GetBlockByHash(blockHash);
 
 // Retrieve by height
-var block = await storage.Blocks.GetBlockByHeightAsync(100);
+var block = storage.Blocks.GetBlockByHeight(100);
 
 // Check existence
-bool exists = await storage.Blocks.ExistsAsync(blockHash);
+bool exists = storage.Blocks.Exists(blockHash);
 ```
 
 #### ITransactionIndex
@@ -62,14 +62,13 @@ Indexes transactions for fast lookup.
 
 ```csharp
 // Index a transaction
-await storage.Transactions.IndexTransactionAsync(
-    txHash, blockHash, blockHeight, txIndex);
+storage.Transactions.IndexTransaction(txHash, blockHash, blockHeight, txIndex);
 
 // Get transaction location
-var location = await storage.Transactions.GetTransactionLocationAsync(txHash);
+var location = storage.Transactions.GetTransactionLocation(txHash);
 
 // Get full transaction
-var tx = await storage.Transactions.GetTransactionAsync(txHash);
+var tx = storage.Transactions.GetTransaction(txHash);
 ```
 
 #### IAccountStorage
@@ -95,12 +94,12 @@ Manages chain metadata like best block and height.
 
 ```csharp
 // Set best block
-await storage.Metadata.SetBestBlockHashAsync(blockHash);
-await storage.Metadata.SetChainHeightAsync(height);
+storage.Metadata.SetBestBlockHash(blockHash);
+storage.Metadata.SetChainHeight(height);
 
 // Get best block
-var bestHash = await storage.Metadata.GetBestBlockHashAsync();
-var height = await storage.Metadata.GetChainHeightAsync();
+var bestHash = storage.Metadata.GetBestBlockHash();
+var height = storage.Metadata.GetChainHeight();
 ```
 
 ### Atomic Operations
@@ -116,17 +115,17 @@ batch.Put(key2, value2, "accounts");
 batch.Delete(key3, "metadata");
 
 // Commit atomically
-await storage.CommitBatchAsync(batch);
+storage.CommitBatch(batch);
 ```
 
 ### Database Maintenance
 
 ```csharp
 // Compact database
-await storage.CompactAsync();
+storage.Compact();
 
 // Check integrity
-bool isHealthy = await storage.CheckIntegrityAsync();
+bool isHealthy = storage.CheckIntegrity();
 ```
 
 ## Data Model
@@ -172,7 +171,7 @@ try
 {
     // Store a block
     var block = CreateBlock();
-    await storage.Blocks.StoreBlockAsync(block);
+    storage.Blocks.StoreBlock(block);
     
     // Index transactions
     for (int i = 0; i < block.Body.Transactions.Count; i++)
@@ -181,8 +180,7 @@ try
         var txHash = tx.ComputeHash();
         var blockHash = block.Header.ComputeHash();
         
-        await storage.Transactions.IndexTransactionAsync(
-            txHash, blockHash, block.Header.Height, i);
+        storage.Transactions.IndexTransaction(txHash, blockHash, block.Header.Height, i);
     }
     
     // Update account states
@@ -190,12 +188,12 @@ try
     storage.Accounts.StoreAccount(minerAddress, account);
     
     // Update chain metadata
-    await storage.Metadata.SetBestBlockHashAsync(block.Header.ComputeHash());
-    await storage.Metadata.SetChainHeightAsync(block.Header.Height);
+    storage.Metadata.SetBestBlockHash(block.Header.ComputeHash());
+    storage.Metadata.SetChainHeight(block.Header.Height);
     
     // Retrieve data
-    var retrievedBlock = await storage.Blocks.GetBlockByHeightAsync(block.Header.Height);
-    var tx = await storage.Transactions.GetTransactionAsync(txHash);
+    var retrievedBlock = storage.Blocks.GetBlockByHeight(block.Header.Height);
+    var retrievedTx = storage.Transactions.GetTransaction(txHash);
     var retrievedAccount = storage.Accounts.GetAccount(minerAddress);
 }
 finally
@@ -208,8 +206,7 @@ finally
 
 - **Batch writes**: Use `IWriteBatch` for multiple operations
 - **Column families**: Data is organized for optimal access patterns
-- **Synchronous account operations**: Account storage operations are synchronous as RocksDB operations are inherently synchronous
-- **Async block/transaction operations**: Block and transaction operations remain async for consistency with existing patterns
+- **Synchronous operations**: All storage operations are synchronous as RocksDB operations are inherently synchronous
 - **Disposal**: Always dispose storage to flush data and release resources
 - **Compaction**: Periodically compact to reclaim space and improve performance
 

@@ -40,19 +40,16 @@ public interface IChainStorage : IAsyncDisposable
     /// Commits a write batch atomically.
     /// </summary>
     /// <param name="batch">The batch to commit.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task CommitBatchAsync(IWriteBatch batch, CancellationToken cancellationToken = default);
+    void CommitBatch(IWriteBatch batch);
 
     /// <summary>
     /// Compacts the database to reclaim space and improve performance.
     /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task CompactAsync(CancellationToken cancellationToken = default);
+    void Compact();
 
     /// <summary>
     /// Checks database integrity and detects corruption.
     /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if database is healthy, false if corruption is detected.</returns>
-    Task<bool> CheckIntegrityAsync(CancellationToken cancellationToken = default);
+    bool CheckIntegrity();
 }

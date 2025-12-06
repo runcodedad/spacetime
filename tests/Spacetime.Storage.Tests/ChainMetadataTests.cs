@@ -23,118 +23,118 @@ public class ChainMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task GetBestBlockHashAsync_WithNoData_ReturnsNull()
+    public void GetBestBlockHashAsync_WithNoData_ReturnsNull()
     {
         // Act
-        var result = await _storage.Metadata.GetBestBlockHashAsync();
+        var result = _storage.Metadata.GetBestBlockHash();
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task SetBestBlockHashAsync_WithValidHash_StoresSuccessfully()
+    public void SetBestBlockHashAsync_WithValidHash_StoresSuccessfully()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        await _storage.Metadata.SetBestBlockHashAsync(hash);
+        _storage.Metadata.SetBestBlockHash(hash);
 
         // Assert
-        var retrieved = await _storage.Metadata.GetBestBlockHashAsync();
+        var retrieved = _storage.Metadata.GetBestBlockHash();
         Assert.NotNull(retrieved);
         Assert.True(hash.AsSpan().SequenceEqual(retrieved.Value.Span));
     }
 
     [Fact]
-    public async Task SetBestBlockHashAsync_WithInvalidHashSize_ThrowsArgumentException()
+    public void SetBestBlockHashAsync_WithInvalidHashSize_ThrowsArgumentException()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(16);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Metadata.SetBestBlockHashAsync(hash));
+        Assert.Throws<ArgumentException>(() => _storage.Metadata.SetBestBlockHash(hash));
     }
 
     [Fact]
-    public async Task SetBestBlockHashAsync_UpdatesExistingHash()
+    public void SetBestBlockHashAsync_UpdatesExistingHash()
     {
         // Arrange
         var hash1 = RandomNumberGenerator.GetBytes(32);
         var hash2 = RandomNumberGenerator.GetBytes(32);
-        await _storage.Metadata.SetBestBlockHashAsync(hash1);
+        _storage.Metadata.SetBestBlockHash(hash1);
 
         // Act
-        await _storage.Metadata.SetBestBlockHashAsync(hash2);
+        _storage.Metadata.SetBestBlockHash(hash2);
 
         // Assert
-        var retrieved = await _storage.Metadata.GetBestBlockHashAsync();
+        var retrieved = _storage.Metadata.GetBestBlockHash();
         Assert.NotNull(retrieved);
         Assert.True(hash2.AsSpan().SequenceEqual(retrieved.Value.Span));
     }
 
     [Fact]
-    public async Task GetChainHeightAsync_WithNoData_ReturnsNull()
+    public void GetChainHeightAsync_WithNoData_ReturnsNull()
     {
         // Act
-        var result = await _storage.Metadata.GetChainHeightAsync();
+        var result = _storage.Metadata.GetChainHeight();
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task SetChainHeightAsync_WithValidHeight_StoresSuccessfully()
+    public void SetChainHeightAsync_WithValidHeight_StoresSuccessfully()
     {
         // Arrange
         var height = 100L;
 
         // Act
-        await _storage.Metadata.SetChainHeightAsync(height);
+        _storage.Metadata.SetChainHeight(height);
 
         // Assert
-        var retrieved = await _storage.Metadata.GetChainHeightAsync();
+        var retrieved = _storage.Metadata.GetChainHeight();
         Assert.NotNull(retrieved);
         Assert.Equal(height, retrieved.Value);
     }
 
     [Fact]
-    public async Task SetChainHeightAsync_WithNegativeHeight_ThrowsArgumentException()
+    public void SetChainHeightAsync_WithNegativeHeight_ThrowsArgumentException()
     {
         // Arrange
         var height = -1L;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Metadata.SetChainHeightAsync(height));
+        Assert.Throws<ArgumentException>(() => _storage.Metadata.SetChainHeight(height));
     }
 
     [Fact]
-    public async Task SetChainHeightAsync_UpdatesExistingHeight()
+    public void SetChainHeightAsync_UpdatesExistingHeight()
     {
         // Arrange
-        await _storage.Metadata.SetChainHeightAsync(100);
+        _storage.Metadata.SetChainHeight(100);
 
         // Act
-        await _storage.Metadata.SetChainHeightAsync(200);
+        _storage.Metadata.SetChainHeight(200);
 
         // Assert
-        var retrieved = await _storage.Metadata.GetChainHeightAsync();
+        var retrieved = _storage.Metadata.GetChainHeight();
         Assert.NotNull(retrieved);
         Assert.Equal(200, retrieved.Value);
     }
 
     [Fact]
-    public async Task SetChainHeightAsync_WithZeroHeight_StoresSuccessfully()
+    public void SetChainHeightAsync_WithZeroHeight_StoresSuccessfully()
     {
         // Arrange
         var height = 0L;
 
         // Act
-        await _storage.Metadata.SetChainHeightAsync(height);
+        _storage.Metadata.SetChainHeight(height);
 
         // Assert
-        var retrieved = await _storage.Metadata.GetChainHeightAsync();
+        var retrieved = _storage.Metadata.GetChainHeight();
         Assert.NotNull(retrieved);
         Assert.Equal(height, retrieved.Value);
     }

@@ -68,7 +68,7 @@ public class RocksDbChainStorageTests : IDisposable
     }
 
     [Fact]
-    public async Task CommitBatchAsync_WithValidBatch_Succeeds()
+    public void CommitBatchAsync_WithValidBatch_Succeeds()
     {
         // Arrange
         using var batch = _storage.CreateWriteBatch();
@@ -77,49 +77,49 @@ public class RocksDbChainStorageTests : IDisposable
         batch.Put(key, value);
 
         // Act
-        await _storage.CommitBatchAsync(batch);
+        _storage.CommitBatch(batch);
 
         // Assert - No exception thrown
     }
 
     [Fact]
-    public async Task CommitBatchAsync_WithNullBatch_ThrowsArgumentNullException()
+    public void CommitBatchAsync_WithNullBatch_ThrowsArgumentNullException()
     {
         // Arrange
         IWriteBatch batch = null!;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _storage.CommitBatchAsync(batch));
+        Assert.Throws<ArgumentNullException>(() => _storage.CommitBatch(batch));
     }
 
     [Fact]
-    public async Task CompactAsync_Succeeds()
+    public void CompactAsync_Succeeds()
     {
         // Act
-        await _storage.CompactAsync();
+        _storage.Compact();
 
         // Assert - No exception thrown
     }
 
     [Fact]
-    public async Task CheckIntegrityAsync_ReturnsTrue()
+    public void CheckIntegrityAsync_ReturnsTrue()
     {
         // Act
-        var result = await _storage.CheckIntegrityAsync();
+        var result = _storage.CheckIntegrity();
 
         // Assert
         Assert.True(result);
     }
 
     [Fact]
-    public async Task DisposeAsync_DisposesResources()
+    public void DisposeAsync_DisposesResources()
     {
         // Arrange
         var tempPath = Path.Combine(Path.GetTempPath(), $"spacetime_test_{Guid.NewGuid():N}");
         var storage = RocksDbChainStorage.Open(tempPath);
 
         // Act
-        await storage.DisposeAsync();
+        storage.DisposeAsync().AsTask().Wait();
 
         // Assert
         // Verify we can't use the storage after disposal

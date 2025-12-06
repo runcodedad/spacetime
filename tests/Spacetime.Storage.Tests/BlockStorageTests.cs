@@ -72,64 +72,64 @@ public class BlockStorageTests : IDisposable
     }
 
     [Fact]
-    public async Task StoreHeaderAsync_WithValidHeader_StoresSuccessfully()
+    public void StoreHeaderAsync_WithValidHeader_StoresSuccessfully()
     {
         // Arrange
         var header = CreateTestHeader();
         var hash = header.ComputeHash();
 
         // Act
-        await _storage.Blocks.StoreHeaderAsync(header);
+        _storage.Blocks.StoreHeader(header);
 
         // Assert
-        var retrieved = await _storage.Blocks.GetHeaderByHashAsync(hash);
+        var retrieved = _storage.Blocks.GetHeaderByHash(hash);
         Assert.NotNull(retrieved);
         Assert.Equal(header.Height, retrieved.Height);
         Assert.Equal(header.Version, retrieved.Version);
     }
 
     [Fact]
-    public async Task StoreHeaderAsync_WithNullHeader_ThrowsArgumentNullException()
+    public void StoreHeaderAsync_WithNullHeader_ThrowsArgumentNullException()
     {
         // Arrange
         BlockHeader header = null!;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _storage.Blocks.StoreHeaderAsync(header));
+        Assert.Throws<ArgumentNullException>(() => _storage.Blocks.StoreHeader(header));
     }
 
     [Fact]
-    public async Task GetHeaderByHashAsync_WithNonExistentHash_ReturnsNull()
+    public void GetHeaderByHashAsync_WithNonExistentHash_ReturnsNull()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        var result = await _storage.Blocks.GetHeaderByHashAsync(hash);
+        var result = _storage.Blocks.GetHeaderByHash(hash);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetHeaderByHashAsync_WithInvalidHashSize_ThrowsArgumentException()
+    public void GetHeaderByHashAsync_WithInvalidHashSize_ThrowsArgumentException()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(16);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Blocks.GetHeaderByHashAsync(hash));
+        Assert.Throws<ArgumentException>(() => _storage.Blocks.GetHeaderByHash(hash));
     }
 
     [Fact]
-    public async Task GetHeaderByHeightAsync_WithValidHeight_ReturnsHeader()
+    public void GetHeaderByHeightAsync_WithValidHeight_ReturnsHeader()
     {
         // Arrange
         var header = CreateTestHeader(123);
-        await _storage.Blocks.StoreHeaderAsync(header);
+        _storage.Blocks.StoreHeader(header);
 
         // Act
-        var retrieved = await _storage.Blocks.GetHeaderByHeightAsync(123);
+        var retrieved = _storage.Blocks.GetHeaderByHeight(123);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -137,112 +137,112 @@ public class BlockStorageTests : IDisposable
     }
 
     [Fact]
-    public async Task GetHeaderByHeightAsync_WithNonExistentHeight_ReturnsNull()
+    public void GetHeaderByHeightAsync_WithNonExistentHeight_ReturnsNull()
     {
         // Act
-        var result = await _storage.Blocks.GetHeaderByHeightAsync(999);
+        var result = _storage.Blocks.GetHeaderByHeight(999);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetHeaderByHeightAsync_WithNegativeHeight_ThrowsArgumentException()
+    public void GetHeaderByHeightAsync_WithNegativeHeight_ThrowsArgumentException()
     {
         // Arrange
         var height = -1L;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Blocks.GetHeaderByHeightAsync(height));
+        Assert.Throws<ArgumentException>(() => _storage.Blocks.GetHeaderByHeight(height));
     }
 
     [Fact]
-    public async Task StoreBodyAsync_WithValidBody_StoresSuccessfully()
+    public void StoreBodyAsync_WithValidBody_StoresSuccessfully()
     {
         // Arrange
         var body = CreateTestBody();
         var hash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        await _storage.Blocks.StoreBodyAsync(hash, body);
+        _storage.Blocks.StoreBody(hash, body);
 
         // Assert
-        var retrieved = await _storage.Blocks.GetBodyByHashAsync(hash);
+        var retrieved = _storage.Blocks.GetBodyByHash(hash);
         Assert.NotNull(retrieved);
         Assert.Equal(body.Transactions.Count, retrieved.Transactions.Count);
     }
 
     [Fact]
-    public async Task StoreBodyAsync_WithNullBody_ThrowsArgumentNullException()
+    public void StoreBodyAsync_WithNullBody_ThrowsArgumentNullException()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(32);
         BlockBody body = null!;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _storage.Blocks.StoreBodyAsync(hash, body));
+        Assert.Throws<ArgumentNullException>(() => _storage.Blocks.StoreBody(hash, body));
     }
 
     [Fact]
-    public async Task StoreBodyAsync_WithInvalidHashSize_ThrowsArgumentException()
+    public void StoreBodyAsync_WithInvalidHashSize_ThrowsArgumentException()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(16);
         var body = CreateTestBody();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Blocks.StoreBodyAsync(hash, body));
+        Assert.Throws<ArgumentException>(() => _storage.Blocks.StoreBody(hash, body));
     }
 
     [Fact]
-    public async Task StoreBlockAsync_WithValidBlock_StoresSuccessfully()
+    public void StoreBlockAsync_WithValidBlock_StoresSuccessfully()
     {
         // Arrange
         var block = CreateTestBlock();
         var hash = block.Header.ComputeHash();
 
         // Act
-        await _storage.Blocks.StoreBlockAsync(block);
+        _storage.Blocks.StoreBlock(block);
 
         // Assert
-        var retrieved = await _storage.Blocks.GetBlockByHashAsync(hash);
+        var retrieved = _storage.Blocks.GetBlockByHash(hash);
         Assert.NotNull(retrieved);
         Assert.Equal(block.Header.Height, retrieved.Header.Height);
         Assert.Equal(block.Body.Transactions.Count, retrieved.Body.Transactions.Count);
     }
 
     [Fact]
-    public async Task StoreBlockAsync_WithNullBlock_ThrowsArgumentNullException()
+    public void StoreBlockAsync_WithNullBlock_ThrowsArgumentNullException()
     {
         // Arrange
         Block block = null!;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _storage.Blocks.StoreBlockAsync(block));
+        Assert.Throws<ArgumentNullException>(() => _storage.Blocks.StoreBlock(block));
     }
 
     [Fact]
-    public async Task GetBlockByHashAsync_WithNonExistentBlock_ReturnsNull()
+    public void GetBlockByHashAsync_WithNonExistentBlock_ReturnsNull()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        var result = await _storage.Blocks.GetBlockByHashAsync(hash);
+        var result = _storage.Blocks.GetBlockByHash(hash);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetBlockByHeightAsync_WithValidHeight_ReturnsBlock()
+    public void GetBlockByHeightAsync_WithValidHeight_ReturnsBlock()
     {
         // Arrange
         var block = CreateTestBlock(456);
-        await _storage.Blocks.StoreBlockAsync(block);
+        _storage.Blocks.StoreBlock(block);
 
         // Act
-        var retrieved = await _storage.Blocks.GetBlockByHeightAsync(456);
+        var retrieved = _storage.Blocks.GetBlockByHeight(456);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -250,50 +250,50 @@ public class BlockStorageTests : IDisposable
     }
 
     [Fact]
-    public async Task GetBlockByHeightAsync_WithNonExistentHeight_ReturnsNull()
+    public void GetBlockByHeightAsync_WithNonExistentHeight_ReturnsNull()
     {
         // Act
-        var result = await _storage.Blocks.GetBlockByHeightAsync(999);
+        var result = _storage.Blocks.GetBlockByHeight(999);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task ExistsAsync_WithExistingBlock_ReturnsTrue()
+    public void ExistsAsync_WithExistingBlock_ReturnsTrue()
     {
         // Arrange
         var header = CreateTestHeader();
         var hash = header.ComputeHash();
-        await _storage.Blocks.StoreHeaderAsync(header);
+        _storage.Blocks.StoreHeader(header);
 
         // Act
-        var exists = await _storage.Blocks.ExistsAsync(hash);
+        var exists = _storage.Blocks.Exists(hash);
 
         // Assert
         Assert.True(exists);
     }
 
     [Fact]
-    public async Task ExistsAsync_WithNonExistentBlock_ReturnsFalse()
+    public void ExistsAsync_WithNonExistentBlock_ReturnsFalse()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        var exists = await _storage.Blocks.ExistsAsync(hash);
+        var exists = _storage.Blocks.Exists(hash);
 
         // Assert
         Assert.False(exists);
     }
 
     [Fact]
-    public async Task ExistsAsync_WithInvalidHashSize_ThrowsArgumentException()
+    public void ExistsAsync_WithInvalidHashSize_ThrowsArgumentException()
     {
         // Arrange
         var hash = RandomNumberGenerator.GetBytes(16);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _storage.Blocks.ExistsAsync(hash));
+        Assert.Throws<ArgumentException>(() => _storage.Blocks.Exists(hash));
     }
 }

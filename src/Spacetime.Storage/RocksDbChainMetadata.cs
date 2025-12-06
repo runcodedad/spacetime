@@ -24,45 +24,38 @@ internal sealed class RocksDbChainMetadata : IChainMetadata
         _metadataCf = columnFamilies[MetadataColumnFamily];
     }
 
-    public Task<ReadOnlyMemory<byte>?> GetBestBlockHashAsync(CancellationToken cancellationToken = default)
+    public ReadOnlyMemory<byte>? GetBestBlockHash()
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         var key = System.Text.Encoding.UTF8.GetBytes(BestBlockHashKey);
         var value = _db.Get(key, _metadataCf);
 
         if (value == null)
         {
-            return Task.FromResult<ReadOnlyMemory<byte>?>(null);
+            return null;
         }
 
-        return Task.FromResult<ReadOnlyMemory<byte>?>(new ReadOnlyMemory<byte>(value));
+        return new ReadOnlyMemory<byte>(value);
     }
 
-    public Task SetBestBlockHashAsync(ReadOnlyMemory<byte> hash, CancellationToken cancellationToken = default)
+    public void SetBestBlockHash(ReadOnlyMemory<byte> hash)
     {
         if (hash.Length != 32)
         {
             throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var key = System.Text.Encoding.UTF8.GetBytes(BestBlockHashKey);
         _db.Put(key, hash.Span.ToArray(), _metadataCf);
-
-        return Task.CompletedTask;
     }
 
-    public Task<long?> GetChainHeightAsync(CancellationToken cancellationToken = default)
+    public long? GetChainHeight()
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         var key = System.Text.Encoding.UTF8.GetBytes(ChainHeightKey);
         var value = _db.Get(key, _metadataCf);
 
         if (value == null)
         {
-            return Task.FromResult<long?>(null);
+            return null;
         }
 
         if (value.Length != 8)
@@ -71,23 +64,20 @@ internal sealed class RocksDbChainMetadata : IChainMetadata
         }
 
         var height = BinaryPrimitives.ReadInt64LittleEndian(value);
-        return Task.FromResult<long?>(height);
+        return height;
     }
 
-    public Task SetChainHeightAsync(long height, CancellationToken cancellationToken = default)
+    public void SetChainHeight(long height)
     {
         if (height < 0)
         {
             throw new ArgumentException("Height must be non-negative.", nameof(height));
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var key = System.Text.Encoding.UTF8.GetBytes(ChainHeightKey);
         var value = new byte[8];
         BinaryPrimitives.WriteInt64LittleEndian(value, height);
 
         _db.Put(key, value, _metadataCf);
-
-        return Task.CompletedTask;
     }
 }

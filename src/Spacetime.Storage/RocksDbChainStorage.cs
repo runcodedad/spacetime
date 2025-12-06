@@ -96,11 +96,10 @@ public sealed class RocksDbChainStorage : IChainStorage
         return new RocksDbWriteBatch(_db, new WriteBatch(), _columnFamilies);
     }
 
-    public Task CommitBatchAsync(IWriteBatch batch, CancellationToken cancellationToken = default)
+    public void CommitBatch(IWriteBatch batch)
     {
         ArgumentNullException.ThrowIfNull(batch);
         ObjectDisposedException.ThrowIf(_disposed, this);
-        cancellationToken.ThrowIfCancellationRequested();
 
         if (batch is not RocksDbWriteBatch rocksDbBatch)
         {
@@ -108,37 +107,32 @@ public sealed class RocksDbChainStorage : IChainStorage
         }
 
         _db.Write(rocksDbBatch.GetWriteBatch());
-        return Task.CompletedTask;
     }
 
-    public Task CompactAsync(CancellationToken cancellationToken = default)
+    public void Compact()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        cancellationToken.ThrowIfCancellationRequested();
 
         // Compact all column families
         foreach (var cf in _columnFamilies.Values)
         {
             _db.CompactRange(null, null, cf);
         }
-
-        return Task.CompletedTask;
     }
 
-    public Task<bool> CheckIntegrityAsync(CancellationToken cancellationToken = default)
+    public bool CheckIntegrity()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {
             // Try to get a property - if database is corrupted, this will throw
             _db.GetProperty("rocksdb.stats");
-            return Task.FromResult(true);
+            return true;
         }
         catch
         {
-            return Task.FromResult(false);
+            return false;
         }
     }
 
