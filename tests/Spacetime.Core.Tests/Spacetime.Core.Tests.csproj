@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Spacetime.Consensus\Spacetime.Consensus.csproj" />
     <ProjectReference Include="..\..\src\Spacetime.Core\Spacetime.Core.csproj" />
   </ItemGroup>
 

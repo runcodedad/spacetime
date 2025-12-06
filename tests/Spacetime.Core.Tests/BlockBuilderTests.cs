@@ -99,7 +99,7 @@ public class BlockBuilderTests
             .Returns(signature);
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -145,7 +145,7 @@ public class BlockBuilderTests
             .Returns(signature);
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -182,7 +182,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -218,7 +218,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -255,7 +255,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -290,7 +290,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(false);
+            .Returns(BlockValidationResult.Failure(new BlockValidationError(BlockValidationErrorType.InvalidProof, "Test failure")));
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -523,7 +523,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -559,7 +559,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -595,7 +595,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -630,7 +630,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
@@ -669,7 +669,7 @@ public class BlockBuilderTests
             .Returns(RandomNumberGenerator.GetBytes(64));
 
         validator.ValidateBlockAsync(Arg.Any<Block>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+            .Returns(BlockValidationResult.Success());
 
         var builder = new BlockBuilder(mempool, signer, validator);
 
