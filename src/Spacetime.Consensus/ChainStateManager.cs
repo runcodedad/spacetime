@@ -291,16 +291,8 @@ public sealed class ChainStateManager : IStateManager
 
     private static void StoreAccountInBatch(IWriteBatch batch, byte[] address, AccountState account)
     {
-        var value = SerializeAccount(account);
+        var value = account.Serialize();
         batch.Put(address, value, "accounts");
-    }
-
-    private static byte[] SerializeAccount(AccountState account)
-    {
-        var buffer = new byte[16]; // 8 bytes for balance + 8 bytes for nonce
-        System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(0), account.Balance);
-        System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(8), account.Nonce);
-        return buffer;
     }
 
     private sealed class StateSnapshot
