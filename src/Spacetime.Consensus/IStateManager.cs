@@ -44,55 +44,48 @@ public interface IStateManager
     /// Gets the balance of an account.
     /// </summary>
     /// <param name="address">The account address (33-byte public key).</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The account balance, or 0 if the account doesn't exist.</returns>
-    Task<long> GetBalanceAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default);
+    long GetBalance(ReadOnlyMemory<byte> address);
 
     /// <summary>
     /// Gets the nonce of an account.
     /// </summary>
     /// <param name="address">The account address (33-byte public key).</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The account nonce, or 0 if the account doesn't exist.</returns>
-    Task<long> GetNonceAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default);
+    long GetNonce(ReadOnlyMemory<byte> address);
 
     /// <summary>
     /// Computes the current state root hash.
     /// </summary>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The 32-byte state root hash.</returns>
     /// <remarks>
     /// The state root is a Merkle root of all account states.
     /// It allows light clients to verify state without downloading all accounts.
     /// </remarks>
-    Task<byte[]> ComputeStateRootAsync(CancellationToken cancellationToken = default);
+    byte[] ComputeStateRoot();
 
     /// <summary>
     /// Creates a snapshot of the current state for potential rollback.
     /// </summary>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A snapshot identifier that can be used to revert state.</returns>
-    Task<long> CreateSnapshotAsync(CancellationToken cancellationToken = default);
+    long CreateSnapshot();
 
     /// <summary>
     /// Reverts state to a previous snapshot.
     /// </summary>
     /// <param name="snapshotId">The snapshot identifier to revert to.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <exception cref="ArgumentException">Thrown when snapshot ID is invalid.</exception>
-    Task RevertToSnapshotAsync(long snapshotId, CancellationToken cancellationToken = default);
+    void RevertToSnapshot(long snapshotId);
 
     /// <summary>
     /// Releases a snapshot, freeing resources.
     /// </summary>
     /// <param name="snapshotId">The snapshot identifier to release.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    Task ReleaseSnapshotAsync(long snapshotId, CancellationToken cancellationToken = default);
+    void ReleaseSnapshot(long snapshotId);
 
     /// <summary>
     /// Checks state consistency and detects corruption.
     /// </summary>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>True if state is consistent; otherwise, false.</returns>
-    Task<bool> CheckConsistencyAsync(CancellationToken cancellationToken = default);
+    bool CheckConsistency();
 }

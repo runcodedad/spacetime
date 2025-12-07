@@ -57,17 +57,15 @@ public sealed class ChainStateManager : IStateManager
         using var batch = _storage.CreateWriteBatch();
 
         // Track modified accounts to prevent double-spending within block
-        // NOTE: Using Base64 strings as dictionary keys for simplicity.
-        // For high-throughput scenarios, consider using a custom IEqualityComparer
-        // with byte array comparison or a different data structure for better performance.
-        var modifiedAccounts = new Dictionary<string, (long balance, long nonce)>();
+        // Using custom byte array comparer for efficient dictionary lookups
+        var modifiedAccounts = new Dictionary<byte[], (long balance, long nonce)>(ByteArrayEqualityComparer.Instance);
 
         foreach (var tx in block.Body.Transactions)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var senderKey = Convert.ToBase64String(tx.Sender);
-            var recipientKey = Convert.ToBase64String(tx.Recipient);
+            var senderKey = tx.Sender.ToArray();
+            var recipientKey = tx.Recipient.ToArray();
 
             // Get sender account state
             AccountState senderAccount;
@@ -103,17 +101,17 @@ public sealed class ChainStateManager : IStateManager
             var updatedRecipientAccount = new AccountState(newRecipientBalance, recipientAccount.Nonce);
 
             // Store in batch
-            StoreAccountInBatch(batch, tx.Sender.ToArray(), updatedSenderAccount);
-            StoreAccountInBatch(batch, tx.Recipient.ToArray(), updatedRecipientAccount);
+            StoreAccountInBatch(batch, senderKey, updatedSenderAccount);
+            StoreAccountInBatch(batch, recipientKey, updatedRecipientAccount);
 
             // Track modifications
             modifiedAccounts[senderKey] = (newSenderBalance, newSenderNonce);
             modifiedAccounts[recipientKey] = (newRecipientBalance, recipientAccount.Nonce);
         }
 
-        // Apply miner reward (from coinbase - not part of transaction list)
-        // For now, we'll apply the fees to the miner
-        var minerKey = Convert.ToBase64String(block.Header.MinerId);
+        // TODO: Implement full coinbase transaction for block reward
+        // Currently only distributing transaction fees to the miner
+        var minerKey = block.Header.MinerId.ToArray();
         AccountState minerAccount;
         if (modifiedAccounts.TryGetValue(minerKey, out var modifiedMiner))
         {
@@ -129,13 +127,13 @@ public sealed class ChainStateManager : IStateManager
         var totalFees = block.Body.Transactions.Sum(tx => tx.Fee);
         var newMinerBalance = minerAccount.Balance + totalFees;
         var updatedMinerAccount = new AccountState(newMinerBalance, minerAccount.Nonce);
-        StoreAccountInBatch(batch, block.Header.MinerId.ToArray(), updatedMinerAccount);
+        StoreAccountInBatch(batch, minerKey, updatedMinerAccount);
 
         // Commit all changes atomically
         _storage.CommitBatch(batch);
 
         // Compute and return state root
-        return await ComputeStateRootAsync(cancellationToken).ConfigureAwait(false);
+        return ComputeStateRoot();
     }
 
     /// <inheritdoc />
@@ -145,7 +143,7 @@ public sealed class ChainStateManager : IStateManager
         cancellationToken.ThrowIfCancellationRequested();
 
         // Track account states within this block to detect double-spending
-        var accountStates = new Dictionary<string, (long balance, long nonce)>();
+        var accountStates = new Dictionary<byte[], (long balance, long nonce)>(ByteArrayEqualityComparer.Instance);
 
         foreach (var tx in block.Body.Transactions)
         {
@@ -164,7 +162,7 @@ public sealed class ChainStateManager : IStateManager
                 return false;
             }
 
-            var senderKey = Convert.ToBase64String(tx.Sender);
+            var senderKey = tx.Sender.ToArray();
 
             // Get current sender state
             AccountState senderAccount;
@@ -197,32 +195,26 @@ public sealed class ChainStateManager : IStateManager
             accountStates[senderKey] = (newBalance, newNonce);
         }
 
-        return await Task.FromResult(true).ConfigureAwait(false);
+        return true;
     }
 
     /// <inheritdoc />
-    public Task<long> GetBalanceAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default)
+    public long GetBalance(ReadOnlyMemory<byte> address)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         var account = _storage.Accounts.GetAccount(address);
-        return Task.FromResult(account?.Balance ?? 0);
+        return account?.Balance ?? 0;
     }
 
     /// <inheritdoc />
-    public Task<long> GetNonceAsync(ReadOnlyMemory<byte> address, CancellationToken cancellationToken = default)
+    public long GetNonce(ReadOnlyMemory<byte> address)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         var account = _storage.Accounts.GetAccount(address);
-        return Task.FromResult(account?.Nonce ?? 0);
+        return account?.Nonce ?? 0;
     }
 
     /// <inheritdoc />
-    public Task<byte[]> ComputeStateRootAsync(CancellationToken cancellationToken = default)
+    public byte[] ComputeStateRoot()
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         // IMPORTANT: This is a placeholder implementation that returns a constant hash.
         // It does NOT reflect actual account states and should NOT be used in production.
         // 
@@ -237,14 +229,12 @@ public sealed class ChainStateManager : IStateManager
         using var hasher = SHA256.Create();
         var emptyRoot = hasher.ComputeHash(Array.Empty<byte>());
         
-        return Task.FromResult(emptyRoot);
+        return emptyRoot;
     }
 
     /// <inheritdoc />
-    public Task<long> CreateSnapshotAsync(CancellationToken cancellationToken = default)
+    public long CreateSnapshot()
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         var snapshotId = Interlocked.Increment(ref _nextSnapshotId);
         var snapshot = new StateSnapshot
         {
@@ -256,14 +246,12 @@ public sealed class ChainStateManager : IStateManager
 
         // In a production system with RocksDB, we would create an actual snapshot here
         // For now, we're using a simplified approach
-        return Task.FromResult(snapshotId);
+        return snapshotId;
     }
 
     /// <inheritdoc />
-    public Task RevertToSnapshotAsync(long snapshotId, CancellationToken cancellationToken = default)
+    public void RevertToSnapshot(long snapshotId)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         if (!_snapshots.ContainsKey(snapshotId))
         {
             throw new ArgumentException($"Snapshot {snapshotId} not found", nameof(snapshotId));
@@ -272,29 +260,21 @@ public sealed class ChainStateManager : IStateManager
         // In a production system with RocksDB, we would revert to the snapshot here
         // This is a placeholder for the actual implementation
         // TODO: Implement proper snapshot revert using RocksDB snapshots
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public Task ReleaseSnapshotAsync(long snapshotId, CancellationToken cancellationToken = default)
+    public void ReleaseSnapshot(long snapshotId)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         _snapshots.TryRemove(snapshotId, out _);
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public Task<bool> CheckConsistencyAsync(CancellationToken cancellationToken = default)
+    public bool CheckConsistency()
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         // Check underlying storage integrity
         var storageHealthy = _storage.CheckIntegrity();
 
-        return Task.FromResult(storageHealthy);
+        return storageHealthy;
     }
 
     private static void StoreAccountInBatch(IWriteBatch batch, byte[] address, AccountState account)

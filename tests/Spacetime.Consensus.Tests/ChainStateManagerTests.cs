@@ -59,30 +59,30 @@ public class ChainStateManagerTests : IDisposable
 
     #endregion
 
-    #region GetBalanceAsync Tests
+    #region GetBalance Tests
 
     [Fact]
-    public async Task GetBalanceAsync_WithNonExistentAccount_ReturnsZero()
+    public void GetBalance_WithNonExistentAccount_ReturnsZero()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
 
         // Act
-        var balance = await _stateManager.GetBalanceAsync(address);
+        var balance = _stateManager.GetBalance(address);
 
         // Assert
         Assert.Equal(0, balance);
     }
 
     [Fact]
-    public async Task GetBalanceAsync_WithExistingAccount_ReturnsBalance()
+    public void GetBalance_WithExistingAccount_ReturnsBalance()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
         _storage.Accounts.StoreAccount(address, new AccountState(1000, 0));
 
         // Act
-        var balance = await _stateManager.GetBalanceAsync(address);
+        var balance = _stateManager.GetBalance(address);
 
         // Assert
         Assert.Equal(1000, balance);
@@ -90,30 +90,30 @@ public class ChainStateManagerTests : IDisposable
 
     #endregion
 
-    #region GetNonceAsync Tests
+    #region GetNonce Tests
 
     [Fact]
-    public async Task GetNonceAsync_WithNonExistentAccount_ReturnsZero()
+    public void GetNonce_WithNonExistentAccount_ReturnsZero()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
 
         // Act
-        var nonce = await _stateManager.GetNonceAsync(address);
+        var nonce = _stateManager.GetNonce(address);
 
         // Assert
         Assert.Equal(0, nonce);
     }
 
     [Fact]
-    public async Task GetNonceAsync_WithExistingAccount_ReturnsNonce()
+    public void GetNonce_WithExistingAccount_ReturnsNonce()
     {
         // Arrange
         var address = RandomNumberGenerator.GetBytes(33);
         _storage.Accounts.StoreAccount(address, new AccountState(1000, 5));
 
         // Act
-        var nonce = await _stateManager.GetNonceAsync(address);
+        var nonce = _stateManager.GetNonce(address);
 
         // Assert
         Assert.Equal(5, nonce);
@@ -298,10 +298,10 @@ public class ChainStateManagerTests : IDisposable
         await _stateManager.ApplyBlockAsync(block);
 
         // Assert
-        var senderBalance = await _stateManager.GetBalanceAsync(sender);
-        var senderNonce = await _stateManager.GetNonceAsync(sender);
-        var recipientBalance = await _stateManager.GetBalanceAsync(recipient);
-        var minerBalance = await _stateManager.GetBalanceAsync(miner);
+        var senderBalance = _stateManager.GetBalance(sender);
+        var senderNonce = _stateManager.GetNonce(sender);
+        var recipientBalance = _stateManager.GetBalance(recipient);
+        var minerBalance = _stateManager.GetBalance(miner);
 
         Assert.Equal(990, senderBalance); // 2000 - 1000 - 10
         Assert.Equal(1, senderNonce);
@@ -328,11 +328,11 @@ public class ChainStateManagerTests : IDisposable
         await _stateManager.ApplyBlockAsync(block);
 
         // Assert
-        var senderBalance = await _stateManager.GetBalanceAsync(sender);
-        var senderNonce = await _stateManager.GetNonceAsync(sender);
-        var recipient1Balance = await _stateManager.GetBalanceAsync(recipient1);
-        var recipient2Balance = await _stateManager.GetBalanceAsync(recipient2);
-        var minerBalance = await _stateManager.GetBalanceAsync(miner);
+        var senderBalance = _stateManager.GetBalance(sender);
+        var senderNonce = _stateManager.GetNonce(sender);
+        var recipient1Balance = _stateManager.GetBalance(recipient1);
+        var recipient2Balance = _stateManager.GetBalance(recipient2);
+        var minerBalance = _stateManager.GetBalance(miner);
 
         Assert.Equal(1485, senderBalance); // 3000 - 1000 - 10 - 500 - 5
         Assert.Equal(2, senderNonce);
@@ -363,11 +363,11 @@ public class ChainStateManagerTests : IDisposable
     #region Snapshot Tests
 
     [Fact]
-    public async Task CreateSnapshotAsync_ReturnsUniqueIds()
+    public void CreateSnapshot_ReturnsUniqueIds()
     {
         // Act
-        var snapshot1 = await _stateManager.CreateSnapshotAsync();
-        var snapshot2 = await _stateManager.CreateSnapshotAsync();
+        var snapshot1 = _stateManager.CreateSnapshot();
+        var snapshot2 = _stateManager.CreateSnapshot();
 
         // Assert
         Assert.NotEqual(snapshot1, snapshot2);
@@ -376,35 +376,35 @@ public class ChainStateManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReleaseSnapshotAsync_RemovesSnapshot()
+    public void ReleaseSnapshot_RemovesSnapshot()
     {
         // Arrange
-        var snapshotId = await _stateManager.CreateSnapshotAsync();
+        var snapshotId = _stateManager.CreateSnapshot();
 
         // Act
-        await _stateManager.ReleaseSnapshotAsync(snapshotId);
+        _stateManager.ReleaseSnapshot(snapshotId);
 
         // Assert - releasing again should not throw
-        await _stateManager.ReleaseSnapshotAsync(snapshotId);
+        _stateManager.ReleaseSnapshot(snapshotId);
     }
 
     [Fact]
-    public async Task RevertToSnapshotAsync_WithInvalidSnapshot_ThrowsArgumentException()
+    public void RevertToSnapshot_WithInvalidSnapshot_ThrowsArgumentException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await _stateManager.RevertToSnapshotAsync(999));
+        Assert.Throws<ArgumentException>(
+            () => _stateManager.RevertToSnapshot(999));
     }
 
     #endregion
 
-    #region ComputeStateRootAsync Tests
+    #region ComputeStateRoot Tests
 
     [Fact]
-    public async Task ComputeStateRootAsync_ReturnsHash()
+    public void ComputeStateRoot_ReturnsHash()
     {
         // Act
-        var stateRoot = await _stateManager.ComputeStateRootAsync();
+        var stateRoot = _stateManager.ComputeStateRoot();
 
         // Assert
         Assert.NotNull(stateRoot);
@@ -413,13 +413,13 @@ public class ChainStateManagerTests : IDisposable
 
     #endregion
 
-    #region CheckConsistencyAsync Tests
+    #region CheckConsistency Tests
 
     [Fact]
-    public async Task CheckConsistencyAsync_WithHealthyStorage_ReturnsTrue()
+    public void CheckConsistency_WithHealthyStorage_ReturnsTrue()
     {
         // Act
-        var result = await _stateManager.CheckConsistencyAsync();
+        var result = _stateManager.CheckConsistency();
 
         // Assert
         Assert.True(result);

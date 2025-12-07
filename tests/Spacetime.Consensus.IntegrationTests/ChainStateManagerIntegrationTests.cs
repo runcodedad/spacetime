@@ -65,10 +65,10 @@ public class ChainStateManagerIntegrationTests : IDisposable
         await _stateManager.ApplyBlockAsync(block2);
 
         // Assert - Verify final balances
-        var balance1 = await _stateManager.GetBalanceAsync(account1);
-        var balance2 = await _stateManager.GetBalanceAsync(account2);
-        var balance3 = await _stateManager.GetBalanceAsync(account3);
-        var minerBalance = await _stateManager.GetBalanceAsync(miner);
+        var balance1 = _stateManager.GetBalance(account1);
+        var balance2 = _stateManager.GetBalance(account2);
+        var balance3 = _stateManager.GetBalance(account3);
+        var minerBalance = _stateManager.GetBalance(miner);
 
         Assert.Equal(8485, balance1); // 10000 - 1000 - 10 - 500 - 5
         Assert.Equal(795, balance2); // 1000 - 200 - 5
@@ -76,8 +76,8 @@ public class ChainStateManagerIntegrationTests : IDisposable
         Assert.Equal(20, minerBalance); // 10 + 5 + 5
 
         // Verify nonces
-        var nonce1 = await _stateManager.GetNonceAsync(account1);
-        var nonce2 = await _stateManager.GetNonceAsync(account2);
+        var nonce1 = _stateManager.GetNonce(account1);
+        var nonce2 = _stateManager.GetNonce(account2);
         Assert.Equal(2, nonce1);
         Assert.Equal(1, nonce2);
     }
@@ -104,10 +104,10 @@ public class ChainStateManagerIntegrationTests : IDisposable
         await _stateManager.ApplyBlockAsync(block);
 
         // Assert
-        var aliceBalance = await _stateManager.GetBalanceAsync(alice);
-        var bobBalance = await _stateManager.GetBalanceAsync(bob);
-        var charlieBalance = await _stateManager.GetBalanceAsync(charlie);
-        var minerBalance = await _stateManager.GetBalanceAsync(miner);
+        var aliceBalance = _stateManager.GetBalance(alice);
+        var bobBalance = _stateManager.GetBalance(bob);
+        var charlieBalance = _stateManager.GetBalance(charlie);
+        var minerBalance = _stateManager.GetBalance(miner);
 
         Assert.Equal(3990, aliceBalance); // 5000 - 1000 - 10
         Assert.Equal(1990, bobBalance); // 3000 + 1000 - 2000 - 10
@@ -126,7 +126,7 @@ public class ChainStateManagerIntegrationTests : IDisposable
         _storage.Accounts.StoreAccount(account, new AccountState(5000, 0));
 
         // Create snapshot before applying block
-        var snapshotId = await _stateManager.CreateSnapshotAsync();
+        var snapshotId = _stateManager.CreateSnapshot();
 
         // Apply a block
         var tx = CreateTransaction(account, recipient, amount: 1000, nonce: 0, fee: 10);
@@ -134,16 +134,16 @@ public class ChainStateManagerIntegrationTests : IDisposable
         await _stateManager.ApplyBlockAsync(block);
 
         // Verify state changed
-        var balanceAfter = await _stateManager.GetBalanceAsync(account);
+        var balanceAfter = _stateManager.GetBalance(account);
         Assert.Equal(3990, balanceAfter);
 
         // Act - Revert to snapshot
-        await _stateManager.RevertToSnapshotAsync(snapshotId);
+        _stateManager.RevertToSnapshot(snapshotId);
 
         // Assert - Note: Current implementation doesn't actually restore state
         // This is a placeholder test to demonstrate the API
         // TODO: Implement actual snapshot/restore using RocksDB features
-        await _stateManager.ReleaseSnapshotAsync(snapshotId);
+        _stateManager.ReleaseSnapshot(snapshotId);
     }
 
     [Fact]
@@ -173,9 +173,9 @@ public class ChainStateManagerIntegrationTests : IDisposable
         await _stateManager.ApplyBlockAsync(block);
 
         // Assert
-        var senderBalance = await _stateManager.GetBalanceAsync(sender);
-        var senderNonce = await _stateManager.GetNonceAsync(sender);
-        var minerBalance = await _stateManager.GetBalanceAsync(miner);
+        var senderBalance = _stateManager.GetBalance(sender);
+        var senderNonce = _stateManager.GetNonce(sender);
+        var minerBalance = _stateManager.GetBalance(miner);
 
         Assert.Equal(89950, senderBalance); // 100000 - (10 * 1000) - (10 * 5)
         Assert.Equal(10, senderNonce);
@@ -184,7 +184,7 @@ public class ChainStateManagerIntegrationTests : IDisposable
         // Verify all recipients received their funds
         foreach (var recipient in recipients)
         {
-            var balance = await _stateManager.GetBalanceAsync(recipient);
+            var balance = _stateManager.GetBalance(recipient);
             Assert.Equal(1000, balance);
         }
     }
@@ -264,10 +264,10 @@ public class ChainStateManagerIntegrationTests : IDisposable
         await _stateManager.ApplyBlockAsync(block);
 
         // Assert - All changes should be committed atomically
-        var balance1 = await _stateManager.GetBalanceAsync(account1);
-        var balance2 = await _stateManager.GetBalanceAsync(account2);
-        var balance3 = await _stateManager.GetBalanceAsync(account3);
-        var minerBalance = await _stateManager.GetBalanceAsync(miner);
+        var balance1 = _stateManager.GetBalance(account1);
+        var balance2 = _stateManager.GetBalance(account2);
+        var balance3 = _stateManager.GetBalance(account3);
+        var minerBalance = _stateManager.GetBalance(miner);
 
         Assert.Equal(1495, balance1); // 2000 - 500 - 5
         Assert.Equal(697, balance2); // 1000 - 300 - 3
@@ -294,14 +294,14 @@ public class ChainStateManagerIntegrationTests : IDisposable
         }
 
         // Act
-        var isHealthy = await _stateManager.CheckConsistencyAsync();
+        var isHealthy = _stateManager.CheckConsistency();
 
         // Assert
         Assert.True(isHealthy);
 
         // Verify final state
-        var balance = await _stateManager.GetBalanceAsync(account);
-        var nonce = await _stateManager.GetNonceAsync(account);
+        var balance = _stateManager.GetBalance(account);
+        var nonce = _stateManager.GetNonce(account);
         Assert.Equal(9495, balance); // 10000 - (5 * 100) - (5 * 1)
         Assert.Equal(5, nonce);
     }
