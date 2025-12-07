@@ -8,9 +8,9 @@ namespace Spacetime.Storage;
 /// </summary>
 internal sealed class RocksDbChainMetadata : IChainMetadata
 {
-    private const string MetadataColumnFamily = "metadata";
-    private const string BestBlockHashKey = "best_block_hash";
-    private const string ChainHeightKey = "chain_height";
+    private const string _metadataColumnFamily = "metadata";
+    private const string _bestBlockHashKey = "best_block_hash";
+    private const string _chainHeightKey = "chain_height";
 
     private readonly RocksDb _db;
     private readonly ColumnFamilyHandle _metadataCf;
@@ -21,12 +21,12 @@ internal sealed class RocksDbChainMetadata : IChainMetadata
         ArgumentNullException.ThrowIfNull(columnFamilies);
 
         _db = db;
-        _metadataCf = columnFamilies[MetadataColumnFamily];
+        _metadataCf = columnFamilies[_metadataColumnFamily];
     }
 
     public ReadOnlyMemory<byte>? GetBestBlockHash()
     {
-        var key = System.Text.Encoding.UTF8.GetBytes(BestBlockHashKey);
+        var key = System.Text.Encoding.UTF8.GetBytes(_bestBlockHashKey);
         var value = _db.Get(key, _metadataCf);
 
         if (value == null)
@@ -44,13 +44,13 @@ internal sealed class RocksDbChainMetadata : IChainMetadata
             throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
         }
 
-        var key = System.Text.Encoding.UTF8.GetBytes(BestBlockHashKey);
+        var key = System.Text.Encoding.UTF8.GetBytes(_bestBlockHashKey);
         _db.Put(key, hash.Span.ToArray(), _metadataCf);
     }
 
     public long? GetChainHeight()
     {
-        var key = System.Text.Encoding.UTF8.GetBytes(ChainHeightKey);
+        var key = System.Text.Encoding.UTF8.GetBytes(_chainHeightKey);
         var value = _db.Get(key, _metadataCf);
 
         if (value == null)
@@ -74,7 +74,7 @@ internal sealed class RocksDbChainMetadata : IChainMetadata
             throw new ArgumentException("Height must be non-negative.", nameof(height));
         }
 
-        var key = System.Text.Encoding.UTF8.GetBytes(ChainHeightKey);
+        var key = System.Text.Encoding.UTF8.GetBytes(_chainHeightKey);
         var value = new byte[8];
         BinaryPrimitives.WriteInt64LittleEndian(value, height);
 

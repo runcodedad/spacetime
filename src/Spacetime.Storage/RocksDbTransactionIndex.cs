@@ -9,7 +9,7 @@ namespace Spacetime.Storage;
 /// </summary>
 internal sealed class RocksDbTransactionIndex : ITransactionIndex
 {
-    private const string TransactionsColumnFamily = "transactions";
+    private const string _transactionsColumnFamily = "transactions";
 
     private readonly RocksDb _db;
     private readonly ColumnFamilyHandle _transactionsCf;
@@ -25,7 +25,7 @@ internal sealed class RocksDbTransactionIndex : ITransactionIndex
         ArgumentNullException.ThrowIfNull(blockStorage);
 
         _db = db;
-        _transactionsCf = columnFamilies[TransactionsColumnFamily];
+        _transactionsCf = columnFamilies[_transactionsColumnFamily];
         _blockStorage = blockStorage;
     }
 

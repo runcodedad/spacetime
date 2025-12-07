@@ -37,7 +37,7 @@ Main storage interface providing access to all sub-storages and atomic operation
 var storage = RocksDbChainStorage.Open("/path/to/db");
 storage.Blocks.StoreBlock(block);
 storage.Accounts.StoreAccount(address, account);
-await storage.DisposeAsync();
+storage.Dispose();
 ```
 
 #### IBlockStorage
@@ -198,7 +198,7 @@ try
 }
 finally
 {
-    await storage.DisposeAsync();
+    storage.Dispose();
 }
 ```
 

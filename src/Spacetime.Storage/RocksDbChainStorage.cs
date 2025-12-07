@@ -1,5 +1,4 @@
 using RocksDbSharp;
-using System.Buffers.Binary;
 
 namespace Spacetime.Storage;
 
@@ -16,11 +15,11 @@ namespace Spacetime.Storage;
 /// </remarks>
 public sealed class RocksDbChainStorage : IChainStorage
 {
-    private const string BlocksColumnFamily = "blocks";
-    private const string HeightsColumnFamily = "heights";
-    private const string TransactionsColumnFamily = "transactions";
-    private const string AccountsColumnFamily = "accounts";
-    private const string MetadataColumnFamily = "metadata";
+    private const string _blocksColumnFamily = "blocks";
+    private const string _heightsColumnFamily = "heights";
+    private const string _transactionsColumnFamily = "transactions";
+    private const string _accountsColumnFamily = "accounts";
+    private const string _metadataColumnFamily = "metadata";
 
     private readonly RocksDb _db;
     private readonly Dictionary<string, ColumnFamilyHandle> _columnFamilies;
@@ -60,11 +59,11 @@ public sealed class RocksDbChainStorage : IChainStorage
         // Create column families if they don't exist
         var columnFamilies = new ColumnFamilies
         {
-            { BlocksColumnFamily, new ColumnFamilyOptions() },
-            { HeightsColumnFamily, new ColumnFamilyOptions() },
-            { TransactionsColumnFamily, new ColumnFamilyOptions() },
-            { AccountsColumnFamily, new ColumnFamilyOptions() },
-            { MetadataColumnFamily, new ColumnFamilyOptions() }
+            { _blocksColumnFamily, new ColumnFamilyOptions() },
+            { _heightsColumnFamily, new ColumnFamilyOptions() },
+            { _transactionsColumnFamily, new ColumnFamilyOptions() },
+            { _accountsColumnFamily, new ColumnFamilyOptions() },
+            { _metadataColumnFamily, new ColumnFamilyOptions() }
         };
 
         var options = new DbOptions()
@@ -75,11 +74,11 @@ public sealed class RocksDbChainStorage : IChainStorage
 
         var cfHandles = new Dictionary<string, ColumnFamilyHandle>
         {
-            [BlocksColumnFamily] = db.GetColumnFamily(BlocksColumnFamily),
-            [HeightsColumnFamily] = db.GetColumnFamily(HeightsColumnFamily),
-            [TransactionsColumnFamily] = db.GetColumnFamily(TransactionsColumnFamily),
-            [AccountsColumnFamily] = db.GetColumnFamily(AccountsColumnFamily),
-            [MetadataColumnFamily] = db.GetColumnFamily(MetadataColumnFamily)
+            [_blocksColumnFamily] = db.GetColumnFamily(_blocksColumnFamily),
+            [_heightsColumnFamily] = db.GetColumnFamily(_heightsColumnFamily),
+            [_transactionsColumnFamily] = db.GetColumnFamily(_transactionsColumnFamily),
+            [_accountsColumnFamily] = db.GetColumnFamily(_accountsColumnFamily),
+            [_metadataColumnFamily] = db.GetColumnFamily(_metadataColumnFamily)
         };
 
         return new RocksDbChainStorage(db, cfHandles);
@@ -136,7 +135,7 @@ public sealed class RocksDbChainStorage : IChainStorage
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (_disposed)
         {
@@ -145,7 +144,5 @@ public sealed class RocksDbChainStorage : IChainStorage
 
         _db.Dispose();
         _disposed = true;
-
-        await Task.CompletedTask;
     }
 }

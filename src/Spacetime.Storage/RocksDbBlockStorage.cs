@@ -9,10 +9,10 @@ namespace Spacetime.Storage;
 /// </summary>
 internal sealed class RocksDbBlockStorage : IBlockStorage
 {
-    private const string BlocksColumnFamily = "blocks";
-    private const string HeightsColumnFamily = "heights";
-    private const string HeaderPrefix = "h:";
-    private const string BodyPrefix = "b:";
+    private const string _blocksColumnFamily = "blocks";
+    private const string _heightsColumnFamily = "heights";
+    private const string _headerPrefix = "h:";
+    private const string _bodyPrefix = "b:";
 
     private readonly RocksDb _db;
     private readonly ColumnFamilyHandle _blocksCf;
@@ -24,8 +24,8 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
         ArgumentNullException.ThrowIfNull(columnFamilies);
 
         _db = db;
-        _blocksCf = columnFamilies[BlocksColumnFamily];
-        _heightsCf = columnFamilies[HeightsColumnFamily];
+        _blocksCf = columnFamilies[_blocksColumnFamily];
+        _heightsCf = columnFamilies[_heightsColumnFamily];
     }
 
     public void StoreHeader(BlockHeader header)
@@ -183,17 +183,17 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
 
     private static byte[] MakeHeaderKey(ReadOnlySpan<byte> hash)
     {
-        var key = new byte[HeaderPrefix.Length + hash.Length];
-        System.Text.Encoding.ASCII.GetBytes(HeaderPrefix).CopyTo(key, 0);
-        hash.CopyTo(key.AsSpan(HeaderPrefix.Length));
+        var key = new byte[_headerPrefix.Length + hash.Length];
+        System.Text.Encoding.ASCII.GetBytes(_headerPrefix).CopyTo(key, 0);
+        hash.CopyTo(key.AsSpan(_headerPrefix.Length));
         return key;
     }
 
     private static byte[] MakeBodyKey(ReadOnlySpan<byte> hash)
     {
-        var key = new byte[BodyPrefix.Length + hash.Length];
-        System.Text.Encoding.ASCII.GetBytes(BodyPrefix).CopyTo(key, 0);
-        hash.CopyTo(key.AsSpan(BodyPrefix.Length));
+        var key = new byte[_bodyPrefix.Length + hash.Length];
+        System.Text.Encoding.ASCII.GetBytes(_bodyPrefix).CopyTo(key, 0);
+        hash.CopyTo(key.AsSpan(_bodyPrefix.Length));
         return key;
     }
 

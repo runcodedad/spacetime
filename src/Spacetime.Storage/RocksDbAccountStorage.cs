@@ -8,7 +8,7 @@ namespace Spacetime.Storage;
 /// </summary>
 internal sealed class RocksDbAccountStorage : IAccountStorage
 {
-    private const string AccountsColumnFamily = "accounts";
+    private const string _accountsColumnFamily = "accounts";
 
     private readonly RocksDb _db;
     private readonly ColumnFamilyHandle _accountsCf;
@@ -19,7 +19,7 @@ internal sealed class RocksDbAccountStorage : IAccountStorage
         ArgumentNullException.ThrowIfNull(columnFamilies);
 
         _db = db;
-        _accountsCf = columnFamilies[AccountsColumnFamily];
+        _accountsCf = columnFamilies[_accountsColumnFamily];
     }
 
     public void StoreAccount(ReadOnlyMemory<byte> address, AccountState account)

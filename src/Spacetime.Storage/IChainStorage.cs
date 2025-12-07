@@ -8,7 +8,7 @@ namespace Spacetime.Storage;
 /// blocks, transactions, and account state. All write operations are atomic to ensure
 /// consistency of the blockchain state.
 /// </remarks>
-public interface IChainStorage : IAsyncDisposable
+public interface IChainStorage : IDisposable
 {
     /// <summary>
     /// Gets the block storage interface.
