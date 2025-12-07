@@ -57,6 +57,9 @@ public sealed class ChainStateManager : IStateManager
         using var batch = _storage.CreateWriteBatch();
 
         // Track modified accounts to prevent double-spending within block
+        // NOTE: Using Base64 strings as dictionary keys for simplicity.
+        // For high-throughput scenarios, consider using a custom IEqualityComparer
+        // with byte array comparison or a different data structure for better performance.
         var modifiedAccounts = new Dictionary<string, (long balance, long nonce)>();
 
         foreach (var tx in block.Body.Transactions)
@@ -220,12 +223,17 @@ public sealed class ChainStateManager : IStateManager
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // For now, compute a simple hash of all account states
-        // In a production system, this would use a Merkle Patricia Trie
-        // TODO: Implement proper Merkle Patricia Trie for state root
+        // IMPORTANT: This is a placeholder implementation that returns a constant hash.
+        // It does NOT reflect actual account states and should NOT be used in production.
+        // 
+        // Production implementation must use a Merkle Patricia Trie that:
+        // - Computes a cryptographic root of all account states
+        // - Enables light client verification
+        // - Supports efficient state proofs
+        // 
+        // TODO: Implement proper Merkle Patricia Trie for state root computation
+        // See: docs/account-model-architecture.md for design details
         
-        // Simple implementation: hash of concatenated account hashes
-        // This is deterministic but not as efficient as a proper trie
         using var hasher = SHA256.Create();
         var emptyRoot = hasher.ComputeHash(Array.Empty<byte>());
         
