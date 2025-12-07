@@ -16,7 +16,7 @@ public class RocksDbChainStorageTests : IDisposable
 
     public void Dispose()
     {
-        _storage.DisposeAsync().AsTask().Wait();
+        _storage.Dispose();
         if (Directory.Exists(_testDbPath))
         {
             Directory.Delete(_testDbPath, recursive: true);
@@ -112,14 +112,14 @@ public class RocksDbChainStorageTests : IDisposable
     }
 
     [Fact]
-    public void DisposeAsync_DisposesResources()
+    public void Dispose_DisposesResources()
     {
         // Arrange
         var tempPath = Path.Combine(Path.GetTempPath(), $"spacetime_test_{Guid.NewGuid():N}");
         var storage = RocksDbChainStorage.Open(tempPath);
 
         // Act
-        storage.DisposeAsync().AsTask().Wait();
+        storage.Dispose();
 
         // Assert
         // Verify we can't use the storage after disposal

@@ -16,7 +16,7 @@ public class BlockStorageTests : IDisposable
 
     public void Dispose()
     {
-        _storage.DisposeAsync().AsTask().Wait();
+        _storage.Dispose();
         if (Directory.Exists(_testDbPath))
         {
             Directory.Delete(_testDbPath, recursive: true);
