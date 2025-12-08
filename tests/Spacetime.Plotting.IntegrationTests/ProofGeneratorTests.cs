@@ -315,7 +315,7 @@ public class ProofGeneratorTests
         var challenge = RandomNumberGenerator.GetBytes(32);
         var outputPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.plot");
 
-        var progressReports = new List<double>();
+        var progressReports = new System.Collections.Concurrent.ConcurrentBag<double>();
         var progress = new Progress<double>(p => progressReports.Add(p));
 
         try
