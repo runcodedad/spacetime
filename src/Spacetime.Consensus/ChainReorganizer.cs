@@ -143,8 +143,8 @@ public sealed class ChainReorganizer : IChainReorganizer
             return cached.Value;
         }
 
-        // Calculate by traversing chain backwards
-        long cumulativeDifficulty = 0;
+        // Calculate by traversing chain backwards and collecting blocks
+        var chainBlocks = new List<(ReadOnlyMemory<byte> hash, long difficulty)>();
         var currentHash = blockHash;
 
         while (true)
@@ -157,10 +157,7 @@ public sealed class ChainReorganizer : IChainReorganizer
                 throw new InvalidOperationException($"Block not found: {Convert.ToHexString(currentHash.Span)}");
             }
 
-            cumulativeDifficulty += header.Difficulty;
-
-            // Store cumulative difficulty for future lookups
-            _storage.Metadata.SetCumulativeDifficulty(currentHash, cumulativeDifficulty);
+            chainBlocks.Add((currentHash, header.Difficulty));
 
             // Check if we reached genesis
             if (header.Height == 0)
@@ -170,6 +167,16 @@ public sealed class ChainReorganizer : IChainReorganizer
 
             // Move to parent
             currentHash = new ReadOnlyMemory<byte>(header.ParentHash.ToArray());
+        }
+
+        // Now traverse forward and compute cumulative difficulty correctly
+        long cumulativeDifficulty = 0;
+        for (int i = chainBlocks.Count - 1; i >= 0; i--)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            cumulativeDifficulty += chainBlocks[i].difficulty;
+            _storage.Metadata.SetCumulativeDifficulty(chainBlocks[i].hash, cumulativeDifficulty);
         }
 
         return cumulativeDifficulty;
