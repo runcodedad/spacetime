@@ -308,14 +308,19 @@ public sealed class ChainReorganizer : IChainReorganizer
             _storage.Metadata.SetChainHeight(newTipHeight);
 
             // Step 5: Return orphaned transactions to mempool
+            // Note: This requires extending IMempool interface with AddTransaction method.
+            // Current IMempool interface (defined in Spacetime.Core) only supports reading
+            // pending transactions, not adding them back. This is a known limitation that
+            // needs to be addressed when implementing a full mempool.
+            // For now, orphaned transactions are not automatically returned to the mempool.
+            // Applications using this reorganizer should:
+            // 1. Subscribe to ChainReorganized events
+            // 2. Extract transactions from orphaned blocks
+            // 3. Re-submit valid transactions to their mempool implementation
             if (_mempool != null)
             {
-                foreach (var revertedBlock in revertedBlocks)
-                {
-                    // TODO: Implement transaction return to mempool
-                    // This requires extending IMempool interface with AddTransaction method
-                    // For now, we just log that transactions were orphaned
-                }
+                // Placeholder for future implementation when IMempool is extended
+                _ = revertedBlocks;
             }
 
             // Step 6: Emit reorg event
