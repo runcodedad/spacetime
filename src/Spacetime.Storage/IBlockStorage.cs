@@ -67,4 +67,21 @@ public interface IBlockStorage
     /// <param name="hash">The block hash.</param>
     /// <returns>True if the block exists, false otherwise.</returns>
     bool Exists(ReadOnlyMemory<byte> hash);
+
+    /// <summary>
+    /// Marks a block as orphaned.
+    /// </summary>
+    /// <param name="hash">The block hash.</param>
+    /// <remarks>
+    /// Orphaned blocks are blocks that were part of the main chain but were
+    /// replaced during a chain reorganization.
+    /// </remarks>
+    void MarkAsOrphaned(ReadOnlyMemory<byte> hash);
+
+    /// <summary>
+    /// Checks if a block is marked as orphaned.
+    /// </summary>
+    /// <param name="hash">The block hash.</param>
+    /// <returns>True if the block is orphaned, false otherwise.</returns>
+    bool IsOrphaned(ReadOnlyMemory<byte> hash);
 }

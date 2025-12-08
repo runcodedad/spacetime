@@ -11,6 +11,7 @@ internal sealed class RocksDbChainMetadata : IChainMetadata
     private const string _metadataColumnFamily = "metadata";
     private const string _bestBlockHashKey = "best_block_hash";
     private const string _chainHeightKey = "chain_height";
+    private const string _cumulativeDifficultyPrefix = "cumulative_difficulty:";
 
     private readonly RocksDb _db;
     private readonly ColumnFamilyHandle _metadataCf;
@@ -79,5 +80,56 @@ internal sealed class RocksDbChainMetadata : IChainMetadata
         BinaryPrimitives.WriteInt64LittleEndian(value, height);
 
         _db.Put(key, value, _metadataCf);
+    }
+
+    public long? GetCumulativeDifficulty(ReadOnlyMemory<byte> blockHash)
+    {
+        if (blockHash.Length != 32)
+        {
+            throw new ArgumentException("Block hash must be 32 bytes.", nameof(blockHash));
+        }
+
+        var key = MakeCumulativeDifficultyKey(blockHash.Span);
+        var value = _db.Get(key, _metadataCf);
+
+        if (value == null)
+        {
+            return null;
+        }
+
+        if (value.Length != 8)
+        {
+            throw new InvalidOperationException("Invalid cumulative difficulty data.");
+        }
+
+        return BinaryPrimitives.ReadInt64LittleEndian(value);
+    }
+
+    public void SetCumulativeDifficulty(ReadOnlyMemory<byte> blockHash, long cumulativeDifficulty)
+    {
+        if (blockHash.Length != 32)
+        {
+            throw new ArgumentException("Block hash must be 32 bytes.", nameof(blockHash));
+        }
+
+        if (cumulativeDifficulty < 0)
+        {
+            throw new ArgumentException("Cumulative difficulty must be non-negative.", nameof(cumulativeDifficulty));
+        }
+
+        var key = MakeCumulativeDifficultyKey(blockHash.Span);
+        var value = new byte[8];
+        BinaryPrimitives.WriteInt64LittleEndian(value, cumulativeDifficulty);
+
+        _db.Put(key, value, _metadataCf);
+    }
+
+    private static byte[] MakeCumulativeDifficultyKey(ReadOnlySpan<byte> blockHash)
+    {
+        var prefix = System.Text.Encoding.UTF8.GetBytes(_cumulativeDifficultyPrefix);
+        var key = new byte[prefix.Length + blockHash.Length];
+        prefix.CopyTo(key, 0);
+        blockHash.CopyTo(key.AsSpan(prefix.Length));
+        return key;
     }
 }
