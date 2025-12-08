@@ -28,4 +28,18 @@ public interface IChainMetadata
     /// </summary>
     /// <param name="height">The chain height.</param>
     void SetChainHeight(long height);
+
+    /// <summary>
+    /// Gets the cumulative difficulty for a block.
+    /// </summary>
+    /// <param name="blockHash">The block hash.</param>
+    /// <returns>The cumulative difficulty, or null if not found.</returns>
+    long? GetCumulativeDifficulty(ReadOnlyMemory<byte> blockHash);
+
+    /// <summary>
+    /// Sets the cumulative difficulty for a block.
+    /// </summary>
+    /// <param name="blockHash">The block hash.</param>
+    /// <param name="cumulativeDifficulty">The cumulative difficulty.</param>
+    void SetCumulativeDifficulty(ReadOnlyMemory<byte> blockHash, long cumulativeDifficulty);
 }

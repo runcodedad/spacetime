@@ -13,6 +13,7 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
     private const string _heightsColumnFamily = "heights";
     private const string _headerPrefix = "h:";
     private const string _bodyPrefix = "b:";
+    private const string _orphanPrefix = "o:";
 
     private readonly RocksDb _db;
     private readonly ColumnFamilyHandle _blocksCf;
@@ -181,6 +182,31 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
         return value != null;
     }
 
+    public void MarkAsOrphaned(ReadOnlyMemory<byte> hash)
+    {
+        if (hash.Length != 32)
+        {
+            throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
+        }
+
+        var key = MakeOrphanKey(hash.Span);
+        var value = new byte[] { 1 }; // Marker value
+        _db.Put(key, value, _blocksCf);
+    }
+
+    public bool IsOrphaned(ReadOnlyMemory<byte> hash)
+    {
+        if (hash.Length != 32)
+        {
+            throw new ArgumentException("Hash must be 32 bytes.", nameof(hash));
+        }
+
+        var key = MakeOrphanKey(hash.Span);
+        var value = _db.Get(key, _blocksCf);
+
+        return value != null;
+    }
+
     private static byte[] MakeHeaderKey(ReadOnlySpan<byte> hash)
     {
         var key = new byte[_headerPrefix.Length + hash.Length];
@@ -201,6 +227,14 @@ internal sealed class RocksDbBlockStorage : IBlockStorage
     {
         var key = new byte[8];
         BinaryPrimitives.WriteInt64LittleEndian(key, height);
+        return key;
+    }
+
+    private static byte[] MakeOrphanKey(ReadOnlySpan<byte> hash)
+    {
+        var key = new byte[_orphanPrefix.Length + hash.Length];
+        System.Text.Encoding.ASCII.GetBytes(_orphanPrefix).CopyTo(key, 0);
+        hash.CopyTo(key.AsSpan(_orphanPrefix.Length));
         return key;
     }
 
