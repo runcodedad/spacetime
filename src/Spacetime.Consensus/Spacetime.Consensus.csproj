@@ -14,6 +14,7 @@
     <ProjectReference Include="..\Spacetime.Common\Spacetime.Common.csproj" />
     <ProjectReference Include="..\Spacetime.Core\Spacetime.Core.csproj" />
     <ProjectReference Include="..\Spacetime.Plotting\Spacetime.Plotting.csproj" />
+    <ProjectReference Include="..\Spacetime.Storage\Spacetime.Storage.csproj" />
   </ItemGroup>
 
 </Project>

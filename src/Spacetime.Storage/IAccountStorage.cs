@@ -36,10 +36,3 @@ public interface IAccountStorage
     /// <param name="address">The account address.</param>
     void DeleteAccount(ReadOnlyMemory<byte> address);
 }
-
-/// <summary>
-/// Represents the state of an account in the blockchain.
-/// </summary>
-/// <param name="Balance">The account balance.</param>
-/// <param name="Nonce">The account nonce for replay protection.</param>
-public record AccountState(long Balance, long Nonce);

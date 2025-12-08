@@ -1,5 +1,4 @@
 using RocksDbSharp;
-using System.Buffers.Binary;
 
 namespace Spacetime.Storage;
 
@@ -30,7 +29,7 @@ internal sealed class RocksDbAccountStorage : IAccountStorage
             throw new ArgumentException("Address cannot be empty.", nameof(address));
         }
 
-        var value = SerializeAccount(account);
+        var value = account.Serialize();
         _db.Put(address.Span.ToArray(), value, _accountsCf);
     }
 
@@ -48,7 +47,7 @@ internal sealed class RocksDbAccountStorage : IAccountStorage
             return null;
         }
 
-        return DeserializeAccount(value);
+        return AccountState.Deserialize(value);
     }
 
     public bool Exists(ReadOnlyMemory<byte> address)
@@ -72,24 +71,5 @@ internal sealed class RocksDbAccountStorage : IAccountStorage
         _db.Remove(address.Span.ToArray(), _accountsCf);
     }
 
-    private static byte[] SerializeAccount(AccountState account)
-    {
-        var buffer = new byte[16]; // 8 bytes for balance + 8 bytes for nonce
-        BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(0), account.Balance);
-        BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(8), account.Nonce);
-        return buffer;
-    }
 
-    private static AccountState DeserializeAccount(byte[] data)
-    {
-        if (data.Length != 16)
-        {
-            throw new InvalidOperationException("Invalid account data.");
-        }
-
-        var balance = BinaryPrimitives.ReadInt64LittleEndian(data.AsSpan(0));
-        var nonce = BinaryPrimitives.ReadInt64LittleEndian(data.AsSpan(8));
-
-        return new AccountState(balance, nonce);
-    }
 }
