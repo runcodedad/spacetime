@@ -205,7 +205,6 @@ public sealed class TransactionValidator : ITransactionValidator
         }
 
         // 8. Update block context with new account state
-        var senderKey = transaction.Sender.ToArray();
         var trackedState = blockContext.GetTrackedAccountState(transaction.Sender);
         
         AccountState senderAccount;
@@ -215,6 +214,7 @@ public sealed class TransactionValidator : ITransactionValidator
         }
         else
         {
+            var senderKey = transaction.Sender.ToArray();
             senderAccount = _accountStorage.GetAccount(senderKey) ?? new AccountState(0, 0);
         }
 
