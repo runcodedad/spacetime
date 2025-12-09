@@ -39,6 +39,18 @@ public sealed record TransactionValidationConfig
     public int MaxTransactionsPerBlock { get; init; } = 10_000;
 
     /// <summary>
+    /// Gets the maximum allowed transaction size in bytes.
+    /// </summary>
+    /// <remarks>
+    /// Transactions larger than this size will be rejected.
+    /// This is a safety check to prevent extremely large transactions.
+    /// Default is 1 MB (1,048,576 bytes).
+    /// Note: Current transaction format has a fixed size, but this
+    /// allows for future extensibility with variable-size transactions.
+    /// </remarks>
+    public int MaxTransactionSize { get; init; } = 1024 * 1024;
+
+    /// <summary>
     /// Gets a value indicating whether to check for duplicate transactions in the index.
     /// </summary>
     /// <remarks>

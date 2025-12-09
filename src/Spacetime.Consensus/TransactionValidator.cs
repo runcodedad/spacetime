@@ -325,19 +325,17 @@ public sealed class TransactionValidator : ITransactionValidator
     /// <summary>
     /// Validates transaction size.
     /// </summary>
-    private static TransactionValidationResult ValidateSize(Transaction transaction)
+    private TransactionValidationResult ValidateSize(Transaction transaction)
     {
         // All transactions have a fixed size in the current implementation
         // This check is here for future extensibility if variable-size transactions are added
         var size = Transaction.SerializedSize;
         
-        // Sanity check: transaction size should be reasonable
-        const int maxReasonableSize = 1024 * 1024; // 1 MB
-        if (size > maxReasonableSize)
+        if (size > _config.MaxTransactionSize)
         {
             return TransactionValidationResult.Failure(
                 TransactionValidationErrorType.TransactionTooLarge,
-                $"Transaction size {size} exceeds maximum reasonable size {maxReasonableSize}");
+                $"Transaction size {size} exceeds maximum {_config.MaxTransactionSize}");
         }
 
         return TransactionValidationResult.Success();
