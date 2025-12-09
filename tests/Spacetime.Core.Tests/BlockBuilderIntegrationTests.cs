@@ -16,9 +16,34 @@ public class BlockBuilderIntegrationTests
     {
         private readonly List<Transaction> _transactions = new();
 
+        public int Count => _transactions.Count;
+
         public void AddTransaction(Transaction tx)
         {
             _transactions.Add(tx);
+        }
+
+        public Task<bool> AddTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _transactions.Add(transaction);
+            return Task.FromResult(true);
+        }
+
+        public Task<int> RemoveTransactionsAsync(IReadOnlyList<byte[]> transactionHashes, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var hashStrings = transactionHashes.Select(h => Convert.ToHexString(h)).ToHashSet();
+            var removed = _transactions.RemoveAll(tx => hashStrings.Contains(Convert.ToHexString(tx.ComputeHash())));
+            return Task.FromResult(removed);
+        }
+
+        public Task<bool> ContainsTransactionAsync(byte[] transactionHash, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var hashStr = Convert.ToHexString(transactionHash);
+            var contains = _transactions.Any(tx => Convert.ToHexString(tx.ComputeHash()) == hashStr);
+            return Task.FromResult(contains);
         }
 
         public Task<IReadOnlyList<Transaction>> GetPendingTransactionsAsync(
@@ -33,6 +58,13 @@ public class BlockBuilderIntegrationTests
                 .ToList();
 
             return Task.FromResult<IReadOnlyList<Transaction>>(transactions);
+        }
+
+        public Task ClearAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _transactions.Clear();
+            return Task.CompletedTask;
         }
     }
 
