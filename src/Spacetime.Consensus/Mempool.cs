@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Spacetime.Core;
 
 namespace Spacetime.Consensus;
@@ -112,8 +111,9 @@ public sealed class Mempool : IMempool
             // Check if mempool is full
             if (_transactions.Count >= _config.MaxTransactions)
             {
-                // Get the lowest fee transaction
-                var lowestFeeTx = _priorityQueue.Max; // Max because we're using descending order
+                // Get the lowest fee transaction (last element in descending order)
+                // Note: Max returns the last element when using descending comparator
+                var lowestFeeTx = _priorityQueue.Max;
                 
                 // Only evict if the new transaction has a higher fee
                 if (lowestFeeTx != null && transaction.Fee > lowestFeeTx.Transaction.Fee)
