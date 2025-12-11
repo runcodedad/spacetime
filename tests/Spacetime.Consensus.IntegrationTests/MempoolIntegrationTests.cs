@@ -22,7 +22,7 @@ public class MempoolIntegrationTests
     }
 
     [Fact]
-    public async Task Mempool_WithRealValidator_AcceptsValidTransaction()
+    public void Mempool_WithRealValidator_AcceptsValidTransaction()
     {
         // Arrange
         var sender = RandomNumberGenerator.GetBytes(33);
@@ -49,7 +49,7 @@ public class MempoolIntegrationTests
         var transaction = CreateSignedTransaction(sender, recipient, 1000, 0, 10);
 
         // Act
-        var added = await mempool.AddTransactionAsync(transaction);
+        var added = mempool.AddTransaction(transaction);
 
         // Assert
         Assert.True(added);
@@ -57,7 +57,7 @@ public class MempoolIntegrationTests
     }
 
     [Fact]
-    public async Task Mempool_WithRealValidator_RejectsInvalidSignature()
+    public void Mempool_WithRealValidator_RejectsInvalidSignature()
     {
         // Arrange
         var sender = RandomNumberGenerator.GetBytes(33);
@@ -84,7 +84,7 @@ public class MempoolIntegrationTests
         var transaction = CreateSignedTransaction(sender, recipient, 1000, 0, 10);
 
         // Act
-        var added = await mempool.AddTransactionAsync(transaction);
+        var added = mempool.AddTransaction(transaction);
 
         // Assert
         Assert.False(added);
@@ -92,7 +92,7 @@ public class MempoolIntegrationTests
     }
 
     [Fact]
-    public async Task Mempool_WithRealValidator_RejectsInsufficientBalance()
+    public void Mempool_WithRealValidator_RejectsInsufficientBalance()
     {
         // Arrange
         var sender = RandomNumberGenerator.GetBytes(33);
@@ -119,7 +119,7 @@ public class MempoolIntegrationTests
         var transaction = CreateSignedTransaction(sender, recipient, 1000, 0, 10);
 
         // Act
-        var added = await mempool.AddTransactionAsync(transaction);
+        var added = mempool.AddTransaction(transaction);
 
         // Assert
         Assert.False(added);
@@ -127,7 +127,7 @@ public class MempoolIntegrationTests
     }
 
     [Fact]
-    public async Task Mempool_WithRealValidator_RejectsInvalidNonce()
+    public void Mempool_WithRealValidator_RejectsInvalidNonce()
     {
         // Arrange
         var sender = RandomNumberGenerator.GetBytes(33);
@@ -154,7 +154,7 @@ public class MempoolIntegrationTests
         var transaction = CreateSignedTransaction(sender, recipient, 1000, 0, 10); // Wrong nonce
 
         // Act
-        var added = await mempool.AddTransactionAsync(transaction);
+        var added = mempool.AddTransaction(transaction);
 
         // Assert
         Assert.False(added);
@@ -162,7 +162,7 @@ public class MempoolIntegrationTests
     }
 
     [Fact]
-    public async Task Mempool_WithRealValidator_RejectsDuplicateTransaction()
+    public void Mempool_WithRealValidator_RejectsDuplicateTransaction()
     {
         // Arrange
         var sender = RandomNumberGenerator.GetBytes(33);
@@ -197,8 +197,8 @@ public class MempoolIntegrationTests
         var mempool = new Mempool(validator, mempoolConfig);
 
         // Act
-        var firstAdd = await mempool.AddTransactionAsync(transaction);
-        var secondAdd = await mempool.AddTransactionAsync(transaction);
+        var firstAdd = mempool.AddTransaction(transaction);
+        var secondAdd = mempool.AddTransaction(transaction);
 
         // Assert
         Assert.True(firstAdd);
@@ -207,7 +207,7 @@ public class MempoolIntegrationTests
     }
 
     [Fact]
-    public async Task Mempool_BlockBuildingScenario_ReturnsHighestFeeTransactions()
+    public void Mempool_BlockBuildingScenario_ReturnsHighestFeeTransactions()
     {
         // Arrange
         var signatureVerifier = Substitute.For<ISignatureVerifier>();
@@ -236,11 +236,11 @@ public class MempoolIntegrationTests
             var recipient = RandomNumberGenerator.GetBytes(33);
             var tx = CreateSignedTransaction(sender, recipient, 1000, 0, i * 10); // Fees: 0, 10, 20, ...
             transactions.Add(tx);
-            await mempool.AddTransactionAsync(tx);
+            mempool.AddTransaction(tx);
         }
 
         // Act - Build a block with top 5 transactions
-        var topTransactions = await mempool.GetPendingTransactionsAsync(5);
+        var topTransactions = mempool.GetPendingTransactions(5);
 
         // Assert
         Assert.Equal(5, topTransactions.Count);
@@ -252,7 +252,7 @@ public class MempoolIntegrationTests
     }
 
     [Fact]
-    public async Task Mempool_AfterBlockInclusion_RemovesIncludedTransactions()
+    public void Mempool_AfterBlockInclusion_RemovesIncludedTransactions()
     {
         // Arrange
         var signatureVerifier = Substitute.For<ISignatureVerifier>();
@@ -287,29 +287,29 @@ public class MempoolIntegrationTests
             RandomNumberGenerator.GetBytes(33),
             1000, 0, 75);
 
-        await mempool.AddTransactionAsync(tx1);
-        await mempool.AddTransactionAsync(tx2);
-        await mempool.AddTransactionAsync(tx3);
+        mempool.AddTransaction(tx1);
+        mempool.AddTransaction(tx2);
+        mempool.AddTransaction(tx3);
 
         // Simulate block building
-        var includedTransactions = await mempool.GetPendingTransactionsAsync(2);
+        var includedTransactions = mempool.GetPendingTransactions(2);
         Assert.Equal(2, includedTransactions.Count);
 
         // Act - Remove transactions that were included in the block
         var hashes = includedTransactions.Select(tx => tx.ComputeHash()).ToList();
-        var removed = await mempool.RemoveTransactionsAsync(hashes);
+        var removed = mempool.RemoveTransactions(hashes);
 
         // Assert
         Assert.Equal(2, removed);
         Assert.Equal(1, mempool.Count);
 
-        var remaining = await mempool.GetPendingTransactionsAsync(10);
+        var remaining = mempool.GetPendingTransactions(10);
         Assert.Single(remaining);
         Assert.Equal(50, remaining[0].Fee); // Lowest fee transaction remains
     }
 
     [Fact]
-    public async Task Mempool_FullPoolScenario_EvictsLowestFeeTransactions()
+    public void Mempool_FullPoolScenario_EvictsLowestFeeTransactions()
     {
         // Arrange
         var signatureVerifier = Substitute.For<ISignatureVerifier>();
@@ -339,7 +339,7 @@ public class MempoolIntegrationTests
                 RandomNumberGenerator.GetBytes(33),
                 1000, 0, 10 + i); // Fees: 10-19
             lowFeeTxs.Add(tx);
-            await mempool.AddTransactionAsync(tx);
+            mempool.AddTransaction(tx);
         }
 
         Assert.Equal(10, mempool.Count);
@@ -349,7 +349,7 @@ public class MempoolIntegrationTests
             RandomNumberGenerator.GetBytes(33),
             RandomNumberGenerator.GetBytes(33),
             1000, 0, 100);
-        var added = await mempool.AddTransactionAsync(highFeeTx);
+        var added = mempool.AddTransaction(highFeeTx);
 
         // Assert
         Assert.True(added);
@@ -357,17 +357,17 @@ public class MempoolIntegrationTests
 
         // Lowest fee transaction (fee=10) should be evicted
         var lowestFeeTxHash = lowFeeTxs[0].ComputeHash();
-        var contains = await mempool.ContainsTransactionAsync(lowestFeeTxHash);
+        var contains = mempool.ContainsTransaction(lowestFeeTxHash);
         Assert.False(contains);
 
         // High fee transaction should be in the pool
         var highFeeTxHash = highFeeTx.ComputeHash();
-        var containsHighFee = await mempool.ContainsTransactionAsync(highFeeTxHash);
+        var containsHighFee = mempool.ContainsTransaction(highFeeTxHash);
         Assert.True(containsHighFee);
     }
 
     [Fact]
-    public async Task Mempool_ClearScenario_RemovesAllTransactions()
+    public void Mempool_ClearScenario_RemovesAllTransactions()
     {
         // Arrange
         var signatureVerifier = Substitute.For<ISignatureVerifier>();
@@ -395,17 +395,17 @@ public class MempoolIntegrationTests
                 RandomNumberGenerator.GetBytes(33),
                 RandomNumberGenerator.GetBytes(33),
                 1000, 0, 10 + i);
-            await mempool.AddTransactionAsync(tx);
+            mempool.AddTransaction(tx);
         }
 
         Assert.Equal(10, mempool.Count);
 
         // Act - Clear the mempool
-        await mempool.ClearAsync();
+        mempool.Clear();
 
         // Assert
         Assert.Equal(0, mempool.Count);
-        var transactions = await mempool.GetPendingTransactionsAsync(100);
+        var transactions = mempool.GetPendingTransactions(100);
         Assert.Empty(transactions);
     }
 }

@@ -27,7 +27,7 @@ public interface IMempool
     /// Duplicate transactions (same hash) are not added.
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when transaction is null.</exception>
-    Task<bool> AddTransactionAsync(
+    bool AddTransaction(
         Transaction transaction,
         CancellationToken cancellationToken = default);
 
@@ -42,7 +42,7 @@ public interface IMempool
     /// Transactions that don't exist in the mempool are silently ignored.
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when transactionHashes is null.</exception>
-    Task<int> RemoveTransactionsAsync(
+    int RemoveTransactions(
         IReadOnlyList<byte[]> transactionHashes,
         CancellationToken cancellationToken = default);
 
@@ -53,7 +53,7 @@ public interface IMempool
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>True if the transaction exists in the mempool; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when transactionHash is null.</exception>
-    Task<bool> ContainsTransactionAsync(
+    bool ContainsTransaction(
         byte[] transactionHash,
         CancellationToken cancellationToken = default);
 
@@ -70,7 +70,7 @@ public interface IMempool
     /// - Respect the maxCount limit
     /// - Handle cancellation gracefully
     /// </remarks>
-    Task<IReadOnlyList<Transaction>> GetPendingTransactionsAsync(
+    IReadOnlyList<Transaction> GetPendingTransactions(
         int maxCount,
         CancellationToken cancellationToken = default);
 
@@ -81,5 +81,5 @@ public interface IMempool
     /// <remarks>
     /// This is typically used for testing or during chain reorganization.
     /// </remarks>
-    Task ClearAsync(CancellationToken cancellationToken = default);
+    void Clear(CancellationToken cancellationToken = default);
 }

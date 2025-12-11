@@ -18,35 +18,33 @@ public class BlockBuilderIntegrationTests
 
         public int Count => _transactions.Count;
 
-        public void AddTransaction(Transaction tx)
+        public bool AddTransaction(Transaction transaction, CancellationToken cancellationToken = default)
         {
-            _transactions.Add(tx);
-        }
-
-        public Task<bool> AddTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
-        {
+            ArgumentNullException.ThrowIfNull(transaction);
             cancellationToken.ThrowIfCancellationRequested();
             _transactions.Add(transaction);
-            return Task.FromResult(true);
+            return true;
         }
 
-        public Task<int> RemoveTransactionsAsync(IReadOnlyList<byte[]> transactionHashes, CancellationToken cancellationToken = default)
+        public int RemoveTransactions(IReadOnlyList<byte[]> transactionHashes, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(transactionHashes);
             cancellationToken.ThrowIfCancellationRequested();
             var hashStrings = transactionHashes.Select(h => Convert.ToHexString(h)).ToHashSet();
             var removed = _transactions.RemoveAll(tx => hashStrings.Contains(Convert.ToHexString(tx.ComputeHash())));
-            return Task.FromResult(removed);
+            return removed;
         }
 
-        public Task<bool> ContainsTransactionAsync(byte[] transactionHash, CancellationToken cancellationToken = default)
+        public bool ContainsTransaction(byte[] transactionHash, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(transactionHash);
             cancellationToken.ThrowIfCancellationRequested();
             var hashStr = Convert.ToHexString(transactionHash);
             var contains = _transactions.Any(tx => Convert.ToHexString(tx.ComputeHash()) == hashStr);
-            return Task.FromResult(contains);
+            return contains;
         }
 
-        public Task<IReadOnlyList<Transaction>> GetPendingTransactionsAsync(
+        public IReadOnlyList<Transaction> GetPendingTransactions(
             int maxCount,
             CancellationToken cancellationToken = default)
         {
@@ -57,14 +55,13 @@ public class BlockBuilderIntegrationTests
                 .Take(maxCount)
                 .ToList();
 
-            return Task.FromResult<IReadOnlyList<Transaction>>(transactions);
+            return transactions;
         }
 
-        public Task ClearAsync(CancellationToken cancellationToken = default)
+        public void Clear(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             _transactions.Clear();
-            return Task.CompletedTask;
         }
     }
 

@@ -75,7 +75,7 @@ public sealed class Mempool : IMempool
     }
 
     /// <inheritdoc />
-    public async Task<bool> AddTransactionAsync(
+    public bool AddTransaction(
         Transaction transaction,
         CancellationToken cancellationToken = default)
     {
@@ -83,7 +83,7 @@ public sealed class Mempool : IMempool
         cancellationToken.ThrowIfCancellationRequested();
 
         // Validate transaction
-        var validationResult = await _validator.ValidateTransactionAsync(transaction, cancellationToken);
+        var validationResult = _validator.ValidateTransaction(transaction, cancellationToken);
         if (!validationResult.IsValid)
         {
             return false;
@@ -138,7 +138,7 @@ public sealed class Mempool : IMempool
     }
 
     /// <inheritdoc />
-    public Task<int> RemoveTransactionsAsync(
+    public int RemoveTransactions(
         IReadOnlyList<byte[]> transactionHashes,
         CancellationToken cancellationToken = default)
     {
@@ -161,11 +161,11 @@ public sealed class Mempool : IMempool
             }
         }
 
-        return Task.FromResult(removedCount);
+        return removedCount;
     }
 
     /// <inheritdoc />
-    public Task<bool> ContainsTransactionAsync(
+    public bool ContainsTransaction(
         byte[] transactionHash,
         CancellationToken cancellationToken = default)
     {
@@ -176,12 +176,12 @@ public sealed class Mempool : IMempool
 
         lock (_lock)
         {
-            return Task.FromResult(_transactions.ContainsKey(hashStr));
+            return _transactions.ContainsKey(hashStr);
         }
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<Transaction>> GetPendingTransactionsAsync(
+    public IReadOnlyList<Transaction> GetPendingTransactions(
         int maxCount,
         CancellationToken cancellationToken = default)
     {
@@ -189,7 +189,7 @@ public sealed class Mempool : IMempool
 
         if (maxCount <= 0)
         {
-            return Task.FromResult<IReadOnlyList<Transaction>>(Array.Empty<Transaction>());
+            return [];
         }
 
         lock (_lock)
@@ -200,12 +200,12 @@ public sealed class Mempool : IMempool
                 .Select(txh => txh.Transaction)
                 .ToList();
 
-            return Task.FromResult<IReadOnlyList<Transaction>>(transactions);
+            return transactions;
         }
     }
 
     /// <inheritdoc />
-    public Task ClearAsync(CancellationToken cancellationToken = default)
+    public void Clear(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -214,8 +214,6 @@ public sealed class Mempool : IMempool
             _transactions.Clear();
             _priorityQueue.Clear();
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>

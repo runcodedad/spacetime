@@ -26,7 +26,7 @@ public interface ITransactionValidator
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A detailed validation result.</returns>
     /// <exception cref="ArgumentNullException">Thrown when transaction is null.</exception>
-    Task<TransactionValidationResult> ValidateTransactionAsync(
+    TransactionValidationResult ValidateTransaction(
         Transaction transaction,
         CancellationToken cancellationToken = default);
 
@@ -43,7 +43,7 @@ public interface ITransactionValidator
     /// and detect double-spending within the same block.
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when transaction or blockContext is null.</exception>
-    Task<TransactionValidationResult> ValidateTransactionInBlockAsync(
+    TransactionValidationResult ValidateTransactionInBlock(
         Transaction transaction,
         BlockValidationContext blockContext,
         CancellationToken cancellationToken = default);
@@ -59,7 +59,7 @@ public interface ITransactionValidator
     /// to detect double-spending and ensure nonce consistency within the transaction set.
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when transactions is null.</exception>
-    Task<IReadOnlyList<TransactionValidationResult>> ValidateTransactionsAsync(
+    IReadOnlyList<TransactionValidationResult> ValidateTransactions(
         IReadOnlyList<Transaction> transactions,
         CancellationToken cancellationToken = default);
 }

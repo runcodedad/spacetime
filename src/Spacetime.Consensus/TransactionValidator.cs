@@ -68,7 +68,7 @@ public sealed class TransactionValidator : ITransactionValidator
     }
 
     /// <inheritdoc />
-    public async Task<TransactionValidationResult> ValidateTransactionAsync(
+    public TransactionValidationResult ValidateTransaction(
         Transaction transaction,
         CancellationToken cancellationToken = default)
     {
@@ -117,7 +117,7 @@ public sealed class TransactionValidator : ITransactionValidator
         // 6. Check for duplicate transaction
         if (_config.CheckDuplicateTransactions)
         {
-            var duplicateResult = await ValidateDuplicateAsync(transaction, cancellationToken);
+            var duplicateResult = ValidateDuplicate(transaction, cancellationToken);
             if (!duplicateResult.IsValid)
             {
                 return duplicateResult;
@@ -137,7 +137,7 @@ public sealed class TransactionValidator : ITransactionValidator
     }
 
     /// <inheritdoc />
-    public async Task<TransactionValidationResult> ValidateTransactionInBlockAsync(
+    public TransactionValidationResult ValidateTransactionInBlock(
         Transaction transaction,
         BlockValidationContext blockContext,
         CancellationToken cancellationToken = default)
@@ -188,7 +188,7 @@ public sealed class TransactionValidator : ITransactionValidator
         // 6. Check for duplicate transaction
         if (_config.CheckDuplicateTransactions)
         {
-            var duplicateResult = await ValidateDuplicateAsync(transaction, cancellationToken);
+            var duplicateResult = ValidateDuplicate(transaction, cancellationToken);
             if (!duplicateResult.IsValid)
             {
                 return duplicateResult;
@@ -226,7 +226,7 @@ public sealed class TransactionValidator : ITransactionValidator
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<TransactionValidationResult>> ValidateTransactionsAsync(
+    public IReadOnlyList<TransactionValidationResult> ValidateTransactions(
         IReadOnlyList<Transaction> transactions,
         CancellationToken cancellationToken = default)
     {
@@ -250,7 +250,7 @@ public sealed class TransactionValidator : ITransactionValidator
         foreach (var tx in transactions)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var result = await ValidateTransactionInBlockAsync(tx, context, cancellationToken);
+            var result = ValidateTransactionInBlock(tx, context, cancellationToken);
             results.Add(result);
 
             // Stop validating remaining transactions if one fails
@@ -374,14 +374,14 @@ public sealed class TransactionValidator : ITransactionValidator
     /// <summary>
     /// Validates transaction is not a duplicate.
     /// </summary>
-    private Task<TransactionValidationResult> ValidateDuplicateAsync(
+    private TransactionValidationResult ValidateDuplicate(
         Transaction transaction,
         CancellationToken cancellationToken)
     {
         if (_transactionIndex == null)
         {
             // If no transaction index is available, skip duplicate check
-            return Task.FromResult(TransactionValidationResult.Success());
+            return TransactionValidationResult.Success();
         }
 
         try
@@ -391,18 +391,18 @@ public sealed class TransactionValidator : ITransactionValidator
 
             if (location != null)
             {
-                return Task.FromResult(TransactionValidationResult.Failure(
+                return TransactionValidationResult.Failure(
                     TransactionValidationErrorType.DuplicateTransaction,
-                    $"Transaction already exists: {Convert.ToHexString(txHash)}"));
+                    $"Transaction already exists: {Convert.ToHexString(txHash)}");
             }
 
-            return Task.FromResult(TransactionValidationResult.Success());
+            return TransactionValidationResult.Success();
         }
         catch
         {
             // If duplicate check fails, don't fail validation
             // This allows the system to continue operating if the index is temporarily unavailable
-            return Task.FromResult(TransactionValidationResult.Success());
+            return TransactionValidationResult.Success();
         }
     }
 

@@ -88,7 +88,7 @@ public class BlockBuilderTests
         var validator = Substitute.For<IBlockValidator>();
 
         var transactions = new[] { CreateValidTransaction(), CreateValidTransaction() };
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(transactions);
 
         var minerPublicKey = RandomNumberGenerator.GetBytes(33);
@@ -134,7 +134,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         var minerPublicKey = RandomNumberGenerator.GetBytes(33);
@@ -174,7 +174,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         signer.GetPublicKey().Returns(RandomNumberGenerator.GetBytes(33));
@@ -199,7 +199,7 @@ public class BlockBuilderTests
             maxTransactions: 500);
 
         // Assert
-        await mempool.Received(1).GetPendingTransactionsAsync(500, Arg.Any<CancellationToken>());
+        mempool.Received(1).GetPendingTransactions(500);
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         signer.GetPublicKey().Returns(RandomNumberGenerator.GetBytes(33));
@@ -247,7 +247,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         signer.GetPublicKey().Returns(RandomNumberGenerator.GetBytes(33));
@@ -282,7 +282,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         signer.GetPublicKey().Returns(RandomNumberGenerator.GetBytes(33));
@@ -514,7 +514,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         var expectedMinerPublicKey = RandomNumberGenerator.GetBytes(33);
@@ -551,7 +551,7 @@ public class BlockBuilderTests
         var validator = Substitute.For<IBlockValidator>();
 
         var transactions = new[] { CreateValidTransaction(), CreateValidTransaction() };
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(transactions);
 
         signer.GetPublicKey().Returns(RandomNumberGenerator.GetBytes(33));
@@ -587,7 +587,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         signer.GetPublicKey().Returns(RandomNumberGenerator.GetBytes(33));
@@ -622,7 +622,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         signer.GetPublicKey().Returns(RandomNumberGenerator.GetBytes(33));
@@ -661,7 +661,7 @@ public class BlockBuilderTests
         var signer = Substitute.For<IBlockSigner>();
         var validator = Substitute.For<IBlockValidator>();
 
-        mempool.GetPendingTransactionsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        mempool.GetPendingTransactions(Arg.Any<int>())
             .Returns(Array.Empty<Transaction>());
 
         signer.GetPublicKey().Returns(RandomNumberGenerator.GetBytes(33));

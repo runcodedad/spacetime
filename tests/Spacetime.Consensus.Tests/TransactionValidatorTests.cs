@@ -91,7 +91,7 @@ public class TransactionValidatorTests
     #region ValidateTransactionAsync - Success Tests
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithValidTransaction_ReturnsSuccess()
+    public void ValidateTransactionAsync_WithValidTransaction_ReturnsSuccess()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -106,7 +106,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.True(result.IsValid);
@@ -118,13 +118,13 @@ public class TransactionValidatorTests
     #region ValidateTransactionAsync - Basic Validation Tests
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithUnsignedTransaction_ReturnsFailure()
+    public void ValidateTransactionAsync_WithUnsignedTransaction_ReturnsFailure()
     {
         // Arrange
         var tx = CreateValidTransaction(signed: false);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -132,14 +132,14 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithSameSenderAndRecipient_ReturnsFailure()
+    public void ValidateTransactionAsync_WithSameSenderAndRecipient_ReturnsFailure()
     {
         // Arrange
         var sameKey = CreateValidPublicKey();
         var tx = new Transaction(sameKey, sameKey, 1000, 0, 10, RandomNumberGenerator.GetBytes(64));
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -151,7 +151,7 @@ public class TransactionValidatorTests
     #region ValidateTransactionAsync - Version Tests
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithUnsupportedVersion_ReturnsFailure()
+    public void ValidateTransactionAsync_WithUnsupportedVersion_ReturnsFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -166,7 +166,7 @@ public class TransactionValidatorTests
             signature: RandomNumberGenerator.GetBytes(64));
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -178,7 +178,7 @@ public class TransactionValidatorTests
     #region ValidateTransactionAsync - Fee Tests
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithFeeBelowMinimum_ReturnsFailure()
+    public void ValidateTransactionAsync_WithFeeBelowMinimum_ReturnsFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -186,7 +186,7 @@ public class TransactionValidatorTests
         var tx = new Transaction(sender, recipient, 1000, 0, 0, RandomNumberGenerator.GetBytes(64));
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -194,7 +194,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithFeeAtMinimum_Succeeds()
+    public void ValidateTransactionAsync_WithFeeAtMinimum_Succeeds()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -209,14 +209,14 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithFeeAboveMaximum_ReturnsFailure()
+    public void ValidateTransactionAsync_WithFeeAboveMaximum_ReturnsFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -224,7 +224,7 @@ public class TransactionValidatorTests
         var tx = new Transaction(sender, recipient, 1000, 0, 1_000_001, RandomNumberGenerator.GetBytes(64));
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -232,7 +232,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithFeeAtMaximum_Succeeds()
+    public void ValidateTransactionAsync_WithFeeAtMaximum_Succeeds()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -247,7 +247,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.True(result.IsValid);
@@ -258,7 +258,7 @@ public class TransactionValidatorTests
     #region ValidateTransactionAsync - Signature Tests
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithInvalidSignature_ReturnsFailure()
+    public void ValidateTransactionAsync_WithInvalidSignature_ReturnsFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -269,7 +269,7 @@ public class TransactionValidatorTests
             .Returns(false); // Invalid signature
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -277,7 +277,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithValidSignature_PassesSignatureCheck()
+    public void ValidateTransactionAsync_WithValidSignature_PassesSignatureCheck()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -292,7 +292,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.True(result.IsValid);
@@ -300,7 +300,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WhenSignatureVerificationThrows_ReturnsFailure()
+    public void ValidateTransactionAsync_WhenSignatureVerificationThrows_ReturnsFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -311,7 +311,7 @@ public class TransactionValidatorTests
             .Do(x => throw new InvalidOperationException("Verification failed"));
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -324,7 +324,7 @@ public class TransactionValidatorTests
     #region ValidateTransactionAsync - Duplicate Tests
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithDuplicateTransaction_ReturnsFailure()
+    public void ValidateTransactionAsync_WithDuplicateTransaction_ReturnsFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -340,7 +340,7 @@ public class TransactionValidatorTests
                 TransactionIndex: 0));
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -348,7 +348,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithNonDuplicateTransaction_PassesDuplicateCheck()
+    public void ValidateTransactionAsync_WithNonDuplicateTransaction_PassesDuplicateCheck()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -363,14 +363,14 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WhenTransactionIndexThrows_ContinuesValidation()
+    public void ValidateTransactionAsync_WhenTransactionIndexThrows_ContinuesValidation()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -385,7 +385,7 @@ public class TransactionValidatorTests
             .Do(x => throw new InvalidOperationException("Index unavailable"));
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert - Should continue and succeed despite index error
         Assert.True(result.IsValid);
@@ -396,7 +396,7 @@ public class TransactionValidatorTests
     #region ValidateTransactionAsync - Account State Tests
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithInvalidNonce_ReturnsFailure()
+    public void ValidateTransactionAsync_WithInvalidNonce_ReturnsFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -411,7 +411,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -419,7 +419,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithCorrectNonce_PassesNonceCheck()
+    public void ValidateTransactionAsync_WithCorrectNonce_PassesNonceCheck()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -434,14 +434,14 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithInsufficientBalance_ReturnsFailure()
+    public void ValidateTransactionAsync_WithInsufficientBalance_ReturnsFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -456,7 +456,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);
@@ -464,7 +464,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithExactBalance_Succeeds()
+    public void ValidateTransactionAsync_WithExactBalance_Succeeds()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -479,14 +479,14 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithNewAccount_UsesZeroBalanceAndNonce()
+    public void ValidateTransactionAsync_WithNewAccount_UsesZeroBalanceAndNonce()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -501,7 +501,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionAsync(tx);
+        var result = _validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid); // Should fail due to insufficient balance (0)
@@ -513,7 +513,7 @@ public class TransactionValidatorTests
     #region ValidateTransactionInBlockAsync Tests
 
     [Fact]
-    public async Task ValidateTransactionInBlockAsync_WithValidTransaction_ReturnsSuccess()
+    public void ValidateTransactionInBlockAsync_WithValidTransaction_ReturnsSuccess()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -529,14 +529,14 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionInBlockAsync(tx, context);
+        var result = _validator.ValidateTransactionInBlock(tx, context);
 
         // Assert
         Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task ValidateTransactionInBlockAsync_UpdatesBlockContext()
+    public void ValidateTransactionInBlockAsync_UpdatesBlockContext()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -552,7 +552,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var result = await _validator.ValidateTransactionInBlockAsync(tx, context);
+        var result = _validator.ValidateTransactionInBlock(tx, context);
 
         // Assert
         Assert.True(result.IsValid);
@@ -563,7 +563,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionInBlockAsync_UsesTrackedStateFromContext()
+    public void ValidateTransactionInBlockAsync_UsesTrackedStateFromContext()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -580,10 +580,10 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act - Process first transaction
-        var result1 = await _validator.ValidateTransactionInBlockAsync(tx1, context);
+        var result1 = _validator.ValidateTransactionInBlock(tx1, context);
         
         // Act - Process second transaction with tracked state
-        var result2 = await _validator.ValidateTransactionInBlockAsync(tx2, context);
+        var result2 = _validator.ValidateTransactionInBlock(tx2, context);
 
         // Assert
         Assert.True(result1.IsValid);
@@ -596,7 +596,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionInBlockAsync_DetectsDoubleSpendInBlock()
+    public void ValidateTransactionInBlockAsync_DetectsDoubleSpendInBlock()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -613,10 +613,10 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act - Process first transaction
-        var result1 = await _validator.ValidateTransactionInBlockAsync(tx1, context);
+        var result1 = _validator.ValidateTransactionInBlock(tx1, context);
         
         // Act - Process second transaction (should fail due to insufficient balance)
-        var result2 = await _validator.ValidateTransactionInBlockAsync(tx2, context);
+        var result2 = _validator.ValidateTransactionInBlock(tx2, context);
 
         // Assert
         Assert.True(result1.IsValid);
@@ -625,46 +625,46 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionInBlockAsync_WithNullTransaction_ThrowsArgumentNullException()
+    public void ValidateTransactionInBlockAsync_WithNullTransaction_ThrowsArgumentNullException()
     {
         // Arrange
         var context = new BlockValidationContext();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await _validator.ValidateTransactionInBlockAsync(null!, context));
+        Assert.Throws<ArgumentNullException>(() =>
+            _validator.ValidateTransactionInBlock(null!, context));
     }
 
     [Fact]
-    public async Task ValidateTransactionInBlockAsync_WithNullContext_ThrowsArgumentNullException()
+    public void ValidateTransactionInBlockAsync_WithNullContext_ThrowsArgumentNullException()
     {
         // Arrange
         var tx = CreateValidTransaction();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await _validator.ValidateTransactionInBlockAsync(tx, null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            _validator.ValidateTransactionInBlock(tx, null!));
     }
 
     #endregion
 
-    #region ValidateTransactionsAsync Tests
+    #region ValidateTransactions Tests
 
     [Fact]
-    public async Task ValidateTransactionsAsync_WithEmptyList_ReturnsEmptyResults()
+    public void ValidateTransactions_WithEmptyList_ReturnsEmptyResults()
     {
         // Arrange
         var transactions = Array.Empty<Transaction>();
 
         // Act
-        var results = await _validator.ValidateTransactionsAsync(transactions);
+        var results = _validator.ValidateTransactions(transactions);
 
         // Assert
         Assert.Empty(results);
     }
 
     [Fact]
-    public async Task ValidateTransactionsAsync_WithValidTransactions_ReturnsAllSuccess()
+    public void ValidateTransactions_WithValidTransactions_ReturnsAllSuccess()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -683,7 +683,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var results = await _validator.ValidateTransactionsAsync(transactions);
+        var results = _validator.ValidateTransactions(transactions);
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -691,7 +691,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionsAsync_StopsOnFirstFailure()
+    public void ValidateTransactions_StopsOnFirstFailure()
     {
         // Arrange
         var sender = CreateValidPublicKey();
@@ -711,7 +711,7 @@ public class TransactionValidatorTests
             .Returns((TransactionLocation?)null);
 
         // Act
-        var results = await _validator.ValidateTransactionsAsync(transactions);
+        var results = _validator.ValidateTransactions(transactions);
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -721,7 +721,7 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionsAsync_WithTooManyTransactions_ReturnsFailure()
+    public void ValidateTransactions_WithTooManyTransactions_ReturnsFailure()
     {
         // Arrange
         var config = new TransactionValidationConfig { MaxTransactionsPerBlock = 2 };
@@ -739,7 +739,7 @@ public class TransactionValidatorTests
         };
 
         // Act
-        var results = await validator.ValidateTransactionsAsync(transactions);
+        var results = validator.ValidateTransactions(transactions);
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -747,11 +747,11 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public async Task ValidateTransactionsAsync_WithNullTransactions_ThrowsArgumentNullException()
+    public void ValidateTransactions_WithNullTransactions_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await _validator.ValidateTransactionsAsync(null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            { var result = _validator.ValidateTransactions(null!); });
     }
 
     #endregion
@@ -759,7 +759,7 @@ public class TransactionValidatorTests
     #region Configuration Tests
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithPermissiveConfig_AllowsZeroFee()
+    public void ValidateTransactionAsync_WithPermissiveConfig_AllowsZeroFee()
     {
         // Arrange
         var config = TransactionValidationConfig.Permissive;
@@ -779,14 +779,14 @@ public class TransactionValidatorTests
             .Returns(new AccountState(Balance: 2000, Nonce: 0));
 
         // Act
-        var result = await validator.ValidateTransactionAsync(tx);
+        var result = validator.ValidateTransaction(tx);
 
         // Assert
         Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task ValidateTransactionAsync_WithCustomMinFee_EnforcesMinimum()
+    public void ValidateTransactionAsync_WithCustomMinFee_EnforcesMinimum()
     {
         // Arrange
         var config = new TransactionValidationConfig { MinimumFee = 100 };
@@ -801,7 +801,7 @@ public class TransactionValidatorTests
         var tx = new Transaction(sender, recipient, 1000, 0, 50, RandomNumberGenerator.GetBytes(64));
 
         // Act
-        var result = await validator.ValidateTransactionAsync(tx);
+        var result = validator.ValidateTransaction(tx);
 
         // Assert
         Assert.False(result.IsValid);

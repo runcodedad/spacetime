@@ -131,7 +131,7 @@ public sealed class BlockBuilder
         cancellationToken.ThrowIfCancellationRequested();
 
         // Step 1: Collect transactions from mempool
-        var transactions = await _mempool.GetPendingTransactionsAsync(maxTransactions, cancellationToken);
+        var transactions = _mempool.GetPendingTransactions(maxTransactions, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         // Step 2: Build transaction Merkle tree and compute root
