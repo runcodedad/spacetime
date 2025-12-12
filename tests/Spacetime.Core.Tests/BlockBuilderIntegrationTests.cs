@@ -16,12 +16,35 @@ public class BlockBuilderIntegrationTests
     {
         private readonly List<Transaction> _transactions = new();
 
-        public void AddTransaction(Transaction tx)
+        public int Count => _transactions.Count;
+
+        public bool AddTransaction(Transaction transaction, CancellationToken cancellationToken = default)
         {
-            _transactions.Add(tx);
+            ArgumentNullException.ThrowIfNull(transaction);
+            cancellationToken.ThrowIfCancellationRequested();
+            _transactions.Add(transaction);
+            return true;
         }
 
-        public Task<IReadOnlyList<Transaction>> GetPendingTransactionsAsync(
+        public int RemoveTransactions(IReadOnlyList<byte[]> transactionHashes, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(transactionHashes);
+            cancellationToken.ThrowIfCancellationRequested();
+            var hashStrings = transactionHashes.Select(h => Convert.ToHexString(h)).ToHashSet();
+            var removed = _transactions.RemoveAll(tx => hashStrings.Contains(Convert.ToHexString(tx.ComputeHash())));
+            return removed;
+        }
+
+        public bool ContainsTransaction(byte[] transactionHash, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(transactionHash);
+            cancellationToken.ThrowIfCancellationRequested();
+            var hashStr = Convert.ToHexString(transactionHash);
+            var contains = _transactions.Any(tx => Convert.ToHexString(tx.ComputeHash()) == hashStr);
+            return contains;
+        }
+
+        public IReadOnlyList<Transaction> GetPendingTransactions(
             int maxCount,
             CancellationToken cancellationToken = default)
         {
@@ -32,7 +55,13 @@ public class BlockBuilderIntegrationTests
                 .Take(maxCount)
                 .ToList();
 
-            return Task.FromResult<IReadOnlyList<Transaction>>(transactions);
+            return transactions;
+        }
+
+        public void Clear(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _transactions.Clear();
         }
     }
 
