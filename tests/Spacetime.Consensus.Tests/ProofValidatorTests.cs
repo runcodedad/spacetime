@@ -505,12 +505,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        
-        // Note: MerkleTree library uses domain-separated hashing for leaves: Hash(0x00 || leaf_data)
-        var domainSeparatedLeaf = new byte[33];
-        domainSeparatedLeaf[0] = 0x00;
-        leafValue.CopyTo(domainSeparatedLeaf.AsSpan(1));
-        var merkleRoot = SHA256.HashData(domainSeparatedLeaf);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         var proof = new Proof(
             leafValue: leafValue,
