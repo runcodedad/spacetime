@@ -17,6 +17,18 @@ public class ProofValidatorTests
         _validator = new ProofValidator(_hashFunction);
     }
 
+    /// <summary>
+    /// Computes the Merkle root for a single leaf using domain-separated hashing.
+    /// MerkleTree library v1.0.0-beta.3+ uses Hash(0x00 || leaf_data) for leaves.
+    /// </summary>
+    private static byte[] ComputeSingleLeafMerkleRoot(byte[] leafValue)
+    {
+        var domainSeparatedLeaf = new byte[33]; // 32 bytes for leaf + 1 byte for domain separator
+        domainSeparatedLeaf[0] = 0x00; // Leaf domain separator
+        leafValue.CopyTo(domainSeparatedLeaf.AsSpan(1));
+        return SHA256.HashData(domainSeparatedLeaf);
+    }
+
     #region ComputeScore Tests
 
     [Fact]
@@ -275,7 +287,7 @@ public class ProofValidatorTests
         var score = _validator.ComputeScore(challenge, leafValue);
         
         // Create a simple single-leaf Merkle tree (height 0)
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         var proof = new Proof(
             leafValue: leafValue,
@@ -303,7 +315,7 @@ public class ProofValidatorTests
         var challenge = RandomNumberGenerator.GetBytes(32);
         var expectedChallenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         var proof = new Proof(
             leafValue: leafValue,
@@ -331,7 +343,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         var expectedPlotRoot = RandomNumberGenerator.GetBytes(32);
         
         var proof = new Proof(
@@ -360,7 +372,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var incorrectScore = RandomNumberGenerator.GetBytes(32); // Not the real score
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         var proof = new Proof(
             leafValue: leafValue,
@@ -388,7 +400,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         // Create a difficulty target that's below the score
         var difficultyTarget = new byte[32];
@@ -420,7 +432,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         // Create a difficulty target that's above the score
         var difficultyTarget = new byte[32];
@@ -450,9 +462,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        
-        // Create a real Merkle root (hash of leaf)
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         // But provide incorrect sibling hashes
         var invalidSibling = RandomNumberGenerator.GetBytes(32);
@@ -495,7 +505,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         var proof = new Proof(
             leafValue: leafValue,
@@ -518,7 +528,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         
         var proof = new Proof(
             leafValue: leafValue,
@@ -541,7 +551,7 @@ public class ProofValidatorTests
         var leafValue = RandomNumberGenerator.GetBytes(32);
         var challenge = RandomNumberGenerator.GetBytes(32);
         var score = _validator.ComputeScore(challenge, leafValue);
-        var merkleRoot = SHA256.HashData(leafValue);
+        var merkleRoot = ComputeSingleLeafMerkleRoot(leafValue);
         var invalidChallenge = RandomNumberGenerator.GetBytes(16);
         
         var proof = new Proof(
