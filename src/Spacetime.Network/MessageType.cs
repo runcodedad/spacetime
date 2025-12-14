@@ -66,6 +66,26 @@ public enum MessageType : byte
     ProofSubmission = 0x40,
 
     /// <summary>
+    /// Broadcast that a block has been accepted.
+    /// </summary>
+    BlockAccepted = 0x41,
+
+    /// <summary>
+    /// Request for transaction pool contents.
+    /// </summary>
+    TxPoolRequest = 0x32,
+
+    /// <summary>
+    /// Ping message to check connection liveness.
+    /// </summary>
+    Ping = 0x04,
+
+    /// <summary>
+    /// Pong response to a ping message.
+    /// </summary>
+    Pong = 0x05,
+
+    /// <summary>
     /// Generic error message.
     /// </summary>
     Error = 0xFF
