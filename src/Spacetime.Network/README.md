@@ -21,13 +21,32 @@
 ### Core Components
 
 #### Message Types
-The network supports various message types for blockchain operations:
-- `Handshake` / `HandshakeAck` - Connection establishment
-- `Heartbeat` - Keep-alive messages
-- `GetPeers` / `Peers` - Peer discovery
-- `GetHeaders` / `Headers` / `GetBlock` / `Block` - Blockchain synchronization
-- `Transaction` / `NewBlock` - Transaction and block propagation
-- `ProofSubmission` - Consensus proof submission
+
+The network supports various message types for blockchain operations, organized by category:
+
+**Discovery Messages:**
+- `Handshake` / `HandshakeAck` - Connection establishment with node information exchange
+- `Ping` / `Pong` - Connection liveness checking with nonce matching
+- `GetPeers` / `Peers` - Peer discovery and exchange
+- `Heartbeat` - Keep-alive messages (legacy, use Ping/Pong for new implementations)
+
+**Synchronization Messages:**
+- `GetHeaders` - Request block headers starting from a specific hash
+- `Headers` - Response containing multiple block headers
+- `GetBlock` - Request a complete block by hash
+- `Block` - Response containing a complete block
+
+**Transaction Messages:**
+- `Transaction` - Broadcast a transaction to the network
+- `TxPoolRequest` - Request contents of a node's transaction pool (mempool)
+
+**Consensus Messages:**
+- `ProofSubmission` - Submit a Proof-of-Space-Time proof
+- `NewBlock` - Broadcast a newly proposed block (alias for BlockProposal)
+- `BlockAccepted` - Notify network that a block has been validated and accepted
+
+**Error Handling:**
+- `Error` - Generic error message for reporting protocol violations or failures
 
 #### Key Interfaces
 
@@ -103,6 +122,201 @@ Messages use a simple length-prefixed binary format:
 - Maximum message size: 16 MB
 - All numeric values use little-endian byte order
 - Efficient for streaming protocols
+
+#### Message Serialization
+
+Each message type has its own serialization format and helper class:
+
+**HandshakeMessage** - Connection establishment
+```csharp
+var handshake = new HandshakeMessage(
+    protocolVersion: 1,
+    nodeId: "node-12345",
+    userAgent: "Spacetime/1.0.0",
+    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+var payload = handshake.Serialize();
+var message = new NetworkMessage(MessageType.Handshake, payload);
+```
+
+**PingPongMessage** - Liveness checking
+```csharp
+var ping = new PingPongMessage(
+    nonce: Random.Shared.NextInt64(),
+    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+var message = new NetworkMessage(MessageType.Ping, ping.Serialize());
+// Responder echoes back with same nonce in a Pong message
+```
+
+**PeerListMessage** - Peer exchange
+```csharp
+var peers = new List<IPEndPoint>
+{
+    new IPEndPoint(IPAddress.Parse("192.168.1.100"), 8333),
+    new IPEndPoint(IPAddress.Parse("10.0.0.50"), 8333)
+};
+var peerList = new PeerListMessage(peers);
+var message = new NetworkMessage(MessageType.Peers, peerList.Serialize());
+```
+
+**GetHeadersMessage** - Request block headers
+```csharp
+var getHeaders = new GetHeadersMessage(
+    locatorHash: lastKnownBlockHash,
+    stopHash: ReadOnlyMemory<byte>.Empty, // Empty = no stop
+    maxHeaders: 2000);
+var message = new NetworkMessage(MessageType.GetHeaders, getHeaders.Serialize());
+```
+
+**HeadersMessage** - Provide block headers
+```csharp
+var headers = blockHeaders.Select(h => new ReadOnlyMemory<byte>(h.Serialize())).ToList();
+var headersMsg = new HeadersMessage(headers);
+var message = new NetworkMessage(MessageType.Headers, headersMsg.Serialize());
+```
+
+**GetBlockMessage** - Request a specific block
+```csharp
+var getBlock = new GetBlockMessage(blockHash);
+var message = new NetworkMessage(MessageType.GetBlock, getBlock.Serialize());
+```
+
+**BlockMessage** - Provide a complete block
+```csharp
+var blockData = block.Serialize();
+var blockMsg = new BlockMessage(blockData);
+var message = new NetworkMessage(MessageType.Block, blockMsg.Serialize());
+```
+
+**TransactionMessage** - Broadcast a transaction
+```csharp
+var txData = transaction.Serialize();
+var txMsg = new TransactionMessage(txData);
+var message = new NetworkMessage(MessageType.Transaction, txMsg.Serialize());
+```
+
+**ProofSubmissionMessage** - Submit a PoST proof
+```csharp
+var proofData = blockProof.Serialize();
+var proofMsg = new ProofSubmissionMessage(
+    proofData: proofData,
+    minerId: minerPublicKey,
+    blockHeight: currentHeight + 1);
+var message = new NetworkMessage(MessageType.ProofSubmission, proofMsg.Serialize());
+```
+
+**BlockProposalMessage** - Propose a new block
+```csharp
+var blockData = newBlock.Serialize();
+var proposal = new BlockProposalMessage(blockData);
+var message = new NetworkMessage(MessageType.NewBlock, proposal.Serialize());
+```
+
+**BlockAcceptedMessage** - Notify block acceptance
+```csharp
+var accepted = new BlockAcceptedMessage(blockHash, blockHeight);
+var message = new NetworkMessage(MessageType.BlockAccepted, accepted.Serialize());
+```
+
+**TxPoolRequestMessage** - Request mempool contents
+```csharp
+var request = new TxPoolRequestMessage(
+    maxTransactions: 1000,
+    includeTransactionData: true); // false = hashes only
+var message = new NetworkMessage(MessageType.TxPoolRequest, request.Serialize());
+```
+
+#### Message Validation
+
+Use `MessageValidator` to validate messages before processing:
+
+```csharp
+var message = await connection.ReceiveAsync();
+if (message != null && MessageValidator.ValidateMessage(message))
+{
+    // Process valid message
+    switch (message.Type)
+    {
+        case MessageType.Handshake:
+            var handshake = HandshakeMessage.Deserialize(message.Payload);
+            // Handle handshake...
+            break;
+        // ... other cases
+    }
+}
+else
+{
+    // Invalid message - close connection or send error
+}
+```
+
+### Message Protocol Flows
+
+#### Connection Establishment Flow
+```
+Node A                          Node B
+  |                               |
+  |-------- Handshake --------->  |
+  |                               | (Validate protocol version, etc.)
+  |<------- HandshakeAck -------  |
+  |                               |
+  |-------- Ping (nonce=N) --->  |
+  |<------- Pong (nonce=N) ----  |
+  |                               |
+  (Connection established)
+```
+
+#### Peer Discovery Flow
+```
+Node A                          Node B
+  |                               |
+  |-------- GetPeers ---------->  |
+  |                               | (Select best peers to share)
+  |<------- Peers (list) -------  |
+  |                               |
+  (Connect to discovered peers)
+```
+
+#### Block Synchronization Flow
+```
+Node A (behind)                 Node B (current)
+  |                               |
+  |-- GetHeaders (from hash) -->  |
+  |                               | (Find headers after hash)
+  |<-- Headers (list) ----------  |
+  |                               |
+  |-- GetBlock (hash) ---------->  |
+  |<-- Block (full data) --------  |
+  |                               |
+  (Repeat for each needed block)
+```
+
+#### Block Propagation Flow
+```
+Miner                           Network Nodes
+  |                               |
+  |-- ProofSubmission ---------->  |
+  |                               | (Validate proof)
+  |<-- BlockAccepted -----------  |
+  |                               |
+  |-- BlockProposal (NewBlock) ->  |
+  |                               | (Validate and add to chain)
+  |<-- BlockAccepted -----------  |
+  |                               |
+  (Propagate to other peers)
+```
+
+#### Transaction Flow
+```
+Wallet/Node                     Network Nodes
+  |                               |
+  |-- Transaction --------------->  |
+  |                               | (Validate and add to mempool)
+  |                               | (Propagate to peers)
+  |                               |
+  |-- TxPoolRequest ------------->  |
+  |<-- Transactions (list) ------  |
+  |                               |
+```
 
 ## Usage
 
