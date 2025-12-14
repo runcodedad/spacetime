@@ -34,7 +34,8 @@ public sealed class PeerInfo
     public DateTimeOffset LastSeen { get; internal set; }
 
     /// <summary>
-    /// Gets a value indicating whether this peer is currently connected.
+    /// Gets a value indicating whether this peer has an active connection tracked by the peer manager.
+    /// This is managed by the peer manager and may differ from the underlying socket state.
     /// </summary>
     public bool IsConnected { get; internal set; }
 

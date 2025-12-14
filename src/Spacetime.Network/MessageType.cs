@@ -61,14 +61,9 @@ public enum MessageType : byte
     NewBlock = 0x31,
 
     /// <summary>
-    /// Broadcast a new challenge for the current epoch.
-    /// </summary>
-    NewChallenge = 0x40,
-
-    /// <summary>
     /// Submit a proof in response to a challenge.
     /// </summary>
-    ProofSubmission = 0x41,
+    ProofSubmission = 0x40,
 
     /// <summary>
     /// Generic error message.

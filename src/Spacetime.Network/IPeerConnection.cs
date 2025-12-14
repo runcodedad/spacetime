@@ -11,7 +11,8 @@ public interface IPeerConnection : IAsyncDisposable
     PeerInfo PeerInfo { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the connection is currently active.
+    /// Gets a value indicating whether the underlying TCP socket is currently connected and not disposed.
+    /// This reflects the actual network socket state.
     /// </summary>
     bool IsConnected { get; }
 

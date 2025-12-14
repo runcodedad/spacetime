@@ -8,7 +8,8 @@
 
 - ✅ **TCP Connection Management** - Asynchronous TCP client/server connections
 - ✅ **Message Framing Protocol** - Length-prefixed binary message format
-- ✅ **Peer Discovery & Management** - Maintain and score known peers
+- ✅ **Automatic Peer Discovery** - Discover peers from seed nodes and peer exchange
+- ✅ **Peer Management** - Maintain and score known peers
 - ✅ **Connection Pooling** - Automatically maintain N active peer connections
 - ✅ **Peer Reputation System** - Track peer behavior and blacklist misbehaving nodes
 - ✅ **Handshake Protocol** - Exchange node information on connection
@@ -26,7 +27,7 @@ The network supports various message types for blockchain operations:
 - `GetPeers` / `Peers` - Peer discovery
 - `GetHeaders` / `Headers` / `GetBlock` / `Block` - Blockchain synchronization
 - `Transaction` / `NewBlock` - Transaction and block propagation
-- `NewChallenge` / `ProofSubmission` - Consensus messages
+- `ProofSubmission` - Consensus proof submission
 
 #### Key Interfaces
 
@@ -157,14 +158,18 @@ if (connection != null && connection.IsConnected)
 
 ### Peer Discovery
 
-```csharp
-// Add known peers
-var peer = new PeerInfo(
-    id: "peer-123",
-    endPoint: new IPEndPoint(IPAddress.Parse("192.168.1.100"), 8333),
-    protocolVersion: 1);
+The network layer supports automatic peer discovery from seed nodes:
 
-peerManager.AddPeer(peer);
+```csharp
+// Create peer discovery service
+var peerDiscovery = new PeerDiscovery(connectionManager, peerManager);
+
+// Add seed nodes for bootstrapping
+peerDiscovery.AddSeedNode(new IPEndPoint(IPAddress.Parse("seed1.spacetime.io"), 8333));
+peerDiscovery.AddSeedNode(new IPEndPoint(IPAddress.Parse("seed2.spacetime.io"), 8333));
+
+// Discover peers from seed nodes
+await peerDiscovery.DiscoverPeersAsync();
 
 // Get best peers to connect to
 var bestPeers = peerManager.GetBestPeers(count: 10);
@@ -175,6 +180,15 @@ foreach (var p in bestPeers)
     if (conn != null)
     {
         peerManager.RecordSuccess(p.Id);
+        
+        // Request more peers from this connection
+        var morePeers = await peerDiscovery.RequestPeersAsync(conn);
+        foreach (var peerEndPoint in morePeers)
+        {
+            var peerId = $"peer_{peerEndPoint.Address}_{peerEndPoint.Port}";
+            var peerInfo = new PeerInfo(peerId, peerEndPoint, 1);
+            peerManager.AddPeer(peerInfo);
+        }
     }
     else
     {
