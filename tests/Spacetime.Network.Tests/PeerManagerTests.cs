@@ -109,7 +109,7 @@ public class PeerManagerTests
     }
 
     [Fact]
-    public void UpdatePeerConnectionStatus_ConnectedPeer_UpdatesStatusAndLastSeen()
+    public async Task UpdatePeerConnectionStatus_ConnectedPeer_UpdatesStatusAndLastSeen()
     {
         // Arrange
         var manager = new PeerManager();
@@ -118,7 +118,7 @@ public class PeerManagerTests
         var originalLastSeen = peer.LastSeen;
 
         // Act
-        Thread.Sleep(10); // Ensure time passes
+        await Task.Delay(10); // Ensure time passes
         manager.UpdatePeerConnectionStatus(peer.Id, true);
 
         // Assert

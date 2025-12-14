@@ -15,6 +15,7 @@ public sealed class TcpConnectionManager : IConnectionManager
     private readonly int _maxConnections;
     private readonly bool _useTls;
     private readonly TimeSpan _connectionTimeout;
+    private readonly TimeSpan _retryDelay;
     private TcpListener? _listener;
     private CancellationTokenSource? _listenerCts;
     private Task? _listenerTask;
@@ -34,6 +35,7 @@ public sealed class TcpConnectionManager : IConnectionManager
     /// <param name="maxConnections">The maximum number of concurrent connections. Default is 50.</param>
     /// <param name="useTls">Whether to use TLS encryption. Default is false.</param>
     /// <param name="connectionTimeout">The connection timeout. Default is 10 seconds.</param>
+    /// <param name="retryDelay">The delay before retrying after a connection error. Default is 1 second.</param>
     /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxConnections"/> is less than 1.</exception>
     public TcpConnectionManager(
@@ -41,7 +43,8 @@ public sealed class TcpConnectionManager : IConnectionManager
         IPeerManager peerManager,
         int maxConnections = 50,
         bool useTls = false,
-        TimeSpan? connectionTimeout = null)
+        TimeSpan? connectionTimeout = null,
+        TimeSpan? retryDelay = null)
     {
         ArgumentNullException.ThrowIfNull(codec);
         ArgumentNullException.ThrowIfNull(peerManager);
@@ -56,6 +59,7 @@ public sealed class TcpConnectionManager : IConnectionManager
         _maxConnections = maxConnections;
         _useTls = useTls;
         _connectionTimeout = connectionTimeout ?? TimeSpan.FromSeconds(10);
+        _retryDelay = retryDelay ?? TimeSpan.FromSeconds(1);
     }
 
     /// <inheritdoc/>
@@ -199,7 +203,7 @@ public sealed class TcpConnectionManager : IConnectionManager
                 // Log error and continue
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(_retryDelay, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
