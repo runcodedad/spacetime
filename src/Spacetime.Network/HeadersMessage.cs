@@ -18,6 +18,11 @@ public sealed class HeadersMessage
     public const int MaxHeaders = 2000;
 
     /// <summary>
+    /// Maximum size of a single header in bytes.
+    /// </summary>
+    private const int MaxHeaderSize = 10 * 1024 * 1024;
+
+    /// <summary>
     /// Gets the serialized block headers.
     /// </summary>
     public IReadOnlyList<ReadOnlyMemory<byte>> Headers { get; }
@@ -83,7 +88,7 @@ public sealed class HeadersMessage
         for (var i = 0; i < headerCount; i++)
         {
             var headerLength = reader.ReadInt32();
-            if (headerLength < 0 || headerLength > 10 * 1024 * 1024) // 10 MB sanity check
+            if (headerLength < 0 || headerLength > MaxHeaderSize)
             {
                 throw new InvalidDataException($"Invalid header length: {headerLength}");
             }

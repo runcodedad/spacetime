@@ -82,9 +82,9 @@ public sealed class PeerListMessage
         for (var i = 0; i < peerCount; i++)
         {
             var addressLength = reader.ReadInt32();
-            if (addressLength < 0 || addressLength > 16)
+            if (addressLength != 4 && addressLength != 16)
             {
-                throw new InvalidDataException($"Invalid address length: {addressLength}");
+                throw new InvalidDataException($"Invalid address length: {addressLength} (must be 4 for IPv4 or 16 for IPv6)");
             }
 
             var addressBytes = reader.ReadBytes(addressLength);

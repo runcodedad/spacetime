@@ -128,7 +128,7 @@ public sealed class GetHeadersMessage
     public override string ToString()
     {
         var locatorHashHex = Convert.ToHexString(LocatorHash.Span);
-        var stopHashHex = StopHash.Length > 0 ? Convert.ToHexString(StopHash.Span) : "none";
+        var stopHashHex = StopHash.Length > 0 ? Convert.ToHexString(StopHash.Span)[..8] + "..." : "none";
         return $"GetHeaders(From={locatorHashHex[..8]}..., Stop={stopHashHex}, Max={MaxHeaders})";
     }
 }
