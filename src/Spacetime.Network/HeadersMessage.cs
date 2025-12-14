@@ -18,9 +18,9 @@ public sealed class HeadersMessage
     public const int MaxHeaders = 2000;
 
     /// <summary>
-    /// Maximum size of a single header in bytes.
+    /// Maximum size of a single header in bytes (10 MB).
     /// </summary>
-    private const int MaxHeaderSize = 10 * 1024 * 1024;
+    public const int MaxHeaderSize = 10 * 1024 * 1024;
 
     /// <summary>
     /// Gets the serialized block headers.

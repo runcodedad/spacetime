@@ -15,6 +15,16 @@ public sealed class PeerListMessage
     public const int MaxPeers = 1000;
 
     /// <summary>
+    /// Length of an IPv4 address in bytes.
+    /// </summary>
+    private const int IPv4AddressLength = 4;
+
+    /// <summary>
+    /// Length of an IPv6 address in bytes.
+    /// </summary>
+    private const int IPv6AddressLength = 16;
+
+    /// <summary>
     /// Gets the list of peer endpoints.
     /// </summary>
     public IReadOnlyList<IPEndPoint> Peers { get; }
@@ -82,9 +92,9 @@ public sealed class PeerListMessage
         for (var i = 0; i < peerCount; i++)
         {
             var addressLength = reader.ReadInt32();
-            if (addressLength != 4 && addressLength != 16)
+            if (addressLength != IPv4AddressLength && addressLength != IPv6AddressLength)
             {
-                throw new InvalidDataException($"Invalid address length: {addressLength} (must be 4 for IPv4 or 16 for IPv6)");
+                throw new InvalidDataException($"Invalid address length: {addressLength} (must be {IPv4AddressLength} for IPv4 or {IPv6AddressLength} for IPv6)");
             }
 
             var addressBytes = reader.ReadBytes(addressLength);
