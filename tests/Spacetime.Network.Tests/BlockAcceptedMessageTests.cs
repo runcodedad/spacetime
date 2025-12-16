@@ -46,7 +46,7 @@ public class BlockAcceptedMessageTests
         var original = new BlockAcceptedMessage(blockHash, 100);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = BlockAcceptedMessage.Deserialize(serialized);
 
         // Assert
@@ -62,7 +62,7 @@ public class BlockAcceptedMessageTests
         var message = new BlockAcceptedMessage(blockHash, 100);
 
         // Act
-        var serialized = message.Serialize();
+        var serialized = message.Payload;
 
         // Assert
         Assert.Equal(40, serialized.Length); // 32 bytes hash + 8 bytes height

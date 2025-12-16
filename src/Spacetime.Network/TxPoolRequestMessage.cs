@@ -7,8 +7,13 @@ namespace Spacetime.Network;
 /// This message requests pending transactions from a peer's mempool.
 /// The response should contain a list of transaction hashes or complete transactions.
 /// </remarks>
-public sealed class TxPoolRequestMessage
+public sealed class TxPoolRequestMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.TxPoolRequest;
+
     /// <summary>
     /// Gets the maximum number of transactions to return.
     /// </summary>
@@ -40,7 +45,7 @@ public sealed class TxPoolRequestMessage
     /// Serializes the message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);

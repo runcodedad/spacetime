@@ -45,7 +45,7 @@ public class BlockProposalMessageTests
         var original = new BlockProposalMessage(blockData);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = BlockProposalMessage.Deserialize(serialized);
 
         // Assert

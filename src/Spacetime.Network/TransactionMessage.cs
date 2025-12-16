@@ -8,8 +8,13 @@ namespace Spacetime.Network;
 /// native serialization format. The transaction can be deserialized using
 /// Spacetime.Core.Transaction.Deserialize().
 /// </remarks>
-public sealed class TransactionMessage
+public sealed class TransactionMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.Transaction;
+
     /// <summary>
     /// Maximum transaction size (1 MB).
     /// </summary>
@@ -44,7 +49,7 @@ public sealed class TransactionMessage
     /// Serializes the message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         return TransactionData.ToArray();
     }

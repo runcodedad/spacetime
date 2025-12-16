@@ -34,7 +34,7 @@ public class TxPoolRequestMessageTests
         var original = new TxPoolRequestMessage(100, true);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = TxPoolRequestMessage.Deserialize(serialized);
 
         // Assert
@@ -49,7 +49,7 @@ public class TxPoolRequestMessageTests
         var original = new TxPoolRequestMessage(50, false);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = TxPoolRequestMessage.Deserialize(serialized);
 
         // Assert

@@ -81,7 +81,7 @@ public class GetHeadersMessageTests
         var original = new GetHeadersMessage(locatorHash, stopHash, 100);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = GetHeadersMessage.Deserialize(serialized);
 
         // Assert
@@ -99,7 +99,7 @@ public class GetHeadersMessageTests
         var original = new GetHeadersMessage(locatorHash, ReadOnlyMemory<byte>.Empty, 100);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = GetHeadersMessage.Deserialize(serialized);
 
         // Assert

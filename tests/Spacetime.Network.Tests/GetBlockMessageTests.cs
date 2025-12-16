@@ -35,7 +35,7 @@ public class GetBlockMessageTests
         var original = new GetBlockMessage(blockHash);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = GetBlockMessage.Deserialize(serialized);
 
         // Assert
@@ -50,7 +50,7 @@ public class GetBlockMessageTests
         var message = new GetBlockMessage(blockHash);
 
         // Act
-        var serialized = message.Serialize();
+        var serialized = message.Payload;
 
         // Assert
         Assert.Equal(32, serialized.Length);

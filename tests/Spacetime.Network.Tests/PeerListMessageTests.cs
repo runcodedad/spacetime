@@ -57,7 +57,7 @@ public class PeerListMessageTests
         var original = new PeerListMessage(peers);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = PeerListMessage.Deserialize(serialized);
 
         // Assert
@@ -76,7 +76,7 @@ public class PeerListMessageTests
         var original = new PeerListMessage(peers);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = PeerListMessage.Deserialize(serialized);
 
         // Assert

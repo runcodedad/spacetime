@@ -8,8 +8,13 @@ namespace Spacetime.Network;
 /// It contains the complete serialized block data using the Block's
 /// native serialization format.
 /// </remarks>
-public sealed class BlockProposalMessage
+public sealed class BlockProposalMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.NewBlock;
+
     /// <summary>
     /// Maximum block size (16 MB).
     /// </summary>
@@ -44,7 +49,7 @@ public sealed class BlockProposalMessage
     /// Serializes the message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         return BlockData.ToArray();
     }

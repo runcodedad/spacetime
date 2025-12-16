@@ -6,8 +6,13 @@ namespace Spacetime.Network;
 /// <summary>
 /// Represents a handshake message exchanged during connection establishment.
 /// </summary>
-public sealed class HandshakeMessage
+public sealed class HandshakeMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.Handshake;
+
     /// <summary>
     /// Gets the protocol version.
     /// </summary>
@@ -62,7 +67,7 @@ public sealed class HandshakeMessage
     /// Serializes the handshake message to a byte array.
     /// </summary>
     /// <returns>The serialized handshake message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         var nodeIdBytes = Encoding.UTF8.GetBytes(NodeId);
         var userAgentBytes = Encoding.UTF8.GetBytes(UserAgent);

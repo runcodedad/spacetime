@@ -7,12 +7,17 @@ namespace Spacetime.Network;
 /// This message is broadcast to inform the network that a block has been validated
 /// and accepted into the blockchain. Nodes use this to update their chain state.
 /// </remarks>
-public sealed class BlockAcceptedMessage
+public sealed class BlockAcceptedMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.BlockAccepted;
+
     /// <summary>
     /// Size of a block hash in bytes.
     /// </summary>
-    private const int HashSize = 32;
+    private const int _hashSize = 32;
 
     /// <summary>
     /// Gets the hash of the accepted block.
@@ -32,9 +37,9 @@ public sealed class BlockAcceptedMessage
     /// <exception cref="ArgumentException">Thrown when parameters are invalid.</exception>
     public BlockAcceptedMessage(ReadOnlyMemory<byte> blockHash, long blockHeight)
     {
-        if (blockHash.Length != HashSize)
+        if (blockHash.Length != _hashSize)
         {
-            throw new ArgumentException($"Block hash must be {HashSize} bytes.", nameof(blockHash));
+            throw new ArgumentException($"Block hash must be {_hashSize} bytes.", nameof(blockHash));
         }
 
         if (blockHeight < 0)
@@ -50,7 +55,7 @@ public sealed class BlockAcceptedMessage
     /// Serializes the message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
@@ -72,12 +77,12 @@ public sealed class BlockAcceptedMessage
         using var ms = new MemoryStream(data.ToArray());
         using var reader = new BinaryReader(ms);
 
-        if (data.Length != HashSize + 8)
+        if (data.Length != _hashSize + 8)
         {
-            throw new InvalidDataException($"BlockAccepted message must be {HashSize + 8} bytes.");
+            throw new InvalidDataException($"BlockAccepted message must be {_hashSize + 8} bytes.");
         }
 
-        var blockHash = reader.ReadBytes(HashSize);
+        var blockHash = reader.ReadBytes(_hashSize);
         var blockHeight = reader.ReadInt64();
 
         return new BlockAcceptedMessage(blockHash, blockHeight);

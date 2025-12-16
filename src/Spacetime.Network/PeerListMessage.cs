@@ -1,14 +1,17 @@
-using System.Buffers.Binary;
 using System.Net;
-using System.Text;
 
 namespace Spacetime.Network;
 
 /// <summary>
 /// Represents a list of peer addresses exchanged during peer discovery.
 /// </summary>
-public sealed class PeerListMessage
+public sealed class PeerListMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.Peers;
+
     /// <summary>
     /// Maximum number of peers that can be included in a single message.
     /// </summary>
@@ -17,12 +20,12 @@ public sealed class PeerListMessage
     /// <summary>
     /// Length of an IPv4 address in bytes.
     /// </summary>
-    private const int IPv4AddressLength = 4;
+    private const int _iPv4AddressLength = 4;
 
     /// <summary>
     /// Length of an IPv6 address in bytes.
     /// </summary>
-    private const int IPv6AddressLength = 16;
+    private const int _iPv6AddressLength = 16;
 
     /// <summary>
     /// Gets the list of peer endpoints.
@@ -51,7 +54,7 @@ public sealed class PeerListMessage
     /// Serializes the peer list message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
@@ -92,9 +95,9 @@ public sealed class PeerListMessage
         for (var i = 0; i < peerCount; i++)
         {
             var addressLength = reader.ReadInt32();
-            if (addressLength != IPv4AddressLength && addressLength != IPv6AddressLength)
+            if (addressLength != _iPv4AddressLength && addressLength != _iPv6AddressLength)
             {
-                throw new InvalidDataException($"Invalid address length: {addressLength} (must be {IPv4AddressLength} for IPv4 or {IPv6AddressLength} for IPv6)");
+                throw new InvalidDataException($"Invalid address length: {addressLength} (must be {_iPv4AddressLength} for IPv4 or {_iPv6AddressLength} for IPv6)");
             }
 
             var addressBytes = reader.ReadBytes(addressLength);

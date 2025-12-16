@@ -45,7 +45,7 @@ public class BlockMessageTests
         var original = new BlockMessage(blockData);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = BlockMessage.Deserialize(serialized);
 
         // Assert

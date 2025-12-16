@@ -3,12 +3,17 @@ namespace Spacetime.Network;
 /// <summary>
 /// Represents a request for a complete block by its hash.
 /// </summary>
-public sealed class GetBlockMessage
+public sealed class GetBlockMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.GetBlock;
+
     /// <summary>
     /// Size of a block hash in bytes.
     /// </summary>
-    private const int HashSize = 32;
+    private const int _hashSize = 32;
 
     /// <summary>
     /// Gets the hash of the requested block.
@@ -22,9 +27,9 @@ public sealed class GetBlockMessage
     /// <exception cref="ArgumentException">Thrown when hash size is invalid.</exception>
     public GetBlockMessage(ReadOnlyMemory<byte> blockHash)
     {
-        if (blockHash.Length != HashSize)
+        if (blockHash.Length != _hashSize)
         {
-            throw new ArgumentException($"Block hash must be {HashSize} bytes.", nameof(blockHash));
+            throw new ArgumentException($"Block hash must be {_hashSize} bytes.", nameof(blockHash));
         }
 
         BlockHash = blockHash;
@@ -34,7 +39,7 @@ public sealed class GetBlockMessage
     /// Serializes the message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         return BlockHash.ToArray();
     }
@@ -47,9 +52,9 @@ public sealed class GetBlockMessage
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
     public static GetBlockMessage Deserialize(ReadOnlyMemory<byte> data)
     {
-        if (data.Length != HashSize)
+        if (data.Length != _hashSize)
         {
-            throw new InvalidDataException($"GetBlock message must be {HashSize} bytes.");
+            throw new InvalidDataException($"GetBlock message must be {_hashSize} bytes.");
         }
 
         return new GetBlockMessage(data);

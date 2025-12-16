@@ -8,8 +8,13 @@ namespace Spacetime.Network;
 /// native serialization format. The block can be deserialized using
 /// Spacetime.Core.Block.Deserialize().
 /// </remarks>
-public sealed class BlockMessage
+public sealed class BlockMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.Block;
+
     /// <summary>
     /// Maximum block size (16 MB).
     /// </summary>
@@ -44,7 +49,7 @@ public sealed class BlockMessage
     /// Serializes the message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         return BlockData.ToArray();
     }

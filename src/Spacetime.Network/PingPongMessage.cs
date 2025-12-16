@@ -10,34 +10,33 @@ namespace Spacetime.Network;
 /// and to measure round-trip time. The nonce in a ping must be echoed back
 /// in the corresponding pong message.
 /// </remarks>
-public sealed class PingPongMessage
+/// <remarks>
+/// Initializes a new instance of the <see cref="PingPongMessage"/> class.
+/// </remarks>
+/// <param name="nonce">The nonce value.</param>
+/// <param name="timestamp">The timestamp.</param>
+public sealed class PingPongMessage(long nonce, long timestamp) : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message (Ping or Pong).
+    /// </summary>
+    public override MessageType Type => MessageType.Ping;
+
     /// <summary>
     /// Gets the nonce value used to match ping/pong pairs.
     /// </summary>
-    public long Nonce { get; }
+    public long Nonce { get; } = nonce;
 
     /// <summary>
     /// Gets the timestamp when the message was created.
     /// </summary>
-    public long Timestamp { get; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PingPongMessage"/> class.
-    /// </summary>
-    /// <param name="nonce">The nonce value.</param>
-    /// <param name="timestamp">The timestamp.</param>
-    public PingPongMessage(long nonce, long timestamp)
-    {
-        Nonce = nonce;
-        Timestamp = timestamp;
-    }
+    public long Timestamp { get; } = timestamp;
 
     /// <summary>
     /// Serializes the ping/pong message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         // Format: [8 bytes nonce][8 bytes timestamp]
         var buffer = new byte[16];

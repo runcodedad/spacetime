@@ -75,7 +75,7 @@ public class ProofSubmissionMessageTests
         var original = new ProofSubmissionMessage(proofData, minerId, 100);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = ProofSubmissionMessage.Deserialize(serialized);
 
         // Assert

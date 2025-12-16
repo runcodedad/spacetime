@@ -52,7 +52,7 @@ public class HeadersMessageTests
         var original = new HeadersMessage(headers);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = HeadersMessage.Deserialize(serialized);
 
         // Assert
@@ -71,7 +71,7 @@ public class HeadersMessageTests
         var original = new HeadersMessage(headers);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = HeadersMessage.Deserialize(serialized);
 
         // Assert

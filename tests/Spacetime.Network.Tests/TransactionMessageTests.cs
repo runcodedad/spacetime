@@ -45,7 +45,7 @@ public class TransactionMessageTests
         var original = new TransactionMessage(txData);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = TransactionMessage.Deserialize(serialized);
 
         // Assert

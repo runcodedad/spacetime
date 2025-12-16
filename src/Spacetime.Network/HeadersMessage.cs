@@ -1,5 +1,3 @@
-using System.Buffers.Binary;
-
 namespace Spacetime.Network;
 
 /// <summary>
@@ -10,8 +8,13 @@ namespace Spacetime.Network;
 /// serialized block header data. The headers are serialized using the
 /// BlockHeader's native serialization format.
 /// </remarks>
-public sealed class HeadersMessage
+public sealed class HeadersMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.Headers;
+
     /// <summary>
     /// Maximum number of headers that can be included in a single message.
     /// </summary>
@@ -49,7 +52,7 @@ public sealed class HeadersMessage
     /// Serializes the headers message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);

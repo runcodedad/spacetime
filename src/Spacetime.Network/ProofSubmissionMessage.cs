@@ -8,8 +8,13 @@ namespace Spacetime.Network;
 /// native serialization format. Miners send this when they find a proof
 /// that satisfies the current challenge and difficulty requirements.
 /// </remarks>
-public sealed class ProofSubmissionMessage
+public sealed class ProofSubmissionMessage : NetworkMessage
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
+    public override MessageType Type => MessageType.ProofSubmission;
+
     /// <summary>
     /// Maximum proof size (1 MB).
     /// </summary>
@@ -68,7 +73,7 @@ public sealed class ProofSubmissionMessage
     /// Serializes the message to a byte array.
     /// </summary>
     /// <returns>The serialized message.</returns>
-    public byte[] Serialize()
+    protected override byte[] Serialize()
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);

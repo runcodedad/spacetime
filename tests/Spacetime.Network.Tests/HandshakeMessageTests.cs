@@ -54,7 +54,7 @@ public class HandshakeMessageTests
         var original = new HandshakeMessage(1, "node123", "Spacetime/1.0", 1234567890);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = HandshakeMessage.Deserialize(serialized);
 
         // Assert
@@ -73,7 +73,7 @@ public class HandshakeMessageTests
         var original = new HandshakeMessage(1, nodeId, userAgent, 1234567890);
 
         // Act
-        var serialized = original.Serialize();
+        var serialized = original.Payload;
         var deserialized = HandshakeMessage.Deserialize(serialized);
 
         // Assert
@@ -128,10 +128,10 @@ public class HandshakeMessageTests
         var message = new HandshakeMessage(1, "node123", "Spacetime/1.0", 1234567890);
 
         // Act
-        var serialized = message.Serialize();
+        var serialized = message.Payload;
 
         // Assert
-        Assert.NotEmpty(serialized);
+        Assert.False(serialized.IsEmpty);
         Assert.True(serialized.Length > 16); // Minimum size
     }
 }
