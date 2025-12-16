@@ -18,7 +18,67 @@ All messages use a consistent binary format:
 - **Byte order**: Little-endian for all numeric values
 - **Encoding**: Binary serialization (not Protocol Buffers)
 
+### NetworkMessage Architecture
+
+All protocol messages inherit from the abstract `NetworkMessage` base class, which provides:
+
+- **Type Property**: Each message declares its `MessageType` enum value
+- **Payload Property**: Lazy-loaded, cached serialized payload data (`ReadOnlyMemory<byte>`)
+- **Serialize Method**: Abstract method each message implements for its specific serialization
+- **Deserialize Method**: Static factory method that routes deserialization to the appropriate message class
+- **Caching**: Serialized payload is cached to avoid repeated serialization
+
+**Implementation Pattern:**
+```csharp
+public sealed class ExampleMessage : NetworkMessage
+{
+    public override MessageType Type => MessageType.Example;
+    
+    // Message-specific properties
+    public string Data { get; }
+    
+    // Constructor with validation
+    public ExampleMessage(string data)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        Data = data;
+    }
+    
+    // Serialization logic
+    protected override byte[] Serialize() { /* ... */ }
+    
+    // Deserialization logic
+    internal static ExampleMessage Deserialize(ReadOnlyMemory<byte> data) { /* ... */ }
+}
+```
+
 ## Message Types
+
+All messages inherit from the abstract `NetworkMessage` base class. Each message type implements its own serialization/deserialization logic.
+
+**Empty Messages:** Some message types (GetPeers, Heartbeat, HandshakeAck) carry no payload and are represented internally by an `EmptyMessage` implementation.
+
+### Message Type Reference
+
+| Type | Hex  | Class Name | Category | Description |
+|------|------|------------|----------|-------------|
+| Handshake | 0x01 | HandshakeMessage | Discovery | Connection establishment with node info |
+| HandshakeAck | 0x02 | EmptyMessage | Discovery | Response to handshake (empty) |
+| Heartbeat | 0x03 | EmptyMessage | Discovery | Keep-alive (legacy, use Ping/Pong) |
+| Ping | 0x04 | PingPongMessage | Discovery | Connection liveness check with nonce |
+| Pong | 0x05 | PingPongMessage | Discovery | Response to Ping with same nonce |
+| GetPeers | 0x10 | EmptyMessage | Discovery | Request for peer list (empty) |
+| Peers | 0x11 | PeerListMessage | Discovery | Response containing peer addresses |
+| GetHeaders | 0x20 | GetHeadersMessage | Synchronization | Request block headers |
+| Headers | 0x21 | HeadersMessage | Synchronization | Response with block headers |
+| GetBlock | 0x22 | GetBlockMessage | Synchronization | Request complete block |
+| Block | 0x23 | BlockMessage | Synchronization | Response with complete block |
+| Transaction | 0x30 | TransactionMessage | Transaction | Broadcast transaction |
+| NewBlock | 0x31 | BlockProposalMessage | Transaction | Broadcast new block proposal |
+| TxPoolRequest | 0x32 | TxPoolRequestMessage | Transaction | Request mempool contents |
+| ProofSubmission | 0x40 | ProofSubmissionMessage | Consensus | Submit PoST proof |
+| BlockAccepted | 0x41 | BlockAcceptedMessage | Consensus | Notify block validation success |
+| Error | 0xFF | (Not Implemented) | Error | Generic error message |
 
 ### Discovery Messages (0x01-0x11)
 
@@ -188,9 +248,13 @@ var txMsg = new TransactionMessage(txData);
 ```
 
 #### 0x31 - NewBlock
-Broadcast a newly proposed block (alias for BlockProposal).
+Broadcast a newly proposed block to the network.
 
-**Payload Format:** Same as Block message
+**Payload Format:** Same as Block message (complete serialized block data)
+
+**Limits:** Maximum 16 MB per block
+
+**Note:** This message type is implemented by `BlockProposalMessage` in the code.
 
 #### 0x32 - TxPoolRequest
 Request contents of a node's transaction pool (mempool).
@@ -319,11 +383,27 @@ else
 
 ### Validation Rules
 
+Each message class implements validation at two levels:
+
+**Constructor Validation** (during message creation):
+- Check for null parameters with `ArgumentNullException.ThrowIfNull()`
+- Validate string parameters are not empty
+- Verify numeric ranges (e.g., block height >= 0)
+- Enforce size constraints (e.g., hash = 32 bytes, miner ID = 33 bytes)
+- Check maximum collection sizes
+
+**Deserialization Validation** (when receiving messages):
+- Verify payload length matches expected format
+- Check for buffer underruns/overruns
+- Validate data ranges and constraints
+- Throw `InvalidDataException` for malformed data
+
+**Network-Level Validation**:
 1. **Size Limits**: Enforce maximum payload sizes per message type
 2. **Format Validation**: Verify correct serialization format
-3. **Semantic Validation**: Check business logic constraints
-4. **Rate Limiting**: Prevent message flooding
-5. **Blacklisting**: Track misbehaving peers
+3. **Semantic Validation**: Check business logic constraints (via validators)
+4. **Rate Limiting**: Prevent message flooding per peer
+5. **Blacklisting**: Track and ban misbehaving peers
 
 ## Security Considerations
 
@@ -421,8 +501,28 @@ When introducing breaking changes:
 3. Document version differences
 4. Provide migration guide
 
+## Message Implementation Summary
+
+The Spacetime network protocol provides 13 message types across 4 categories:
+
+- **7 Discovery Messages**: Connection establishment, peer discovery, liveness checking
+- **4 Synchronization Messages**: Block header and full block exchange
+- **3 Transaction Messages**: Transaction and mempool management, block proposals
+- **2 Consensus Messages**: Proof submission and block acceptance notifications
+
+All messages follow a consistent pattern:
+1. Inherit from `NetworkMessage` abstract base class
+2. Implement `Type` property and `Serialize()` method
+3. Provide static `Deserialize()` method for reconstruction
+4. Validate inputs in constructor (throw `ArgumentException`/`ArgumentNullException`)
+5. Validate format in deserialization (throw `InvalidDataException`)
+6. Use little-endian byte order for all numeric values
+7. Cache serialized payload to avoid repeated serialization
+
 ## References
 
 - [Spacetime.Network Implementation](../src/Spacetime.Network/)
+- [Spacetime.Network README](../src/Spacetime.Network/README.md)
 - [Network Tests](../tests/Spacetime.Network.Tests/)
+- [Network Integration Tests](../tests/Spacetime.Network.IntegrationTests/)
 - [Core Types Documentation](../src/Spacetime.Core/)
