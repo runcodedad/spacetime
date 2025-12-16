@@ -114,7 +114,7 @@ public class RateLimiterTests
     }
 
     [Fact]
-    public void TryConsume_AfterRefillInterval_RefillsTokens()
+    public async Task TryConsume_AfterRefillInterval_RefillsTokens()
     {
         // Arrange
         var refillInterval = TimeSpan.FromMilliseconds(100);
@@ -125,7 +125,7 @@ public class RateLimiterTests
         Assert.False(rateLimiter.TryConsume("peer1", tokens: 1));
 
         // Act - Wait for refill
-        Thread.Sleep(150);
+        await Task.Delay(150);
         var result = rateLimiter.TryConsume("peer1", tokens: 5);
 
         // Assert

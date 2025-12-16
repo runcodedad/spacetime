@@ -159,7 +159,7 @@ public class BandwidthMonitorTests
     }
 
     [Fact]
-    public void CanSend_AfterSecondReset_AllowsNewQuota()
+    public async Task CanSend_AfterSecondReset_AllowsNewQuota()
     {
         // Arrange
         var monitor = new BandwidthMonitor(maxBytesPerSecondPerPeer: 1000, maxTotalBytesPerSecond: 5000);
@@ -167,7 +167,7 @@ public class BandwidthMonitorTests
         Assert.False(monitor.CanSend("peer1", 100));
 
         // Act - Wait for second to roll over
-        Thread.Sleep(1100);
+        await Task.Delay(1100);
         var result = monitor.CanSend("peer1", 100);
 
         // Assert

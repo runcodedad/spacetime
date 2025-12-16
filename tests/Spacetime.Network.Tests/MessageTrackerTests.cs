@@ -129,7 +129,7 @@ public class MessageTrackerTests
     }
 
     [Fact]
-    public void MarkAndCheckIfNew_AfterMessageLifetime_ReturnsTrueForSameMessage()
+    public async Task MarkAndCheckIfNew_AfterMessageLifetime_ReturnsTrueForSameMessage()
     {
         // Arrange
         var lifetime = TimeSpan.FromMilliseconds(100);
@@ -138,7 +138,7 @@ public class MessageTrackerTests
         tracker.MarkAndCheckIfNew(message);
 
         // Act
-        Thread.Sleep(150); // Wait for message to expire
+        await Task.Delay(150); // Wait for message to expire
         var result = tracker.MarkAndCheckIfNew(message);
 
         // Assert
