@@ -95,7 +95,7 @@ public sealed class PeerDiscovery : IPeerDiscovery
         try
         {
             // Send GetPeers request
-            var request = NetworkMessage.CreateEmpty(MessageType.GetPeers);
+            var request = NetworkMessage.Deserialize(MessageType.GetPeers, ReadOnlyMemory<byte>.Empty);
             await connection.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             // Wait for Peers response with timeout

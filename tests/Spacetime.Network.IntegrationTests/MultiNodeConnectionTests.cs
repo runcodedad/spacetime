@@ -98,8 +98,7 @@ public class MultiNodeConnectionTests : IAsyncLifetime
         var serverConnection = serverConnections[0];
 
         // Act - Send a message from client to server
-        var testPayload = new byte[] { 1, 2, 3, 4, 5 };
-        var testMessage = new NetworkMessage(MessageType.Heartbeat, testPayload);
+        var testMessage = NetworkMessage.Deserialize(MessageType.Heartbeat, ReadOnlyMemory<byte>.Empty);
         await clientConnection.SendAsync(testMessage);
 
         // Receive the message on the server side
@@ -108,7 +107,7 @@ public class MultiNodeConnectionTests : IAsyncLifetime
         // Assert
         Assert.NotNull(receivedMessage);
         Assert.Equal(MessageType.Heartbeat, receivedMessage.Type);
-        Assert.Equal(testPayload, receivedMessage.Payload.ToArray());
+        Assert.True(receivedMessage.Payload.IsEmpty); // Heartbeat has no payload
     }
 
     [Fact]
@@ -183,14 +182,13 @@ public class MultiNodeConnectionTests : IAsyncLifetime
             "Spacetime/1.0.0",
             DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
-        var handshakePayload = clientHandshake.Serialize();
-        await clientConnection.SendAsync(new NetworkMessage(MessageType.Handshake, handshakePayload));
+        await clientConnection.SendAsync(clientHandshake);
 
         var receivedMessage = await serverConnection.ReceiveAsync();
         Assert.NotNull(receivedMessage);
         Assert.Equal(MessageType.Handshake, receivedMessage.Type);
 
-        var receivedHandshake = HandshakeMessage.Deserialize(receivedMessage.Payload);
+        var receivedHandshake = (HandshakeMessage)NetworkMessage.Deserialize(MessageType.Handshake, receivedMessage.Payload);
 
         // Assert
         Assert.Equal(clientHandshake.ProtocolVersion, receivedHandshake.ProtocolVersion);

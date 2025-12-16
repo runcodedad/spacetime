@@ -8,8 +8,8 @@ namespace Spacetime.Network;
 /// </summary>
 public sealed class LengthPrefixedMessageCodec : IMessageCodec
 {
-    private const int HeaderSize = 5; // 4 bytes for length + 1 byte for type
-    private const int MaxMessageSize = 16 * 1024 * 1024; // 16 MB max message size
+    private const int _headerSize = 5; // 4 bytes for length + 1 byte for type
+    private const int _maxMessageSize = 16 * 1024 * 1024; // 16 MB max message size
 
     /// <inheritdoc/>
     public byte[] Encode(NetworkMessage message)
@@ -17,7 +17,7 @@ public sealed class LengthPrefixedMessageCodec : IMessageCodec
         ArgumentNullException.ThrowIfNull(message);
 
         var payloadLength = message.Payload.Length;
-        var totalLength = HeaderSize + payloadLength;
+        var totalLength = _headerSize + payloadLength;
         var buffer = new byte[totalLength];
 
         // Write length (includes type byte and payload)
@@ -57,7 +57,7 @@ public sealed class LengthPrefixedMessageCodec : IMessageCodec
         var messageLength = BinaryPrimitives.ReadInt32LittleEndian(lengthBuffer);
 
         // Validate message length
-        if (messageLength < 1 || messageLength > MaxMessageSize)
+        if (messageLength < 1 || messageLength > _maxMessageSize)
         {
             throw new InvalidDataException($"Invalid message length: {messageLength}");
         }
@@ -89,7 +89,7 @@ public sealed class LengthPrefixedMessageCodec : IMessageCodec
             }
         }
 
-        return new NetworkMessage(messageType, payload);
+        return NetworkMessage.Deserialize(messageType, payload);
     }
 
     private static async Task<int> ReadExactlyAsync(Stream stream, byte[] buffer, CancellationToken cancellationToken)

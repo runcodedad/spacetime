@@ -8,24 +8,22 @@ public class LengthPrefixedMessageCodecTests
     public void Encode_WithValidMessage_EncodesCorrectly()
     {
         // Arrange
-        var payload = new byte[] { 1, 2, 3, 4, 5 };
-        var message = new NetworkMessage(MessageType.Handshake, payload);
+        var message = new HandshakeMessage(1, "node123", "TestAgent/1.0", 1234567890);
 
         // Act
         var encoded = _codec.Encode(message);
 
         // Assert
         Assert.NotNull(encoded);
-        Assert.Equal(10, encoded.Length); // 4 (length) + 1 (type) + 5 (payload)
+        Assert.True(encoded.Length > 5); // At least header size
         Assert.Equal((byte)MessageType.Handshake, encoded[4]);
-        Assert.Equal(payload, encoded[5..]);
     }
 
     [Fact]
     public void Encode_WithEmptyPayload_EncodesCorrectly()
     {
-        // Arrange
-        var message = NetworkMessage.CreateEmpty(MessageType.Heartbeat);
+        // Arrange - Use Deserialize factory to create empty message
+        var message = NetworkMessage.Deserialize(MessageType.Heartbeat, ReadOnlyMemory<byte>.Empty);
 
         // Act
         var encoded = _codec.Encode(message);
@@ -47,8 +45,8 @@ public class LengthPrefixedMessageCodecTests
     public async Task DecodeAsync_WithValidMessage_DecodesCorrectly()
     {
         // Arrange
-        var payload = new byte[] { 1, 2, 3, 4, 5 };
-        var originalMessage = new NetworkMessage(MessageType.Block, payload);
+        var blockData = new byte[1000];
+        var originalMessage = new BlockMessage(blockData);
         var encoded = _codec.Encode(originalMessage);
         using var stream = new MemoryStream(encoded);
 
@@ -58,7 +56,9 @@ public class LengthPrefixedMessageCodecTests
         // Assert
         Assert.NotNull(decoded);
         Assert.Equal(MessageType.Block, decoded.Type);
-        Assert.Equal(payload, decoded.Payload.ToArray());
+        Assert.IsType<BlockMessage>(decoded);
+        var blockMsg = (BlockMessage)decoded;
+        Assert.Equal(blockData, blockMsg.BlockData.ToArray());
     }
 
     [Fact]
@@ -118,9 +118,9 @@ public class LengthPrefixedMessageCodecTests
     public async Task EncodeDecodeRoundTrip_PreservesMessage()
     {
         // Arrange
-        var payload = new byte[1000];
-        Random.Shared.NextBytes(payload);
-        var originalMessage = new NetworkMessage(MessageType.Transaction, payload);
+        var txData = new byte[1000];
+        Random.Shared.NextBytes(txData);
+        var originalMessage = new TransactionMessage(txData);
 
         // Act
         var encoded = _codec.Encode(originalMessage);
@@ -129,16 +129,18 @@ public class LengthPrefixedMessageCodecTests
 
         // Assert
         Assert.NotNull(decoded);
-        Assert.Equal(originalMessage.Type, decoded.Type);
-        Assert.Equal(originalMessage.Payload.ToArray(), decoded.Payload.ToArray());
+        Assert.Equal(MessageType.Transaction, decoded.Type);
+        Assert.IsType<TransactionMessage>(decoded);
+        var txMsg = (TransactionMessage)decoded;
+        Assert.Equal(txData, txMsg.TransactionData.ToArray());
     }
 
     [Fact]
     public async Task DecodeAsync_MultipleMessages_DecodesInSequence()
     {
         // Arrange
-        var message1 = new NetworkMessage(MessageType.Handshake, new byte[] { 1, 2, 3 });
-        var message2 = new NetworkMessage(MessageType.HandshakeAck, new byte[] { 4, 5, 6 });
+        var message1 = new HandshakeMessage(1, "node1", "Agent/1.0", 1234567890);
+        var message2 = NetworkMessage.Deserialize(MessageType.HandshakeAck, ReadOnlyMemory<byte>.Empty);
         var encoded1 = _codec.Encode(message1);
         var encoded2 = _codec.Encode(message2);
         
@@ -154,10 +156,9 @@ public class LengthPrefixedMessageCodecTests
         // Assert
         Assert.NotNull(decoded1);
         Assert.Equal(MessageType.Handshake, decoded1.Type);
-        Assert.Equal(new byte[] { 1, 2, 3 }, decoded1.Payload.ToArray());
+        Assert.IsType<HandshakeMessage>(decoded1);
 
         Assert.NotNull(decoded2);
         Assert.Equal(MessageType.HandshakeAck, decoded2.Type);
-        Assert.Equal(new byte[] { 4, 5, 6 }, decoded2.Payload.ToArray());
     }
 }

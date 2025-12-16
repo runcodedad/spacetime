@@ -20,14 +20,76 @@
 
 ### Core Components
 
+#### NetworkMessage Base Class
+
+All protocol messages inherit from the abstract `NetworkMessage` base class, which provides:
+
+- **Type Property**: Each message declares its `MessageType` enum value
+- **Payload Property**: Lazy-loaded, cached serialized payload (`ReadOnlyMemory<byte>`)
+- **Serialize Method**: Abstract method each message implements for its specific serialization
+- **Deserialize Method**: Static factory method that routes to appropriate message class
+- **Caching**: Serialized payload is cached to avoid repeated serialization
+
+**Empty Messages**: Some message types (GetPeers, Heartbeat, HandshakeAck) carry no payload and are represented internally by a private `EmptyMessage` implementation.
+
+**Usage Pattern:**
+```csharp
+// Creating a message (validation happens in constructor)
+var message = new HandshakeMessage(
+    protocolVersion: 1,
+    nodeId: "node-123",
+    userAgent: "Spacetime/1.0.0",
+    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+// Sending a message (serialization happens automatically)
+await connection.SendAsync(message);
+
+// Receiving a message (deserialization happens automatically)
+var received = await connection.ReceiveAsync();
+
+// Type-based handling
+switch (received)
+{
+    case HandshakeMessage hs:
+        Console.WriteLine($"Handshake from {hs.NodeId}");
+        break;
+    case PingPongMessage pp when received.Type == MessageType.Ping:
+        var pong = new PingPongMessage(pp.Nonce, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        await connection.SendAsync(pong);
+        break;
+}
+```
+
 #### Message Types
-The network supports various message types for blockchain operations:
-- `Handshake` / `HandshakeAck` - Connection establishment
-- `Heartbeat` - Keep-alive messages
-- `GetPeers` / `Peers` - Peer discovery
-- `GetHeaders` / `Headers` / `GetBlock` / `Block` - Blockchain synchronization
-- `Transaction` / `NewBlock` - Transaction and block propagation
-- `ProofSubmission` - Consensus proof submission
+
+The network supports 13 message types for blockchain operations, organized by category:
+
+**Discovery Messages:**
+- `Handshake` (HandshakeMessage) - Connection establishment with node information exchange
+- `HandshakeAck` (EmptyMessage) - Response to handshake (no payload)
+- `Ping` (PingPongMessage) - Connection liveness checking with nonce matching
+- `Pong` (PingPongMessage) - Response to Ping with same nonce
+- `GetPeers` (EmptyMessage) - Request peer list (no payload)
+- `Peers` (PeerListMessage) - Peer discovery and exchange
+- `Heartbeat` (EmptyMessage) - Keep-alive messages (legacy, use Ping/Pong for new implementations)
+
+**Synchronization Messages:**
+- `GetHeaders` (GetHeadersMessage) - Request block headers starting from a specific hash
+- `Headers` (HeadersMessage) - Response containing multiple block headers
+- `GetBlock` (GetBlockMessage) - Request a complete block by hash
+- `Block` (BlockMessage) - Response containing a complete block
+
+**Transaction Messages:**
+- `Transaction` (TransactionMessage) - Broadcast a transaction to the network
+- `TxPoolRequest` (TxPoolRequestMessage) - Request contents of a node's transaction pool (mempool)
+- `NewBlock` (BlockProposalMessage) - Broadcast a newly proposed block
+
+**Consensus Messages:**
+- `ProofSubmission` (ProofSubmissionMessage) - Submit a Proof-of-Space-Time proof
+- `BlockAccepted` (BlockAcceptedMessage) - Notify network that a block has been validated and accepted
+
+**Error Handling:**
+- `Error` (Not yet implemented) - Generic error message for reporting protocol violations or failures
 
 #### Key Interfaces
 
@@ -90,6 +152,27 @@ public interface IConnectionManager : IAsyncDisposable
 }
 ```
 
+### Message Classes
+
+Each message type has a dedicated class that handles serialization/deserialization:
+
+| Message Class | Type | Purpose | Max Size |
+|--------------|------|---------|----------|
+| HandshakeMessage | 0x01 | Connection establishment | Variable |
+| PingPongMessage | 0x04/0x05 | Liveness checking | 16 bytes |
+| PeerListMessage | 0x11 | Peer exchange | 1000 peers max |
+| GetHeadersMessage | 0x20 | Request headers | Variable |
+| HeadersMessage | 0x21 | Provide headers | 2000 headers max |
+| GetBlockMessage | 0x22 | Request block | 32 bytes |
+| BlockMessage | 0x23 | Provide block | 16 MB max |
+| TransactionMessage | 0x30 | Broadcast transaction | 1 MB max |
+| BlockProposalMessage | 0x31 | Propose new block | 16 MB max |
+| TxPoolRequestMessage | 0x32 | Request mempool | 5 bytes |
+| ProofSubmissionMessage | 0x40 | Submit PoST proof | 1 MB max |
+| BlockAcceptedMessage | 0x41 | Notify acceptance | 40 bytes |
+
+All messages implement validation in constructors and throw `ArgumentException` or `ArgumentNullException` for invalid inputs. Deserialization methods throw `InvalidDataException` for malformed data.
+
 ### Message Protocol
 
 Messages use a simple length-prefixed binary format:
@@ -103,6 +186,232 @@ Messages use a simple length-prefixed binary format:
 - Maximum message size: 16 MB
 - All numeric values use little-endian byte order
 - Efficient for streaming protocols
+
+#### Message Serialization
+
+Each message type has its own serialization format and validation. Messages expose a `Payload` property that returns the cached serialized data:
+
+**HandshakeMessage** - Connection establishment
+```csharp
+var handshake = new HandshakeMessage(
+    protocolVersion: 1,
+    nodeId: "node-12345",
+    userAgent: "Spacetime/1.0.0",
+    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+// Payload is automatically serialized and cached
+ReadOnlyMemory<byte> payload = handshake.Payload;
+
+// Send via connection
+await connection.SendAsync(handshake);
+```
+
+**Deserialization** - Receiving messages
+```csharp
+// Receive raw message type and payload
+var messageType = /* read from stream */;
+var payloadData = /* read from stream */;
+
+// Deserialize to specific message type
+NetworkMessage message = NetworkMessage.Deserialize(messageType, payloadData);
+
+// Handle based on type
+switch (message)
+{
+    case HandshakeMessage handshake:
+        Console.WriteLine($"Node: {handshake.NodeId}, Version: {handshake.ProtocolVersion}");
+        break;
+    case PingPongMessage ping when message.Type == MessageType.Ping:
+        var pong = new PingPongMessage(ping.Nonce, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        await connection.SendAsync(pong);
+        break;
+    // ... other message types
+}
+```
+
+**PingPongMessage** - Liveness checking
+```csharp
+var ping = new PingPongMessage(
+    nonce: Random.Shared.NextInt64(),
+    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+// Message automatically serializes when accessing Payload property
+await connection.SendAsync(ping);
+
+// Responder echoes back with same nonce in a Pong message
+var pong = new PingPongMessage(ping.Nonce, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+await connection.SendAsync(pong);
+```
+
+**PeerListMessage** - Peer exchange
+```csharp
+var peers = new List<IPEndPoint>
+{
+    new IPEndPoint(IPAddress.Parse("192.168.1.100"), 8333),
+    new IPEndPoint(IPAddress.Parse("10.0.0.50"), 8333)
+};
+var peerList = new PeerListMessage(peers);
+await connection.SendAsync(peerList);
+```
+
+**GetHeadersMessage** - Request block headers
+```csharp
+var getHeaders = new GetHeadersMessage(
+    locatorHash: lastKnownBlockHash,
+    stopHash: ReadOnlyMemory<byte>.Empty, // Empty = no stop
+    maxHeaders: 2000);
+await connection.SendAsync(getHeaders);
+```
+
+**HeadersMessage** - Provide block headers
+```csharp
+var headers = blockHeaders.Select(h => new ReadOnlyMemory<byte>(h.Serialize())).ToList();
+var headersMsg = new HeadersMessage(headers);
+await connection.SendAsync(headersMsg);
+```
+
+**GetBlockMessage** - Request a specific block
+```csharp
+var getBlock = new GetBlockMessage(blockHash);
+await connection.SendAsync(getBlock);
+```
+
+**BlockMessage** - Provide a complete block
+```csharp
+var blockData = block.Serialize();
+var blockMsg = new BlockMessage(blockData);
+await connection.SendAsync(blockMsg);
+```
+
+**TransactionMessage** - Broadcast a transaction
+```csharp
+var txData = transaction.Serialize();
+var txMsg = new TransactionMessage(txData);
+await connection.SendAsync(txMsg);
+```
+
+**ProofSubmissionMessage** - Submit a PoST proof
+```csharp
+var proofData = blockProof.Serialize();
+var proofMsg = new ProofSubmissionMessage(
+    proofData: proofData,
+    minerId: minerPublicKey,
+    blockHeight: currentHeight + 1);
+await connection.SendAsync(proofMsg);
+```
+
+**BlockProposalMessage** - Propose a new block
+```csharp
+var blockData = newBlock.Serialize();
+var proposal = new BlockProposalMessage(blockData);
+await connection.SendAsync(proposal);
+```
+
+**BlockAcceptedMessage** - Notify block acceptance
+```csharp
+var accepted = new BlockAcceptedMessage(blockHash, blockHeight);
+await connection.SendAsync(accepted);
+```
+
+**TxPoolRequestMessage** - Request mempool contents
+```csharp
+var request = new TxPoolRequestMessage(
+    maxTransactions: 1000,
+    includeTransactionData: true); // false = hashes only
+await connection.SendAsync(request);
+```
+
+#### Message Validation
+
+Use `MessageValidator` to validate messages before processing:
+
+```csharp
+var message = await connection.ReceiveAsync();
+if (message != null && MessageValidator.ValidateMessage(message))
+{
+    // Process valid message
+    switch (message.Type)
+    {
+        case MessageType.Handshake:
+            var handshake = HandshakeMessage.Deserialize(message.Payload);
+            // Handle handshake...
+            break;
+        // ... other cases
+    }
+}
+else
+{
+    // Invalid message - close connection or send error
+}
+```
+
+### Message Protocol Flows
+
+#### Connection Establishment Flow
+```
+Node A                          Node B
+  |                               |
+  |-------- Handshake --------->  |
+  |                               | (Validate protocol version, etc.)
+  |<------- HandshakeAck -------  |
+  |                               |
+  |-------- Ping (nonce=N) --->  |
+  |<------- Pong (nonce=N) ----  |
+  |                               |
+  (Connection established)
+```
+
+#### Peer Discovery Flow
+```
+Node A                          Node B
+  |                               |
+  |-------- GetPeers ---------->  |
+  |                               | (Select best peers to share)
+  |<------- Peers (list) -------  |
+  |                               |
+  (Connect to discovered peers)
+```
+
+#### Block Synchronization Flow
+```
+Node A (behind)                 Node B (current)
+  |                               |
+  |-- GetHeaders (from hash) -->  |
+  |                               | (Find headers after hash)
+  |<-- Headers (list) ----------  |
+  |                               |
+  |-- GetBlock (hash) ---------->  |
+  |<-- Block (full data) --------  |
+  |                               |
+  (Repeat for each needed block)
+```
+
+#### Block Propagation Flow
+```
+Miner                           Network Nodes
+  |                               |
+  |-- ProofSubmission ---------->  |
+  |                               | (Validate proof)
+  |<-- BlockAccepted -----------  |
+  |                               |
+  |-- BlockProposal (NewBlock) ->  |
+  |                               | (Validate and add to chain)
+  |<-- BlockAccepted -----------  |
+  |                               |
+  (Propagate to other peers)
+```
+
+#### Transaction Flow
+```
+Wallet/Node                     Network Nodes
+  |                               |
+  |-- Transaction --------------->  |
+  |                               | (Validate and add to mempool)
+  |                               | (Propagate to peers)
+  |                               |
+  |-- TxPoolRequest ------------->  |
+  |<-- Transactions (list) ------  |
+  |                               |
+```
 
 ## Usage
 
@@ -143,13 +452,14 @@ if (connection != null && connection.IsConnected)
         userAgent: "Spacetime/1.0.0",
         timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
-    var message = new NetworkMessage(MessageType.Handshake, handshake.Serialize());
-    await connection.SendAsync(message);
+    // Message is automatically serialized when sent
+    await connection.SendAsync(handshake);
 
     // Receive response
     var response = await connection.ReceiveAsync();
     if (response != null && response.Type == MessageType.HandshakeAck)
     {
+        // HandshakeAck uses same format as Handshake
         var ackHandshake = HandshakeMessage.Deserialize(response.Payload);
         Console.WriteLine($"Connected to: {ackHandshake.NodeId}");
     }
