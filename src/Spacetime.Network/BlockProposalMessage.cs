@@ -60,7 +60,7 @@ public sealed class BlockProposalMessage : NetworkMessage
     /// <param name="data">The serialized data.</param>
     /// <returns>The deserialized message.</returns>
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
-    public static BlockProposalMessage Deserialize(ReadOnlyMemory<byte> data)
+    internal static BlockProposalMessage Deserialize(ReadOnlyMemory<byte> data)
     {
         if (data.Length == 0)
         {

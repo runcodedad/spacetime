@@ -50,7 +50,7 @@ public sealed class GetBlockMessage : NetworkMessage
     /// <param name="data">The serialized data.</param>
     /// <returns>The deserialized message.</returns>
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
-    public static GetBlockMessage Deserialize(ReadOnlyMemory<byte> data)
+    internal static GetBlockMessage Deserialize(ReadOnlyMemory<byte> data)
     {
         if (data.Length != _hashSize)
         {

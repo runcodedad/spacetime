@@ -62,7 +62,7 @@ public sealed class TxPoolRequestMessage : NetworkMessage
     /// <param name="data">The serialized data.</param>
     /// <returns>The deserialized message.</returns>
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
-    public static TxPoolRequestMessage Deserialize(ReadOnlyMemory<byte> data)
+    internal static TxPoolRequestMessage Deserialize(ReadOnlyMemory<byte> data)
     {
         using var ms = new MemoryStream(data.ToArray());
         using var reader = new BinaryReader(ms);

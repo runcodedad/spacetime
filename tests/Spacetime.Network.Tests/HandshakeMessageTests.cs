@@ -55,7 +55,7 @@ public class HandshakeMessageTests
 
         // Act
         var serialized = original.Payload;
-        var deserialized = HandshakeMessage.Deserialize(serialized);
+        var deserialized = (HandshakeMessage)NetworkMessage.Deserialize(MessageType.Handshake, serialized);
 
         // Assert
         Assert.Equal(original.ProtocolVersion, deserialized.ProtocolVersion);
@@ -74,7 +74,7 @@ public class HandshakeMessageTests
 
         // Act
         var serialized = original.Payload;
-        var deserialized = HandshakeMessage.Deserialize(serialized);
+        var deserialized = (HandshakeMessage)NetworkMessage.Deserialize(MessageType.Handshake, serialized);
 
         // Assert
         Assert.Equal(original.NodeId, deserialized.NodeId);
@@ -88,7 +88,7 @@ public class HandshakeMessageTests
         var invalidData = new byte[] { 1, 2, 3 };
 
         // Act & Assert
-        Assert.Throws<InvalidDataException>(() => HandshakeMessage.Deserialize(invalidData));
+        Assert.Throws<InvalidDataException>(() => NetworkMessage.Deserialize(MessageType.Handshake, invalidData));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class HandshakeMessageTests
         data[15] = 0xFF;
 
         // Act & Assert
-        Assert.Throws<InvalidDataException>(() => HandshakeMessage.Deserialize(data));
+        Assert.Throws<InvalidDataException>(() => NetworkMessage.Deserialize(MessageType.Handshake, data));
     }
 
     [Fact]

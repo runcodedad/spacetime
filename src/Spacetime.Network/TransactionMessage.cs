@@ -60,7 +60,7 @@ public sealed class TransactionMessage : NetworkMessage
     /// <param name="data">The serialized data.</param>
     /// <returns>The deserialized message.</returns>
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
-    public static TransactionMessage Deserialize(ReadOnlyMemory<byte> data)
+    internal static TransactionMessage Deserialize(ReadOnlyMemory<byte> data)
     {
         if (data.Length == 0)
         {

@@ -96,7 +96,7 @@ public sealed class GetHeadersMessage : NetworkMessage
     /// <param name="data">The serialized data.</param>
     /// <returns>The deserialized message.</returns>
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
-    public static GetHeadersMessage Deserialize(ReadOnlyMemory<byte> data)
+    internal static GetHeadersMessage Deserialize(ReadOnlyMemory<byte> data)
     {
         var span = data.Span;
         if (span.Length < _hashSize + 1 + 4)

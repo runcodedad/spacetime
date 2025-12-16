@@ -92,7 +92,7 @@ public sealed class ProofSubmissionMessage : NetworkMessage
     /// <param name="data">The serialized data.</param>
     /// <returns>The deserialized message.</returns>
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
-    public static ProofSubmissionMessage Deserialize(ReadOnlyMemory<byte> data)
+    internal static ProofSubmissionMessage Deserialize(ReadOnlyMemory<byte> data)
     {
         using var ms = new MemoryStream(data.ToArray());
         using var reader = new BinaryReader(ms);

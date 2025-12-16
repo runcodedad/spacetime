@@ -188,7 +188,7 @@ public class MultiNodeConnectionTests : IAsyncLifetime
         Assert.NotNull(receivedMessage);
         Assert.Equal(MessageType.Handshake, receivedMessage.Type);
 
-        var receivedHandshake = HandshakeMessage.Deserialize(receivedMessage.Payload);
+        var receivedHandshake = (HandshakeMessage)NetworkMessage.Deserialize(MessageType.Handshake, receivedMessage.Payload);
 
         // Assert
         Assert.Equal(clientHandshake.ProtocolVersion, receivedHandshake.ProtocolVersion);

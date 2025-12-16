@@ -80,7 +80,7 @@ public sealed class PeerListMessage : NetworkMessage
     /// <param name="data">The serialized data.</param>
     /// <returns>The deserialized message.</returns>
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
-    public static PeerListMessage Deserialize(ReadOnlyMemory<byte> data)
+    internal static PeerListMessage Deserialize(ReadOnlyMemory<byte> data)
     {
         using var ms = new MemoryStream(data.ToArray());
         using var reader = new BinaryReader(ms);

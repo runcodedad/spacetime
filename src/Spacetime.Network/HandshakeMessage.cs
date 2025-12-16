@@ -104,7 +104,7 @@ public sealed class HandshakeMessage : NetworkMessage
     /// <returns>The deserialized handshake message.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="data"/> is null.</exception>
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
-    public static HandshakeMessage Deserialize(ReadOnlyMemory<byte> data)
+    internal static HandshakeMessage Deserialize(ReadOnlyMemory<byte> data)
     {
         var span = data.Span;
         if (span.Length < 16)
