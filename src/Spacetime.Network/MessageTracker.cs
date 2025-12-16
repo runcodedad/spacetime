@@ -7,25 +7,17 @@ namespace Spacetime.Network;
 /// Tracks seen messages to prevent duplicate relays.
 /// Uses a sliding window approach with automatic cleanup of old entries.
 /// </summary>
-public sealed class MessageTracker
+/// <remarks>
+/// Initializes a new instance of the <see cref="MessageTracker"/> class.
+/// </remarks>
+/// <param name="messageLifetime">How long to track messages before they can be seen again. Default is 5 minutes.</param>
+/// <param name="maxTrackedMessages">Maximum number of messages to track. Default is 100,000.</param>
+public sealed class MessageTracker(TimeSpan? messageLifetime = null, int maxTrackedMessages = 100_000)
 {
-    private readonly ConcurrentDictionary<string, DateTimeOffset> _seenMessages;
-    private readonly TimeSpan _messageLifetime;
-    private readonly int _maxTrackedMessages;
-    private DateTimeOffset _lastCleanup;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MessageTracker"/> class.
-    /// </summary>
-    /// <param name="messageLifetime">How long to track messages before they can be seen again. Default is 5 minutes.</param>
-    /// <param name="maxTrackedMessages">Maximum number of messages to track. Default is 100,000.</param>
-    public MessageTracker(TimeSpan? messageLifetime = null, int maxTrackedMessages = 100_000)
-    {
-        _messageLifetime = messageLifetime ?? TimeSpan.FromMinutes(5);
-        _maxTrackedMessages = maxTrackedMessages;
-        _seenMessages = new ConcurrentDictionary<string, DateTimeOffset>();
-        _lastCleanup = DateTimeOffset.UtcNow;
-    }
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _seenMessages = new ConcurrentDictionary<string, DateTimeOffset>();
+    private readonly TimeSpan _messageLifetime = messageLifetime ?? TimeSpan.FromMinutes(5);
+    private readonly int _maxTrackedMessages = maxTrackedMessages;
+    private DateTimeOffset _lastCleanup = DateTimeOffset.UtcNow;
 
     /// <summary>
     /// Gets the total number of messages currently being tracked.

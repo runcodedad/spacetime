@@ -6,28 +6,19 @@ namespace Spacetime.Network;
 /// Monitors and manages bandwidth usage for message relay.
 /// Tracks bytes sent per peer and enforces bandwidth limits.
 /// </summary>
-public sealed class BandwidthMonitor
+/// <remarks>
+/// Initializes a new instance of the <see cref="BandwidthMonitor"/> class.
+/// </remarks>
+/// <param name="maxBytesPerSecondPerPeer">Maximum bytes per second per peer. Default is 1 MB/s.</param>
+/// <param name="maxTotalBytesPerSecond">Maximum total bytes per second across all peers. Default is 10 MB/s.</param>
+public sealed class BandwidthMonitor(long maxBytesPerSecondPerPeer = 1_048_576, long maxTotalBytesPerSecond = 10_485_760)
 {
-    private readonly ConcurrentDictionary<string, BandwidthTracker> _peerTrackers;
-    private readonly long _maxBytesPerSecondPerPeer;
-    private readonly long _maxTotalBytesPerSecond;
-    private long _totalBytesThisSecond;
-    private DateTimeOffset _currentSecond;
+    private readonly ConcurrentDictionary<string, BandwidthTracker> _peerTrackers = new ConcurrentDictionary<string, BandwidthTracker>();
+    private readonly long _maxBytesPerSecondPerPeer = maxBytesPerSecondPerPeer;
+    private readonly long _maxTotalBytesPerSecond = maxTotalBytesPerSecond;
+    private long _totalBytesThisSecond = 0;
+    private DateTimeOffset _currentSecond = GetCurrentSecond();
     private readonly object _lock = new();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BandwidthMonitor"/> class.
-    /// </summary>
-    /// <param name="maxBytesPerSecondPerPeer">Maximum bytes per second per peer. Default is 1 MB/s.</param>
-    /// <param name="maxTotalBytesPerSecond">Maximum total bytes per second across all peers. Default is 10 MB/s.</param>
-    public BandwidthMonitor(long maxBytesPerSecondPerPeer = 1_048_576, long maxTotalBytesPerSecond = 10_485_760)
-    {
-        _maxBytesPerSecondPerPeer = maxBytesPerSecondPerPeer;
-        _maxTotalBytesPerSecond = maxTotalBytesPerSecond;
-        _peerTrackers = new ConcurrentDictionary<string, BandwidthTracker>();
-        _currentSecond = GetCurrentSecond();
-        _totalBytesThisSecond = 0;
-    }
 
     /// <summary>
     /// Gets the total bytes sent in the current second.

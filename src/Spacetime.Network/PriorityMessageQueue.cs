@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Threading.Channels;
 
 namespace Spacetime.Network;
@@ -20,7 +19,7 @@ public sealed class PriorityMessageQueue : IAsyncDisposable
     public PriorityMessageQueue(int capacity = 1000)
     {
         _channels = new Channel<QueuedMessage>[4]; // One channel per priority level
-        for (int i = 0; i < _channels.Length; i++)
+        for (var i = 0; i < _channels.Length; i++)
         {
             _channels[i] = Channel.CreateBounded<QueuedMessage>(new BoundedChannelOptions(capacity)
             {

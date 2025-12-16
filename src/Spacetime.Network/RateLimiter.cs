@@ -5,26 +5,18 @@ namespace Spacetime.Network;
 /// <summary>
 /// Implements token bucket rate limiting per peer.
 /// </summary>
-public sealed class RateLimiter
+/// <remarks>
+/// Initializes a new instance of the <see cref="RateLimiter"/> class.
+/// </remarks>
+/// <param name="maxTokens">Maximum number of tokens a peer can accumulate. Default is 100.</param>
+/// <param name="refillInterval">How often tokens are refilled. Default is 1 second.</param>
+/// <param name="refillAmount">Number of tokens to refill per interval. Default is 10.</param>
+public sealed class RateLimiter(int maxTokens = 100, TimeSpan? refillInterval = null, int refillAmount = 10)
 {
-    private readonly ConcurrentDictionary<string, TokenBucket> _peerBuckets;
-    private readonly int _maxTokens;
-    private readonly TimeSpan _refillInterval;
-    private readonly int _refillAmount;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RateLimiter"/> class.
-    /// </summary>
-    /// <param name="maxTokens">Maximum number of tokens a peer can accumulate. Default is 100.</param>
-    /// <param name="refillInterval">How often tokens are refilled. Default is 1 second.</param>
-    /// <param name="refillAmount">Number of tokens to refill per interval. Default is 10.</param>
-    public RateLimiter(int maxTokens = 100, TimeSpan? refillInterval = null, int refillAmount = 10)
-    {
-        _maxTokens = maxTokens;
-        _refillInterval = refillInterval ?? TimeSpan.FromSeconds(1);
-        _refillAmount = refillAmount;
-        _peerBuckets = new ConcurrentDictionary<string, TokenBucket>();
-    }
+    private readonly ConcurrentDictionary<string, TokenBucket> _peerBuckets = new ConcurrentDictionary<string, TokenBucket>();
+    private readonly int _maxTokens = maxTokens;
+    private readonly TimeSpan _refillInterval = refillInterval ?? TimeSpan.FromSeconds(1);
+    private readonly int _refillAmount = refillAmount;
 
     /// <summary>
     /// Attempts to consume tokens for a peer.
