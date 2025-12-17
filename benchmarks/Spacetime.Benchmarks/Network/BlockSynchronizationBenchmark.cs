@@ -14,6 +14,7 @@ namespace Spacetime.Benchmarks.Network;
 [SimpleJob(warmupCount: 1, iterationCount: 3)]
 public class BlockSynchronizationBenchmark
 {
+    private IConnectionManager _connectionManager = null!;
     private IPeerManager _peerManager = null!;
     private IChainStorage _chainStorage = null!;
     private IBlockValidator _blockValidator = null!;
@@ -28,6 +29,7 @@ public class BlockSynchronizationBenchmark
     [GlobalSetup]
     public void Setup()
     {
+        _connectionManager = Substitute.For<IConnectionManager>();
         _peerManager = Substitute.For<IPeerManager>();
         _chainStorage = CreateMockStorage();
         _blockValidator = Substitute.For<IBlockValidator>();
@@ -40,6 +42,7 @@ public class BlockSynchronizationBenchmark
             peers.Add(new PeerInfo($"peer{i}", new IPEndPoint(IPAddress.Loopback, 8000 + i), 1));
         }
         _peerManager.GetBestPeers(Arg.Any<int>()).Returns(peers);
+        _connectionManager.GetActiveConnections().Returns(new List<IPeerConnection>());
 
         // Setup storage to simulate blocks
         _chainStorage.Metadata.GetChainHeight().Returns(0L);
@@ -62,6 +65,7 @@ public class BlockSynchronizationBenchmark
         };
 
         var synchronizer = new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,

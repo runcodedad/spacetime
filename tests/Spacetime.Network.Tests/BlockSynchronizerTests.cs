@@ -7,6 +7,7 @@ namespace Spacetime.Network.Tests;
 
 public class BlockSynchronizerTests
 {
+    private readonly IConnectionManager _connectionManager;
     private readonly IPeerManager _peerManager;
     private readonly IChainStorage _chainStorage;
     private readonly IBlockValidator _blockValidator;
@@ -16,6 +17,7 @@ public class BlockSynchronizerTests
 
     public BlockSynchronizerTests()
     {
+        _connectionManager = Substitute.For<IConnectionManager>();
         _peerManager = Substitute.For<IPeerManager>();
         _chainStorage = Substitute.For<IChainStorage>();
         _blockValidator = Substitute.For<IBlockValidator>();
@@ -25,6 +27,19 @@ public class BlockSynchronizerTests
 
         _chainStorage.Blocks.Returns(_blockStorage);
         _chainStorage.Metadata.Returns(_chainMetadata);
+        _connectionManager.GetActiveConnections().Returns(new List<IPeerConnection>());
+    }
+
+    [Fact]
+    public void Constructor_WithNullConnectionManager_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => new BlockSynchronizer(
+            null!,
+            _peerManager,
+            _chainStorage,
+            _blockValidator,
+            _bandwidthMonitor));
     }
 
     [Fact]
@@ -32,6 +47,7 @@ public class BlockSynchronizerTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new BlockSynchronizer(
+            _connectionManager,
             null!,
             _chainStorage,
             _blockValidator,
@@ -43,6 +59,7 @@ public class BlockSynchronizerTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             null!,
             _blockValidator,
@@ -54,6 +71,7 @@ public class BlockSynchronizerTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             null!,
@@ -65,6 +83,7 @@ public class BlockSynchronizerTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,
@@ -76,6 +95,7 @@ public class BlockSynchronizerTests
     {
         // Act
         var synchronizer = new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,
@@ -94,6 +114,7 @@ public class BlockSynchronizerTests
         _chainMetadata.GetChainHeight().Returns(100L);
         var config = new SyncConfig { IbdThresholdBlocks = 1000 };
         var synchronizer = new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,
@@ -116,6 +137,7 @@ public class BlockSynchronizerTests
         // Arrange
         _chainMetadata.GetChainHeight().Returns(0L);
         var synchronizer = new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,
@@ -143,6 +165,7 @@ public class BlockSynchronizerTests
         });
 
         var synchronizer = new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,
@@ -161,6 +184,7 @@ public class BlockSynchronizerTests
     {
         // Arrange
         var synchronizer = new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,
@@ -175,6 +199,7 @@ public class BlockSynchronizerTests
     {
         // Arrange
         var synchronizer = new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,
@@ -192,6 +217,7 @@ public class BlockSynchronizerTests
     {
         // Arrange
         var synchronizer = new BlockSynchronizer(
+            _connectionManager,
             _peerManager,
             _chainStorage,
             _blockValidator,

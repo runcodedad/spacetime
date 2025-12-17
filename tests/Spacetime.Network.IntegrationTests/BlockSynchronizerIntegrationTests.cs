@@ -24,7 +24,10 @@ public class BlockSynchronizerIntegrationTests : IDisposable
 
         peerManager.GetBestPeers(Arg.Any<int>()).Returns([]);
 
+        var connectionManager = Substitute.For<IConnectionManager>();
+        connectionManager.GetActiveConnections().Returns(new List<IPeerConnection>());
         var synchronizer = new BlockSynchronizer(
+            connectionManager,
             peerManager,
             chainStorage,
             blockValidator,
@@ -52,7 +55,10 @@ public class BlockSynchronizerIntegrationTests : IDisposable
         // Set current height to match target (already synced)
         chainStorage.Metadata.GetChainHeight().Returns(0L);
 
+        var connectionManager = Substitute.For<IConnectionManager>();
+        connectionManager.GetActiveConnections().Returns(new List<IPeerConnection>());
         var synchronizer = new BlockSynchronizer(
+            connectionManager,
             peerManager,
             chainStorage,
             blockValidator,
@@ -87,7 +93,10 @@ public class BlockSynchronizerIntegrationTests : IDisposable
 
             chainStorage.Metadata.GetChainHeight().Returns(0L);
 
-            var synchronizer = new BlockSynchronizer(
+            var connectionManager = Substitute.For<IConnectionManager>();
+        connectionManager.GetActiveConnections().Returns(new List<IPeerConnection>());
+        var synchronizer = new BlockSynchronizer(
+            connectionManager,
                 peerManager,
                 chainStorage,
                 blockValidator,
@@ -124,7 +133,10 @@ public class BlockSynchronizerIntegrationTests : IDisposable
 
         chainStorage.Metadata.GetChainHeight().Returns(0L);
 
+        var connectionManager = Substitute.For<IConnectionManager>();
+        connectionManager.GetActiveConnections().Returns(new List<IPeerConnection>());
         var synchronizer = new BlockSynchronizer(
+            connectionManager,
             peerManager,
             chainStorage,
             blockValidator,
@@ -166,7 +178,10 @@ public class BlockSynchronizerIntegrationTests : IDisposable
 
         chainStorage.Metadata.GetChainHeight().Returns(0L);
 
+        var connectionManager = Substitute.For<IConnectionManager>();
+        connectionManager.GetActiveConnections().Returns(new List<IPeerConnection>());
         var synchronizer = new BlockSynchronizer(
+            connectionManager,
             peerManager,
             chainStorage,
             blockValidator,
@@ -202,7 +217,10 @@ public class BlockSynchronizerIntegrationTests : IDisposable
         // Set a higher target to make sync take longer
         chainStorage.Metadata.GetChainHeight().Returns(0L);
 
+        var connectionManager = Substitute.For<IConnectionManager>();
+        connectionManager.GetActiveConnections().Returns(new List<IPeerConnection>());
         var synchronizer = new BlockSynchronizer(
+            connectionManager,
             peerManager,
             chainStorage,
             blockValidator,

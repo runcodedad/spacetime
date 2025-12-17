@@ -20,6 +20,7 @@ namespace Spacetime.Network;
 /// </remarks>
 public sealed class BlockSynchronizer : IBlockSynchronizer
 {
+    private readonly IConnectionManager _connectionManager;
     private readonly IPeerManager _peerManager;
     private readonly IChainStorage _chainStorage;
     private readonly IBlockValidator _blockValidator;
@@ -30,6 +31,7 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
     private readonly ConcurrentQueue<BlockDownloadRequest> _downloadQueue;
     private readonly ConcurrentDictionary<long, BlockDownloadRequest> _pendingDownloads;
     private readonly ConcurrentDictionary<long, Block> _downloadedBlocks;
+    private readonly ConcurrentDictionary<long, BlockHeader> _downloadedHeaders;
     private readonly object _syncLock = new();
 
     private CancellationTokenSource? _syncCts;
@@ -82,6 +84,7 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
     /// <summary>
     /// Initializes a new instance of the <see cref="BlockSynchronizer"/> class.
     /// </summary>
+    /// <param name="connectionManager">The connection manager.</param>
     /// <param name="peerManager">The peer manager.</param>
     /// <param name="chainStorage">The chain storage.</param>
     /// <param name="blockValidator">The block validator.</param>
@@ -89,17 +92,20 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
     /// <param name="config">The synchronization configuration.</param>
     /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
     public BlockSynchronizer(
+        IConnectionManager connectionManager,
         IPeerManager peerManager,
         IChainStorage chainStorage,
         IBlockValidator blockValidator,
         BandwidthMonitor bandwidthMonitor,
         SyncConfig? config = null)
     {
+        ArgumentNullException.ThrowIfNull(connectionManager);
         ArgumentNullException.ThrowIfNull(peerManager);
         ArgumentNullException.ThrowIfNull(chainStorage);
         ArgumentNullException.ThrowIfNull(blockValidator);
         ArgumentNullException.ThrowIfNull(bandwidthMonitor);
 
+        _connectionManager = connectionManager;
         _peerManager = peerManager;
         _chainStorage = chainStorage;
         _blockValidator = blockValidator;
@@ -110,6 +116,7 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
         _downloadQueue = new ConcurrentQueue<BlockDownloadRequest>();
         _pendingDownloads = new ConcurrentDictionary<long, BlockDownloadRequest>();
         _downloadedBlocks = new ConcurrentDictionary<long, Block>();
+        _downloadedHeaders = new ConcurrentDictionary<long, BlockHeader>();
         _currentState = SyncState.Idle;
     }
 
@@ -247,12 +254,71 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
             throw new InvalidOperationException("No peers available for synchronization");
         }
 
-        // In a real implementation, we would query peers for their best height
-        // For now, we'll use a placeholder value
-        _targetHeight = _chainStorage.Metadata.GetChainHeight() ?? 0;
+        // Query peers for their best height
+        var peerHeights = new List<long>();
+        var connections = _connectionManager.GetActiveConnections();
 
-        cancellationToken.ThrowIfCancellationRequested();
-        await Task.CompletedTask.ConfigureAwait(false);
+        // Get current local height
+        var currentHeight = _chainStorage.Metadata.GetChainHeight() ?? 0;
+        var currentHash = _chainStorage.Metadata.GetBestBlockHash() ?? new byte[32];
+
+        // Request headers from each connected peer to determine their height
+        foreach (var connection in connections)
+        {
+            if (!connection.IsConnected)
+                continue;
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Request headers to discover peer's best height
+                var getHeadersMsg = new GetHeadersMessage(
+                    currentHash,
+                    ReadOnlyMemory<byte>.Empty,
+                    _config.MaxHeadersPerRequest);
+
+                await connection.SendAsync(getHeadersMsg, cancellationToken).ConfigureAwait(false);
+
+                // Wait for response with timeout
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(_config.DownloadTimeoutSeconds));
+
+                var response = await connection.ReceiveAsync(timeoutCts.Token).ConfigureAwait(false);
+
+                if (response is HeadersMessage headersMsg && headersMsg.Headers.Count > 0)
+                {
+                    // Estimate peer height based on headers received
+                    var estimatedHeight = currentHeight + headersMsg.Headers.Count;
+                    peerHeights.Add(estimatedHeight);
+                }
+                else
+                {
+                    // If no headers, peer is likely at same height
+                    peerHeights.Add(currentHeight);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                // Failed to get height from this peer, skip it
+                _peerManager.RecordFailure(connection.PeerInfo.Id);
+            }
+        }
+
+        // Use the highest reported height as target
+        if (peerHeights.Count > 0)
+        {
+            _targetHeight = peerHeights.Max();
+        }
+        else
+        {
+            // No peer data available, assume we're synced
+            _targetHeight = currentHeight;
+        }
     }
 
     private async Task DownloadHeadersAsync(CancellationToken cancellationToken)
@@ -270,25 +336,65 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var peer = _peerManager.GetBestPeers(1).FirstOrDefault();
-            if (peer == null)
+            // Get an available connection
+            var connection = GetAvailableConnection();
+            if (connection == null)
             {
                 throw new InvalidOperationException("No peers available");
             }
 
-            // Request headers from this peer
-            var maxHeaders = Math.Min(_config.MaxHeadersPerRequest, (int)(_targetHeight - currentHeight));
-            var getHeadersMsg = new GetHeadersMessage(
-                currentHash.Value,
-                ReadOnlyMemory<byte>.Empty,
-                maxHeaders);
+            try
+            {
+                // Request headers from this peer
+                var maxHeaders = Math.Min(_config.MaxHeadersPerRequest, (int)(_targetHeight - currentHeight));
+                var getHeadersMsg = new GetHeadersMessage(
+                    currentHash.Value,
+                    ReadOnlyMemory<byte>.Empty,
+                    maxHeaders);
 
-            // In a real implementation, we would send this message to a peer and wait for response
-            // For now, we'll simulate progress
-            currentHeight += maxHeaders;
-            
+                await connection.SendAsync(getHeadersMsg, cancellationToken).ConfigureAwait(false);
+
+                // Wait for response with timeout
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(_config.DownloadTimeoutSeconds));
+
+                var response = await connection.ReceiveAsync(timeoutCts.Token).ConfigureAwait(false);
+
+                if (response is HeadersMessage headersMsg && headersMsg.Headers.Count > 0)
+                {
+                    // Process received headers
+                    foreach (var headerData in headersMsg.Headers)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var header = BlockHeader.Deserialize(new BinaryReader(new MemoryStream(headerData.ToArray())));
+                        
+                        // Store header and track for block download
+                        _downloadedHeaders.TryAdd(header.Height, header);
+                        currentHeight = header.Height;
+                        currentHash = header.ComputeHash();
+                    }
+
+                    _peerManager.RecordSuccess(connection.PeerInfo.Id);
+                }
+                else
+                {
+                    // No more headers available from this peer
+                    break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                // Failed to download headers from this peer
+                _peerManager.RecordFailure(connection.PeerInfo.Id);
+                // Continue with next peer
+            }
+
             NotifyProgress();
-            await Task.Delay(10, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -296,12 +402,23 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
     {
         var currentHeight = _chainStorage.Metadata.GetChainHeight() ?? 0;
 
-        // Create download requests for missing blocks
+        // Create download requests for missing blocks using headers
         for (var height = currentHeight + 1; height <= _targetHeight; height++)
         {
-            var blockHash = new byte[32]; // Placeholder - would get from headers
-            var request = new BlockDownloadRequest(blockHash, height);
-            _downloadQueue.Enqueue(request);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Get block hash from downloaded headers
+            if (_downloadedHeaders.TryGetValue(height, out var header))
+            {
+                var blockHash = header.ComputeHash();
+                var request = new BlockDownloadRequest(blockHash, height);
+                _downloadQueue.Enqueue(request);
+            }
+            else
+            {
+                // Header not available, skip this block
+                continue;
+            }
         }
 
         // Start parallel download workers
@@ -418,15 +535,43 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
         ReadOnlyMemory<byte> blockHash,
         CancellationToken cancellationToken)
     {
-        // In a real implementation, this would:
-        // 1. Send GetBlockMessage to peer
-        // 2. Wait for BlockMessage response
-        // 3. Deserialize and return the block
+        // Find or establish connection to peer
+        var connection = GetConnectionForPeer(peer);
+        if (connection == null || !connection.IsConnected)
+        {
+            return null;
+        }
 
-        // For now, return null to simulate download
-        cancellationToken.ThrowIfCancellationRequested();
-        await Task.Delay(10, cancellationToken).ConfigureAwait(false);
-        return null;
+        try
+        {
+            // Send GetBlockMessage to peer
+            var getBlockMsg = new GetBlockMessage(blockHash);
+            await connection.SendAsync(getBlockMsg, cancellationToken).ConfigureAwait(false);
+
+            // Wait for BlockMessage response with timeout
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(_config.DownloadTimeoutSeconds));
+
+            var response = await connection.ReceiveAsync(timeoutCts.Token).ConfigureAwait(false);
+
+            if (response is BlockMessage blockMsg)
+            {
+                // Deserialize and return the block
+                var block = Block.Deserialize(blockMsg.BlockData.ToArray());
+                return block;
+            }
+
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Failed to download block
+            return null;
+        }
     }
 
     private async Task ApplyBlocksAsync(CancellationToken cancellationToken)
@@ -455,6 +600,32 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
                 throw new InvalidOperationException($"Missing block at height {height}");
             }
         }
+    }
+
+    private IPeerConnection? GetAvailableConnection()
+    {
+        var connections = _connectionManager.GetActiveConnections();
+        return connections.FirstOrDefault(c => c.IsConnected);
+    }
+
+    private IPeerConnection? GetConnectionForPeer(PeerInfo peer)
+    {
+        // Check if we already have a connection cached for this peer
+        if (_peerConnections.TryGetValue(peer.Id, out var cachedConnection) && cachedConnection.IsConnected)
+        {
+            return cachedConnection;
+        }
+
+        // Try to find an active connection to this peer
+        var connections = _connectionManager.GetActiveConnections();
+        var connection = connections.FirstOrDefault(c => c.PeerInfo.Id == peer.Id && c.IsConnected);
+
+        if (connection != null)
+        {
+            _peerConnections.TryAdd(peer.Id, connection);
+        }
+
+        return connection;
     }
 
     private void NotifyProgress()
