@@ -203,8 +203,20 @@ public sealed class PeerAddressBook : IPeerAddressBook
             return;
         }
 
-        var addresses = _addresses.Values.ToList();
-        var json = JsonSerializer.Serialize(addresses, new JsonSerializerOptions
+        // Convert to serializable format
+        var data = _addresses.Values.Select(a => new
+        {
+            Address = a.EndPoint.Address.ToString(),
+            Port = a.EndPoint.Port,
+            FirstSeen = a.FirstSeen,
+            LastSeen = a.LastSeen,
+            LastAttempt = a.LastAttempt,
+            SuccessCount = a.SuccessCount,
+            FailureCount = a.FailureCount,
+            Source = a.Source
+        }).ToList();
+
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
         {
             WriteIndented = true
         });
@@ -221,14 +233,35 @@ public sealed class PeerAddressBook : IPeerAddressBook
         }
 
         var json = await File.ReadAllTextAsync(_persistencePath, cancellationToken).ConfigureAwait(false);
-        var addresses = JsonSerializer.Deserialize<List<PeerAddress>>(json);
+        var data = JsonSerializer.Deserialize<List<JsonElement>>(json);
 
-        if (addresses != null)
+        if (data != null)
         {
             _addresses.Clear();
-            foreach (var address in addresses)
+            foreach (var item in data)
             {
-                AddAddress(address);
+                try
+                {
+                    var addressStr = item.GetProperty("Address").GetString();
+                    var port = item.GetProperty("Port").GetInt32();
+                    if (addressStr != null && IPAddress.TryParse(addressStr, out var address))
+                    {
+                        var endPoint = new IPEndPoint(address, port);
+                        var peerAddress = new PeerAddress(endPoint, item.GetProperty("Source").GetString() ?? "unknown")
+                        {
+                            FirstSeen = item.GetProperty("FirstSeen").GetDateTimeOffset(),
+                            LastSeen = item.GetProperty("LastSeen").GetDateTimeOffset(),
+                            LastAttempt = item.GetProperty("LastAttempt").GetDateTimeOffset(),
+                            SuccessCount = item.GetProperty("SuccessCount").GetInt32(),
+                            FailureCount = item.GetProperty("FailureCount").GetInt32()
+                        };
+                        AddAddress(peerAddress);
+                    }
+                }
+                catch
+                {
+                    // Skip invalid entries
+                }
             }
         }
     }

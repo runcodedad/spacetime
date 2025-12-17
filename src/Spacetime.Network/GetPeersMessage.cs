@@ -77,6 +77,12 @@ public sealed class GetPeersMessage : NetworkMessage
     /// <exception cref="InvalidDataException">Thrown when the data format is invalid.</exception>
     internal static GetPeersMessage Deserialize(ReadOnlyMemory<byte> data)
     {
+        // Handle empty message (legacy format or default request)
+        if (data.Length == 0)
+        {
+            return new GetPeersMessage();
+        }
+
         if (data.Length < 8)
         {
             // Minimum size: 4 bytes maxCount + 4 bytes exclude count
