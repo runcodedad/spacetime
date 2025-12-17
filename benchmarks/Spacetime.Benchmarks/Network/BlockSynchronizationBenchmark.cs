@@ -5,7 +5,7 @@ using Spacetime.Network;
 using Spacetime.Storage;
 using System.Net;
 
-namespace Spacetime.Benchmarks;
+namespace Spacetime.Benchmarks.Network;
 
 /// <summary>
 /// Benchmarks for block synchronization performance.

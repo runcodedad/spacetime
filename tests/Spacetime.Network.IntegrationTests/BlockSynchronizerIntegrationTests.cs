@@ -10,8 +10,8 @@ namespace Spacetime.Network.IntegrationTests;
 /// </summary>
 public class BlockSynchronizerIntegrationTests : IDisposable
 {
-    private readonly List<IChainStorage> _storages = new();
-    private readonly List<BlockSynchronizer> _synchronizers = new();
+    private readonly List<IChainStorage> _storages = [];
+    private readonly List<BlockSynchronizer> _synchronizers = [];
 
     [Fact]
     public async Task StartAsync_WithNoPeers_ThrowsInvalidOperationException()
@@ -22,7 +22,7 @@ public class BlockSynchronizerIntegrationTests : IDisposable
         var blockValidator = Substitute.For<IBlockValidator>();
         var bandwidthMonitor = new BandwidthMonitor();
 
-        peerManager.GetBestPeers(Arg.Any<int>()).Returns(new List<PeerInfo>());
+        peerManager.GetBestPeers(Arg.Any<int>()).Returns([]);
 
         var synchronizer = new BlockSynchronizer(
             peerManager,
@@ -47,7 +47,7 @@ public class BlockSynchronizerIntegrationTests : IDisposable
         var bandwidthMonitor = new BandwidthMonitor();
 
         var peer = new PeerInfo("peer1", new IPEndPoint(IPAddress.Loopback, 8000), 1);
-        peerManager.GetBestPeers(Arg.Any<int>()).Returns(new List<PeerInfo> { peer });
+        peerManager.GetBestPeers(Arg.Any<int>()).Returns([peer]);
 
         // Set current height to match target (already synced)
         chainStorage.Metadata.GetChainHeight().Returns(0L);
@@ -83,7 +83,7 @@ public class BlockSynchronizerIntegrationTests : IDisposable
             var bandwidthMonitor = new BandwidthMonitor();
 
             var peer = new PeerInfo($"peer{i}", new IPEndPoint(IPAddress.Loopback, 8000 + i), 1);
-            peerManager.GetBestPeers(Arg.Any<int>()).Returns(new List<PeerInfo> { peer });
+            peerManager.GetBestPeers(Arg.Any<int>()).Returns([peer]);
 
             chainStorage.Metadata.GetChainHeight().Returns(0L);
 
@@ -120,7 +120,7 @@ public class BlockSynchronizerIntegrationTests : IDisposable
         var bandwidthMonitor = new BandwidthMonitor();
 
         var peer = new PeerInfo("peer1", new IPEndPoint(IPAddress.Loopback, 8000), 1);
-        peerManager.GetBestPeers(Arg.Any<int>()).Returns(new List<PeerInfo> { peer });
+        peerManager.GetBestPeers(Arg.Any<int>()).Returns([peer]);
 
         chainStorage.Metadata.GetChainHeight().Returns(0L);
 
@@ -162,7 +162,7 @@ public class BlockSynchronizerIntegrationTests : IDisposable
         var bandwidthMonitor = new BandwidthMonitor();
 
         var peer = new PeerInfo("peer1", new IPEndPoint(IPAddress.Loopback, 8000), 1);
-        peerManager.GetBestPeers(Arg.Any<int>()).Returns(new List<PeerInfo> { peer });
+        peerManager.GetBestPeers(Arg.Any<int>()).Returns([peer]);
 
         chainStorage.Metadata.GetChainHeight().Returns(0L);
 
@@ -197,7 +197,7 @@ public class BlockSynchronizerIntegrationTests : IDisposable
         var bandwidthMonitor = new BandwidthMonitor();
 
         var peer = new PeerInfo("peer1", new IPEndPoint(IPAddress.Loopback, 8000), 1);
-        peerManager.GetBestPeers(Arg.Any<int>()).Returns(new List<PeerInfo> { peer });
+        peerManager.GetBestPeers(Arg.Any<int>()).Returns([peer]);
 
         // Set a higher target to make sync take longer
         chainStorage.Metadata.GetChainHeight().Returns(0L);
