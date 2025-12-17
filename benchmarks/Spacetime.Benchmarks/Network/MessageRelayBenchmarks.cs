@@ -3,7 +3,7 @@ using BenchmarkDotNet.Jobs;
 using NSubstitute;
 using Spacetime.Network;
 
-namespace Spacetime.Benchmarks;
+namespace Spacetime.Benchmarks.Network;
 
 /// <summary>
 /// Performance benchmarks for message relay operations.

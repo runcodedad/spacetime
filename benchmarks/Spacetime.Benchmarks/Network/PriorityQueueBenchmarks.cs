@@ -2,7 +2,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Spacetime.Network;
 
-namespace Spacetime.Benchmarks;
+namespace Spacetime.Benchmarks.Network;
 
 /// <summary>
 /// Benchmarks for priority queue with different priority distributions.

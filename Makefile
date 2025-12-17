@@ -10,6 +10,7 @@ INT_PROJS  := $(shell find tests -type f -name '*IntegrationTests.csproj' -print
 
 SINGLE_FILTER := "*Single*"
 MULTI_FILTER  := "*Multi*"
+NETWORK_FILTER := "*Network*"
 
 BENCHMARKS_PROJECT := benchmarks/Spacetime.Benchmarks/Spacetime.Benchmarks.csproj
 
@@ -56,6 +57,10 @@ benchmark-single: build
 benchmark-multi: build
 	@echo "Running multi benchmark..."
 	$(DOTNET) run -c Release --project $(BENCHMARKS_PROJECT) -- --filter $(MULTI_FILTER)
+
+benchmark-network: build
+	@echo "Running network benchmark..."
+	$(DOTNET) run -c Release --project $(BENCHMARKS_PROJECT) -- --filter $(NETWORK_FILTER)
 
 all: unit integration
 
