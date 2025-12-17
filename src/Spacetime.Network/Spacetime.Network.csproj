@@ -10,4 +10,8 @@
     <InternalsVisibleTo Include="Spacetime.Network.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+  </ItemGroup>
+
 </Project>
