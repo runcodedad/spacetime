@@ -19,10 +19,14 @@ Spacetime: Proof-of-Space-Time blockchain in C# / .NET 10. Energy-efficient, dis
 
 ## Required Coding Patterns
 
+## C# Language Features
+- Use primary constructors where possible
+
 ### Naming
 - Use PascalCase for classes, methods, properties
 - Use _camelCase for private fields
 - Use interfaces starting with `I` (e.g., `IHashFunction`)
+- Use `var` only when type is obvious from right side
 
 ### Nullable Types
 - Always enable nullable reference types: `<Nullable>enable</Nullable>`

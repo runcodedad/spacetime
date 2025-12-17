@@ -2,6 +2,7 @@
 description: "Roadmap / Product Manager agent for analyzing repository issues, determining priorities and dependencies, and producing an ordered roadmap"
 name: "roadmap-manager"
 tools: ['read/readFile', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'search/changes', 'search/codebase', 'web/fetch', 'github/get_commit', 'github/get_file_contents', 'github/search_code', 'github/search_issues', 'github/search_pull_requests', 'github/search_repositories']
+model: GPT-5 mini (copilot)
 ---
 # Roadmap / Product Manager Agent Instructions
 
