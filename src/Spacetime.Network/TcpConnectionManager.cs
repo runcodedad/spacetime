@@ -178,6 +178,15 @@ public sealed class TcpConnectionManager : IConnectionManager
         }
     }
 
+    /// <inheritdoc/>
+    public Task<IPeerConnection?> GetConnectionAsync(string peerId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(peerId);
+        
+        _connections.TryGetValue(peerId, out var connection);
+        return Task.FromResult(connection);
+    }
+
     private async Task AcceptConnectionsAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)

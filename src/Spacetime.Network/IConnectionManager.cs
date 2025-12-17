@@ -56,4 +56,13 @@ public interface IConnectionManager : IAsyncDisposable
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="peerId"/> is null.</exception>
     Task DisconnectAsync(string peerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a connection to a specific peer.
+    /// </summary>
+    /// <param name="peerId">The ID of the peer.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The connection, or null if not found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="peerId"/> is null.</exception>
+    Task<IPeerConnection?> GetConnectionAsync(string peerId, CancellationToken cancellationToken = default);
 }

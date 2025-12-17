@@ -55,7 +55,7 @@ public abstract class NetworkMessage
             MessageType.BlockAccepted => BlockAcceptedMessage.Deserialize(data),
             MessageType.TxPoolRequest => TxPoolRequestMessage.Deserialize(data),
             MessageType.NewBlock => BlockProposalMessage.Deserialize(data),
-            MessageType.GetPeers => CreateEmpty(MessageType.GetPeers),
+            MessageType.GetPeers => GetPeersMessage.Deserialize(data),
             MessageType.Heartbeat => CreateEmpty(MessageType.Heartbeat),
             MessageType.HandshakeAck => CreateEmpty(MessageType.HandshakeAck),
             _ => throw new InvalidDataException($"Unknown message type: {type}")
