@@ -143,8 +143,7 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
 
         try
         {
-            _syncTask = Task.Run(() => SynchronizeAsync(_syncCts.Token), _syncCts.Token);
-            await _syncTask.ConfigureAwait(false);
+            await SynchronizeAsync(_syncCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -266,7 +265,9 @@ public sealed class BlockSynchronizer : IBlockSynchronizer
         foreach (var connection in connections)
         {
             if (!connection.IsConnected)
+            {
                 continue;
+            }
 
             try
             {
