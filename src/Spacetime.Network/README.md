@@ -9,6 +9,10 @@
 - ✅ **TCP Connection Management** - Asynchronous TCP client/server connections
 - ✅ **Message Framing Protocol** - Length-prefixed binary message format
 - ✅ **Automatic Peer Discovery** - Discover peers from seed nodes and peer exchange
+- ✅ **Peer Address Book** - Persistent storage of known peer addresses with metadata
+- ✅ **Peer Exchange Protocol** - REQUEST_PEERS/PEER_LIST with rate limiting
+- ✅ **Peer Address Gossiping** - Periodic broadcasting of peer addresses
+- ✅ **Address Validation** - Filter private/local addresses, enforce IP diversity
 - ✅ **Peer Management** - Maintain and score known peers
 - ✅ **Connection Pooling** - Automatically maintain N active peer connections
 - ✅ **Peer Reputation System** - Track peer behavior and blacklist misbehaving nodes
@@ -69,8 +73,8 @@ The network supports 13 message types for blockchain operations, organized by ca
 - `HandshakeAck` (EmptyMessage) - Response to handshake (no payload)
 - `Ping` (PingPongMessage) - Connection liveness checking with nonce matching
 - `Pong` (PingPongMessage) - Response to Ping with same nonce
-- `GetPeers` (EmptyMessage) - Request peer list (no payload)
-- `Peers` (PeerListMessage) - Peer discovery and exchange
+- `GetPeers` (GetPeersMessage) - Request peer list with filter criteria (maxCount, excludeAddresses)
+- `Peers` (PeerListMessage) - Peer discovery and exchange (up to 1000 addresses)
 - `Heartbeat` (EmptyMessage) - Keep-alive messages (legacy, use Ping/Pong for new implementations)
 
 **Synchronization Messages:**
@@ -152,6 +156,181 @@ public interface IConnectionManager : IAsyncDisposable
 }
 ```
 
+#### Peer Exchange and Address Gossiping
+
+The network layer implements a comprehensive peer exchange and gossiping system to enable nodes to discover and maintain a healthy set of network peers without relying solely on hardcoded seed nodes.
+
+##### `IPeerAddressBook`
+Manages a persistent collection of peer addresses with metadata, validation, and maintenance.
+
+```csharp
+public interface IPeerAddressBook
+{
+    int Count { get; }
+    IReadOnlyList<PeerAddress> GetAllAddresses();
+    bool AddAddress(PeerAddress address);
+    bool RemoveAddress(IPEndPoint endPoint);
+    PeerAddress? GetAddress(IPEndPoint endPoint);
+    void UpdateLastSeen(IPEndPoint endPoint);
+    void RecordSuccess(IPEndPoint endPoint);
+    void RecordFailure(IPEndPoint endPoint);
+    IReadOnlyList<PeerAddress> GetBestAddresses(int count, IEnumerable<IPEndPoint>? excludeEndPoints = null);
+    int RemoveStaleAddresses(TimeSpan maxAge);
+    int RemovePoorQualityAddresses(double minQualityScore, int minAttempts = 5);
+    Task SaveAsync(CancellationToken cancellationToken = default);
+    Task LoadAsync(CancellationToken cancellationToken = default);
+}
+```
+
+**Features:**
+- **Address Validation**: Filters private/local addresses (192.168.x.x, 10.x.x.x, 127.x.x.x) unless explicitly allowed
+- **IP Diversity**: Limits addresses per /24 subnet (default: 10) to prevent Sybil attacks
+- **Quality Tracking**: Maintains success/failure counts and calculates connection quality scores
+- **Staleness Detection**: Removes addresses not seen within configurable time window (default: 24 hours)
+- **Capacity Management**: Evicts lowest quality addresses when capacity (default: 10,000) is reached
+- **Persistence**: Save/load address book to/from disk in JSON format
+
+**Usage:**
+```csharp
+var addressBook = new PeerAddressBook(
+    maxAddresses: 10000,
+    allowPrivateAddresses: false,
+    persistencePath: "peers.json",
+    maxAddressesPerSubnet: 10);
+
+// Load persisted addresses on startup
+await addressBook.LoadAsync();
+
+// Add new address
+var address = new PeerAddress(
+    new IPEndPoint(IPAddress.Parse("203.0.113.100"), 8333),
+    source: "seed");
+addressBook.AddAddress(address);
+
+// Track connection attempts
+addressBook.RecordSuccess(address.EndPoint);
+addressBook.RecordFailure(address.EndPoint);
+
+// Get best peers to connect to
+var best = addressBook.GetBestAddresses(count: 8);
+
+// Clean up stale addresses
+addressBook.RemoveStaleAddresses(TimeSpan.FromHours(24));
+addressBook.RemovePoorQualityAddresses(minQualityScore: 0.3, minAttempts: 5);
+
+// Persist changes
+await addressBook.SaveAsync();
+```
+
+##### `IPeerExchange`
+Implements the peer exchange protocol with rate limiting.
+
+```csharp
+public interface IPeerExchange
+{
+    Task<IReadOnlyList<IPEndPoint>> RequestPeersAsync(
+        IPeerConnection connection,
+        int maxCount = 100,
+        IEnumerable<IPEndPoint>? excludeAddresses = null,
+        CancellationToken cancellationToken = default);
+    
+    PeerListMessage HandlePeerRequest(GetPeersMessage request, string requesterId);
+    bool CanRequestPeers(string peerId);
+}
+```
+
+**Features:**
+- **Rate Limiting**: Token bucket rate limiter (default: 1 request per 5 minutes per peer)
+- **Request Filtering**: Clients can specify addresses to exclude and max count
+- **Response Limits**: Maximum 1000 addresses per response
+- **Timeout Handling**: Configurable request timeout (default: 10 seconds)
+
+**Protocol:**
+```
+Client                           Server
+  |                                 |
+  |---GetPeersMessage(max=100)---->|
+  |    (maxCount, excludeAddresses) |
+  |                                 |
+  |<---PeerListMessage(peers)-------|
+  |    (list of IPEndPoints)        |
+  |                                 |
+```
+
+**Usage:**
+```csharp
+var exchange = new PeerExchange(
+    addressBook,
+    minRequestInterval: TimeSpan.FromMinutes(5),
+    requestTimeout: TimeSpan.FromSeconds(10));
+
+// Request peers from a connection
+var excludeList = connectedPeers.Select(p => p.EndPoint);
+var peers = await exchange.RequestPeersAsync(connection, maxCount: 100, excludeList);
+
+// Handle incoming peer requests
+var request = new GetPeersMessage(maxCount: 50);
+var response = exchange.HandlePeerRequest(request, "peer-abc123");
+await connection.SendAsync(response);
+```
+
+##### `IPeerGossiper`
+Manages periodic gossiping of peer addresses to maintain network connectivity.
+
+```csharp
+public interface IPeerGossiper : IAsyncDisposable
+{
+    Task StartAsync(CancellationToken cancellationToken = default);
+    Task StopAsync(CancellationToken cancellationToken = default);
+    void ProcessReceivedAddresses(IEnumerable<PeerAddress> peerAddresses, string sourceId);
+}
+```
+
+**Features:**
+- **Periodic Broadcasting**: Gossips subset of known peers at configurable interval (default: 10 minutes)
+- **Address Deduplication**: Tracks recently seen addresses to avoid redundant processing (default: 1 hour window)
+- **Automatic Forwarding**: Forwards received addresses (excluding sender) to other connected peers
+- **Configurable Size**: Number of addresses per gossip message (default: 20)
+
+**Usage:**
+```csharp
+var gossiper = new PeerGossiper(
+    addressBook,
+    peerManager,
+    connectionManager,
+    gossipInterval: TimeSpan.FromMinutes(10),
+    addressesPerGossip: 20,
+    addressDeduplicationWindow: TimeSpan.FromHours(1));
+
+// Start gossiping service
+await gossiper.StartAsync();
+
+// Process received addresses from gossip
+var receivedAddresses = peerListMessage.Peers
+    .Select(ep => new PeerAddress(ep, $"gossip:{sourceId}"));
+gossiper.ProcessReceivedAddresses(receivedAddresses, sourceId);
+
+// Stop when shutting down
+await gossiper.StopAsync();
+```
+
+##### PeerAddress Record
+Immutable record containing peer address metadata.
+
+```csharp
+public sealed record PeerAddress
+{
+    public IPEndPoint EndPoint { get; init; }
+    public DateTimeOffset FirstSeen { get; init; }
+    public DateTimeOffset LastSeen { get; init; }
+    public DateTimeOffset LastAttempt { get; init; }
+    public int SuccessCount { get; init; }
+    public int FailureCount { get; init; }
+    public string Source { get; init; }
+    public double QualityScore { get; }  // SuccessCount / (SuccessCount + FailureCount)
+}
+```
+
 ### Message Classes
 
 Each message type has a dedicated class that handles serialization/deserialization:
@@ -160,6 +339,7 @@ Each message type has a dedicated class that handles serialization/deserializati
 |--------------|------|---------|----------|
 | HandshakeMessage | 0x01 | Connection establishment | Variable |
 | PingPongMessage | 0x04/0x05 | Liveness checking | 16 bytes |
+| GetPeersMessage | 0x10 | Request peer list with filters | Variable (1000 excludes max) |
 | PeerListMessage | 0x11 | Peer exchange | 1000 peers max |
 | GetHeadersMessage | 0x20 | Request headers | Variable |
 | HeadersMessage | 0x21 | Provide headers | 2000 headers max |
