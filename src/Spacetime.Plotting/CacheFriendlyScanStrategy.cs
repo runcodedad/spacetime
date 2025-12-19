@@ -95,7 +95,7 @@ public sealed class CacheFriendlyScanStrategy : IScanningStrategy
             if (leavesToScanInBlock >= actualBlockSize)
             {
                 // Scan all leaves in the block
-                for (long i = blockStart; i < blockEnd; i++)
+                for (var i = blockStart; i < blockEnd; i++)
                 {
                     yield return i;
                 }
