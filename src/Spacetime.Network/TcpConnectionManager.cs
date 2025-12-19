@@ -162,7 +162,7 @@ public sealed class TcpConnectionManager : IConnectionManager
     /// <inheritdoc/>
     public IReadOnlyList<IPeerConnection> GetActiveConnections()
     {
-        return _connections.Values.ToList();
+        return [.. _connections.Values];
     }
 
     /// <inheritdoc/>
@@ -176,6 +176,15 @@ public sealed class TcpConnectionManager : IConnectionManager
             await connection.CloseAsync(cancellationToken).ConfigureAwait(false);
             await connection.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    /// <inheritdoc/>
+    public IPeerConnection? GetConnection(string peerId)
+    {
+        ArgumentNullException.ThrowIfNull(peerId);
+        
+        _connections.TryGetValue(peerId, out var connection);
+        return connection;
     }
 
     private async Task AcceptConnectionsAsync(CancellationToken cancellationToken)
