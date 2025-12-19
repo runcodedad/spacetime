@@ -181,7 +181,7 @@ public sealed class PeerGossiper : IPeerGossiper
         {
             try
             {
-                var connection = await _connectionManager.GetConnectionAsync(peer.Id, cancellationToken).ConfigureAwait(false);
+                var connection = _connectionManager.GetConnection(peer.Id);
                 if (connection != null)
                 {
                     await connection.SendAsync(message, cancellationToken).ConfigureAwait(false);

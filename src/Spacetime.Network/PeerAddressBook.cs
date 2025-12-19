@@ -15,6 +15,17 @@ public sealed class PeerAddressBook : IPeerAddressBook
     private readonly string? _persistencePath;
     private readonly int _maxAddressesPerSubnet;
 
+    private sealed record PersistedPeerAddress(
+        string Address,
+        int Port,
+        DateTimeOffset FirstSeen,
+        DateTimeOffset LastSeen,
+        DateTimeOffset LastAttempt,
+        int SuccessCount,
+        int FailureCount,
+        string? Source
+    );
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PeerAddressBook"/> class.
     /// </summary>
@@ -50,7 +61,7 @@ public sealed class PeerAddressBook : IPeerAddressBook
     /// <inheritdoc/>
     public IReadOnlyList<PeerAddress> GetAllAddresses()
     {
-        return _addresses.Values.ToList();
+        return [.. _addresses.Values];
     }
 
     /// <inheritdoc/>
@@ -203,18 +214,17 @@ public sealed class PeerAddressBook : IPeerAddressBook
             return;
         }
 
-        // Convert to serializable format
-        var data = _addresses.Values.Select(a => new
-        {
-            Address = a.EndPoint.Address.ToString(),
-            Port = a.EndPoint.Port,
-            FirstSeen = a.FirstSeen,
-            LastSeen = a.LastSeen,
-            LastAttempt = a.LastAttempt,
-            SuccessCount = a.SuccessCount,
-            FailureCount = a.FailureCount,
-            Source = a.Source
-        }).ToList();
+        // Convert to serializable format using a typed record
+        var data = _addresses.Values.Select(a => new PersistedPeerAddress(
+            a.EndPoint.Address.ToString(),
+            a.EndPoint.Port,
+            a.FirstSeen,
+            a.LastSeen,
+            a.LastAttempt,
+            a.SuccessCount,
+            a.FailureCount,
+            a.Source
+        )).ToList();
 
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
         {
@@ -233,7 +243,7 @@ public sealed class PeerAddressBook : IPeerAddressBook
         }
 
         var json = await File.ReadAllTextAsync(_persistencePath, cancellationToken).ConfigureAwait(false);
-        var data = JsonSerializer.Deserialize<List<JsonElement>>(json);
+        var data = JsonSerializer.Deserialize<List<PersistedPeerAddress>>(json);
 
         if (data != null)
         {
@@ -242,18 +252,16 @@ public sealed class PeerAddressBook : IPeerAddressBook
             {
                 try
                 {
-                    var addressStr = item.GetProperty("Address").GetString();
-                    var port = item.GetProperty("Port").GetInt32();
-                    if (addressStr != null && IPAddress.TryParse(addressStr, out var address))
+                    if (IPAddress.TryParse(item.Address, out var address))
                     {
-                        var endPoint = new IPEndPoint(address, port);
-                        var peerAddress = new PeerAddress(endPoint, item.GetProperty("Source").GetString() ?? "unknown")
+                        var endPoint = new IPEndPoint(address, item.Port);
+                        var peerAddress = new PeerAddress(endPoint, item.Source ?? "unknown")
                         {
-                            FirstSeen = item.GetProperty("FirstSeen").GetDateTimeOffset(),
-                            LastSeen = item.GetProperty("LastSeen").GetDateTimeOffset(),
-                            LastAttempt = item.GetProperty("LastAttempt").GetDateTimeOffset(),
-                            SuccessCount = item.GetProperty("SuccessCount").GetInt32(),
-                            FailureCount = item.GetProperty("FailureCount").GetInt32()
+                            FirstSeen = item.FirstSeen,
+                            LastSeen = item.LastSeen,
+                            LastAttempt = item.LastAttempt,
+                            SuccessCount = item.SuccessCount,
+                            FailureCount = item.FailureCount
                         };
                         AddAddress(peerAddress);
                     }

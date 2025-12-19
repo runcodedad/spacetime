@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+
 namespace Spacetime.Network.Tests;
 
 public class MessageValidatorTests
@@ -51,8 +53,14 @@ public class MessageValidatorTests
     [Fact]
     public void ValidateMessage_WithGetPeers_ReturnsTrue()
     {
-        // Arrange - GetPeers is an empty message
-        var message = NetworkMessage.Deserialize(MessageType.GetPeers, ReadOnlyMemory<byte>.Empty);
+        // Arrange: GetPeers expects 4 bytes maxCount, 4 bytes excludeCount, then exclude addresses (none for this test)
+        var maxCount = 10;
+        var excludeCount = 0;
+        var data = new byte[8];
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(0, 4), maxCount);
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(4, 4), excludeCount);
+        
+        var message = NetworkMessage.Deserialize(MessageType.GetPeers, data);
 
         // Act
         var result = MessageValidator.ValidateMessage(message);

@@ -329,6 +329,8 @@ public sealed record PeerAddress
     public string Source { get; init; }
     public double QualityScore { get; }  // SuccessCount / (SuccessCount + FailureCount)
 }
+
+See [docs/peer-address-vs-connection.md](docs/peer-address-vs-connection.md) for a short guide that explains the roles and integration between the address book (`PeerAddress` / `PeerAddressBook`) and the runtime peer/connection APIs (`IPeerManager` / `IPeerConnection`).
 ```
 
 ### Message Classes

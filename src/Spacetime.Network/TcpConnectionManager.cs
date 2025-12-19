@@ -162,7 +162,7 @@ public sealed class TcpConnectionManager : IConnectionManager
     /// <inheritdoc/>
     public IReadOnlyList<IPeerConnection> GetActiveConnections()
     {
-        return _connections.Values.ToList();
+        return [.. _connections.Values];
     }
 
     /// <inheritdoc/>
@@ -179,12 +179,12 @@ public sealed class TcpConnectionManager : IConnectionManager
     }
 
     /// <inheritdoc/>
-    public Task<IPeerConnection?> GetConnectionAsync(string peerId, CancellationToken cancellationToken = default)
+    public IPeerConnection? GetConnection(string peerId)
     {
         ArgumentNullException.ThrowIfNull(peerId);
         
         _connections.TryGetValue(peerId, out var connection);
-        return Task.FromResult(connection);
+        return connection;
     }
 
     private async Task AcceptConnectionsAsync(CancellationToken cancellationToken)

@@ -95,7 +95,9 @@ public sealed class PeerDiscovery : IPeerDiscovery
         try
         {
             // Send GetPeers request
-            var request = NetworkMessage.Deserialize(MessageType.GetPeers, ReadOnlyMemory<byte>.Empty);
+            var getPeersMessage = new GetPeersMessage();
+            var request = NetworkMessage.Deserialize(getPeersMessage.Type, getPeersMessage.Payload);
+           
             await connection.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             // Wait for Peers response with timeout
@@ -103,7 +105,7 @@ public sealed class PeerDiscovery : IPeerDiscovery
             cts.CancelAfter(_requestTimeout);
 
             var response = await connection.ReceiveAsync(cts.Token).ConfigureAwait(false);
-            if (response != null && response.Type == MessageType.Peers)
+            if (response != null && response.Type == getPeersMessage.Type)
             {
                 peers = DecodePeerList(response.Payload);
             }
