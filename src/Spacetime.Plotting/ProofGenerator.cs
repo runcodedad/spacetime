@@ -256,14 +256,20 @@ public sealed class ProofGenerator
         if (config.MaxLeavesToScan > 0 && totalToScan > config.MaxLeavesToScan)
         {
             totalToScan = config.MaxLeavesToScan;
-            indicesToScan = indicesToScan.Take((int)config.MaxLeavesToScan);
         }
 
         long scanned = 0;
+        var maxLeavesToScan = config.MaxLeavesToScan;
 
         foreach (var leafIndex in indicesToScan)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // Check if we've reached the max leaves limit
+            if (maxLeavesToScan > 0 && scanned >= maxLeavesToScan)
+            {
+                break;
+            }
 
             // Read leaf from plot
             var leaf = await plotLoader.ReadLeafAsync(leafIndex, cancellationToken);
