@@ -50,9 +50,42 @@ public sealed class ProofGenerator
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        return await GenerateProofAsync(
+            plotLoader,
+            challenge,
+            strategy,
+            ScanningConfiguration.Default,
+            cacheFilePath,
+            progress,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Generates a proof from a plot file for the given challenge with configurable scanning behavior.
+    /// </summary>
+    /// <param name="plotLoader">The loaded plot file</param>
+    /// <param name="challenge">The 32-byte challenge to generate proof for</param>
+    /// <param name="strategy">The scanning strategy to use</param>
+    /// <param name="config">Scanning configuration controlling early termination and scan limits</param>
+    /// <param name="cacheFilePath">Optional path to Merkle tree cache file</param>
+    /// <param name="progress">Optional progress reporter (reports percentage 0-100)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A proof containing the best score found, or null if no valid proof could be generated</returns>
+    /// <exception cref="ArgumentNullException">Thrown when required parameters are null</exception>
+    /// <exception cref="ArgumentException">Thrown when challenge is not 32 bytes</exception>
+    public async Task<Proof?> GenerateProofAsync(
+        PlotLoader plotLoader,
+        byte[] challenge,
+        IScanningStrategy strategy,
+        ScanningConfiguration config,
+        string? cacheFilePath = null,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(plotLoader);
         ArgumentNullException.ThrowIfNull(challenge);
         ArgumentNullException.ThrowIfNull(strategy);
+        ArgumentNullException.ThrowIfNull(config);
 
         if (challenge.Length != 32)
         {
@@ -74,6 +107,7 @@ public sealed class ProofGenerator
             plotLoader,
             challenge,
             strategy,
+            config,
             scanProgress,
             cancellationToken);
 
@@ -121,9 +155,39 @@ public sealed class ProofGenerator
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        return await GenerateProofFromMultiplePlotsAsync(
+            options,
+            challenge,
+            strategy,
+            ScanningConfiguration.Default,
+            progress,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Generates proofs from multiple plots in parallel with configurable scanning and returns the best one.
+    /// </summary>
+    /// <param name="options">Collection of plot loaders with cache file paths</param>
+    /// <param name="challenge">The 32-byte challenge to generate proof for</param>
+    /// <param name="strategy">The scanning strategy to use for each plot</param>
+    /// <param name="config">Scanning configuration controlling early termination and scan limits</param>
+    /// <param name="progress">Optional progress reporter (reports percentage 0-100)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The best proof found across all plots, or null if no valid proof could be generated</returns>
+    /// <exception cref="ArgumentNullException">Thrown when required parameters are null</exception>
+    /// <exception cref="ArgumentException">Thrown when challenge is not 32 bytes or options is empty</exception>
+    public async Task<Proof?> GenerateProofFromMultiplePlotsAsync(
+        IReadOnlyList<ProofGenerationOptions> options,
+        byte[] challenge,
+        IScanningStrategy strategy,
+        ScanningConfiguration config,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(challenge);
         ArgumentNullException.ThrowIfNull(strategy);
+        ArgumentNullException.ThrowIfNull(config);
 
         if (options.Count == 0 || options.Any(o => o.PlotLoader == null))
         {
@@ -144,7 +208,7 @@ public sealed class ProofGenerator
         {
             try
             {
-                var proof = await GenerateProofAsync(options.PlotLoader, challenge, strategy, options.CacheFilePath, null, cancellationToken);
+                var proof = await GenerateProofAsync(options.PlotLoader, challenge, strategy, config, options.CacheFilePath, null, cancellationToken);
                 if (proof != null)
                 {
                     // Update best proof if this one is better
@@ -177,6 +241,7 @@ public sealed class ProofGenerator
         PlotLoader plotLoader,
         byte[] challenge,
         IScanningStrategy strategy,
+        ScanningConfiguration config,
         IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
@@ -186,6 +251,14 @@ public sealed class ProofGenerator
 
         var indicesToScan = strategy.GetIndicesToScan(plotLoader.LeafCount);
         var totalToScan = strategy.GetScanCount(plotLoader.LeafCount);
+        
+        // Apply max leaves limit if configured
+        if (config.MaxLeavesToScan > 0 && totalToScan > config.MaxLeavesToScan)
+        {
+            totalToScan = config.MaxLeavesToScan;
+            indicesToScan = indicesToScan.Take((int)config.MaxLeavesToScan);
+        }
+
         long scanned = 0;
 
         foreach (var leafIndex in indicesToScan)
@@ -205,6 +278,12 @@ public sealed class ProofGenerator
                 // Store leaf directly (already a byte array)
                 bestLeaf = leaf;
                 bestLeafIndex = leafIndex;
+
+                // Check for early termination if a winning proof is found
+                if (config.MeetsQualityThreshold(score))
+                {
+                    break;
+                }
             }
 
             scanned++;
