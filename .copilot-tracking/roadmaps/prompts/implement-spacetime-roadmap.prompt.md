@@ -175,56 +175,56 @@ This roadmap guides implementation of the Spacetime blockchain from its current 
 - Priority queuing:
   - High priority: NEW_CHALLENGE, BLOCK
   - Medium priority: PROOF_SUBMISSION
-  - Low priority: TX
-- Relay validation (don't relay invalid data):
-  - Quick validation before relay (signatures, basic format)
-  - Drop and ban on invalid relay attempts
-- Bandwidth management (throttle if exceeding limits)
+  ---
+  mode: agent
+  model: {{implementation_agent_model}}
+  ---
 
-**Acceptance Criteria:**
-- Messages propagate quickly across network (target: 95% nodes in 5 seconds)
-- No duplicate message sends
-- Bandwidth usage optimized (minimal redundancy)
-- Invalid messages not relayed
-- Rate limiting prevents flooding
-- Unit tests for relay logic
-- Network simulation tests (10+ nodes, measure propagation time)
-- Performance benchmarks (blocks/sec, txs/sec)
+  # Implementation Prompt: spacetime Roadmap (Generated 2025-12-19)
 
-**Stop Point:** Validate message propagation in 10-node simulated network
+  ## Overview
 
----
+  Implement the miner integration phases to bring plot scanning strategies into a working miner event loop, with configuration and CLI support.
 
-### Phase 7 — Emission & Economic Model (6-8 weeks, parallel with Phase 3)
+  ## Phase-by-phase Execution
 
-**Execute in order, parallel with Phase 3**
+  ### Phase 1 — Miner Integration
 
-#### Issue #67: Implement Emission Curve and Block Reward Schedule (2-3 weeks)
+  - Prerequisites:
+    - #20 — Plot scanning strategies implemented and merged
+    - Workspace branch `copilot/implement-plot-scanning-strategies` available for review
+  - Tasks (ordered):
+    - #21 — Implement Miner Event Loop: wire challenge handling to `PlotManager`, run parallel scans across plots, support early termination when winning proof found.
+    - Add unit/integration tests that mock `PlotManager` and assert the event loop behaves correctly across success/failure paths.
+    - Run quick benchmarks comparing scan strategies under representative datasets; record artifacts.
+  - Acceptance criteria:
+    - Miner boots and responds to challenges by invoking scanning strategies
+    - Valid proofs are submitted to network stubs in integration tests
+    - Benchmarks show no major regressions compared to prior runs
 
-**Prerequisites:**
-- None - can start immediately
+  ### Phase 2 — Miner CLI & Hardening
 
-**Implementation Notes:**
-- Define EmissionConfig structure:
-  - initial_reward (in smallest units)
-  - schedule_type (enum: Halving, ExponentialDecay, LinearDecay, Fixed, CustomTable)
-  - schedule_parameters (type-specific config)
-  - emission_cap (optional max supply)
-  - reward_floor (minimum non-zero reward)
-- Implement CalculateBlockReward(height) function:
-  - Use **integer-only arithmetic** (no floating point)
-  - Define explicit rounding rules (truncate/floor)
-  - Support all schedule types
-  - Performance: O(1) or O(log n)
-- Schedule implementations:
-  - **Halving**: reward = initial_reward / (2 ^ (height / halving_interval))
-  - **Exponential decay**: reward = initial_reward * exp(-decay_rate * height)
-  - **Linear decay**: reward = initial_reward - (height * decay_per_block)
-  - **Fixed**: reward = fixed_reward
-  - **Custom table**: lookup by height range
-- Supply tracking integration with #13 (chain state)
-- Versioning support for future changes
+  - Prerequisites:
+    - #21 completed and merged
+  - Tasks (ordered):
+    - #19 — Implement Miner Configuration and CLI (start/stop/status, create-plot, list-plots)
+    - Add documentation and examples for configuring scan strategy and performance settings
+    - Add CI job that runs the miner integration tests on PRs
+  - Acceptance criteria:
+    - CLI commands work and have help text
+    - Miner integration tests pass in CI
+    - Documentation for configuration and scanning strategies published
 
+  ## Review & Stop Points
+
+  - After Phase 1: run product/dev review with logs and benchmark artifacts.
+  - After Phase 2: integration tests and documentation review required.
+
+  ## Success Criteria
+
+  - Miner event loop integrated with plot scanning and passing integration tests
+  - Configurable scan strategies selectable via CLI/config
+  - Benchmarks and docs available for maintainers
 **Acceptance Criteria:**
 - All schedule types implemented and tested
 - Integer-only arithmetic throughout
