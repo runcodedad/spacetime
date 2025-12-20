@@ -13,6 +13,10 @@ public sealed record MinerConfiguration
     /// <summary>
     /// Gets the path to the plot metadata file.
     /// </summary>
+    /// <remarks>
+    /// This is a single JSON file that stores metadata for all plots managed by this miner.
+    /// Each plot file (.plot) does not have its own separate metadata file.
+    /// </remarks>
     public required string PlotMetadataPath { get; init; }
 
     /// <summary>
@@ -65,13 +69,18 @@ public sealed record MinerConfiguration
     /// </summary>
     public static MinerConfiguration Default()
     {
+        // Use cross-platform home directory: ~/.spacetime/
+        var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var spacetimeDir = Path.Combine(homeDir, ".spacetime");
+        var plotsDir = Path.Combine(spacetimeDir, "plots");
+        
         return new MinerConfiguration
         {
-            PlotDirectory = "./plots",
-            PlotMetadataPath = "./plots_metadata.json",
+            PlotDirectory = plotsDir,
+            PlotMetadataPath = Path.Combine(spacetimeDir, "plots_metadata.json"),
             NodeAddress = "127.0.0.1",
             NodePort = 8333,
-            PrivateKeyPath = "./miner_key.dat",
+            PrivateKeyPath = Path.Combine(spacetimeDir, "miner_key.dat"),
             NetworkId = "testnet",
             MaxConcurrentProofs = 1,
             ProofGenerationTimeoutSeconds = 60,

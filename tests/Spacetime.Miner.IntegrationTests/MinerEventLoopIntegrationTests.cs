@@ -1,5 +1,6 @@
 using MerkleTree.Hashing;
 using NSubstitute;
+using Spacetime.Consensus;
 using Spacetime.Core;
 using Spacetime.Network;
 using Spacetime.Plotting;
@@ -21,6 +22,7 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
     private readonly IBlockValidator _blockValidator;
     private readonly IMempool _mempool;
     private readonly IHashFunction _hashFunction;
+    private readonly IChainState _chainState;
 
     public MinerEventLoopIntegrationTests()
     {
@@ -53,6 +55,7 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
         _blockValidator = Substitute.For<IBlockValidator>();
         _mempool = Substitute.For<IMempool>();
         _hashFunction = new Sha256HashFunction();
+        _chainState = Substitute.For<IChainState>();
 
         // Setup default mock behaviors
         _epochManager.CurrentChallenge.Returns(new byte[32]);
@@ -73,7 +76,8 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Assert
         Assert.NotNull(eventLoop);
@@ -105,7 +109,8 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Act
         await eventLoop.StartAsync();
@@ -141,7 +146,8 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Act
         await eventLoop.StartAsync();
@@ -188,7 +194,8 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Act
         await eventLoop.StartAsync();
@@ -222,7 +229,8 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -256,7 +264,8 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Act
         await eventLoop.StartAsync();
@@ -284,7 +293,8 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Assert initial state
         Assert.Equal(0, eventLoop.TotalChallengesReceived);

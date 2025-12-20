@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using MerkleTree.Hashing;
+using Spacetime.Consensus;
 using Spacetime.Core;
 using Spacetime.Network;
 using Spacetime.Plotting;
@@ -30,13 +31,14 @@ public sealed class MinerEventLoop : IAsyncDisposable
     private readonly IBlockValidator _blockValidator;
     private readonly IMempool _mempool;
     private readonly IHashFunction _hashFunction;
+    private readonly IChainState _chainState;
+    private readonly ProofValidator _proofValidator;
     private readonly CancellationTokenSource _shutdownCts;
     private readonly SemaphoreSlim _proofGenerationLock;
     
     private IPeerConnection? _nodeConnection;
     private bool _disposed;
     private Task? _eventLoopTask;
-    private byte[]? _bestProof;
     private byte[]? _bestProofScore;
     private readonly object _bestProofLock = new();
 
@@ -77,6 +79,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
     /// <param name="blockValidator">The block validator.</param>
     /// <param name="mempool">The mempool.</param>
     /// <param name="hashFunction">The hash function.</param>
+    /// <param name="chainState">The chain state for querying blockchain info.</param>
     /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
     public MinerEventLoop(
         MinerConfiguration config,
@@ -87,7 +90,8 @@ public sealed class MinerEventLoop : IAsyncDisposable
         IBlockSigner blockSigner,
         IBlockValidator blockValidator,
         IMempool mempool,
-        IHashFunction hashFunction)
+        IHashFunction hashFunction,
+        IChainState chainState)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(plotManager);
@@ -98,6 +102,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(blockValidator);
         ArgumentNullException.ThrowIfNull(mempool);
         ArgumentNullException.ThrowIfNull(hashFunction);
+        ArgumentNullException.ThrowIfNull(chainState);
 
         _config = config;
         _plotManager = plotManager;
@@ -108,6 +113,8 @@ public sealed class MinerEventLoop : IAsyncDisposable
         _blockValidator = blockValidator;
         _mempool = mempool;
         _hashFunction = hashFunction;
+        _chainState = chainState;
+        _proofValidator = new ProofValidator(hashFunction);
         _shutdownCts = new CancellationTokenSource();
         _proofGenerationLock = new SemaphoreSlim(_config.MaxConcurrentProofs, _config.MaxConcurrentProofs);
     }
@@ -141,7 +148,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
 
         if (_plotManager.ValidPlotCount == 0)
         {
-            throw new InvalidOperationException("No valid plots loaded. Cannot start mining.");
+            Console.WriteLine("⚠️  WARNING: No valid plots loaded. Miner will run but cannot generate proofs until plots are added.");
         }
 
         // Step 3: Connect to full node or validator
@@ -334,30 +341,13 @@ public sealed class MinerEventLoop : IAsyncDisposable
             throw new InvalidOperationException("Not connected to node");
         }
 
-        // In a real implementation, this would subscribe to message events from the connection
-        // For now, we'll poll for messages
-        var message = await ReceiveMessageAsync(cancellationToken);
+        // Receive message from the connection's message queue
+        var message = await _nodeConnection.ReceiveAsync(cancellationToken);
         
         if (message is BlockAcceptedMessage blockAccepted)
         {
             await HandleBlockAcceptedAsync(blockAccepted, cancellationToken);
         }
-    }
-
-    /// <summary>
-    /// Receives a network message from the node connection.
-    /// </summary>
-    private async Task<NetworkMessage?> ReceiveMessageAsync(CancellationToken cancellationToken)
-    {
-        if (_nodeConnection == null)
-        {
-            return null;
-        }
-
-        // This is a simplified implementation - in a real system, this would
-        // be handled by the connection's message queue or event system
-        await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
-        return null;
     }
 
     /// <summary>
@@ -380,10 +370,9 @@ public sealed class MinerEventLoop : IAsyncDisposable
 
         Console.WriteLine($"Challenge: {Convert.ToHexString(challenge)[..16]}...");
 
-        // Reset best proof for this epoch
+        // Reset best proof score for this epoch
         lock (_bestProofLock)
         {
-            _bestProof = null;
             _bestProofScore = null;
         }
 
@@ -423,6 +412,16 @@ public sealed class MinerEventLoop : IAsyncDisposable
         long epochNumber,
         CancellationToken cancellationToken)
     {
+        // Check if we have any plots to scan
+        if (_plotManager.ValidPlotCount == 0)
+        {
+            if (_config.EnablePerformanceMonitoring)
+            {
+                Console.WriteLine("⚠️  No plots available to scan");
+            }
+            return;
+        }
+
         var stopwatch = Stopwatch.StartNew();
         
         // Use sampling strategy for faster proof generation (sample 10,000 leaves)
@@ -462,8 +461,6 @@ public sealed class MinerEventLoop : IAsyncDisposable
                 if (_bestProofScore == null || CompareScores(proof.Score, _bestProofScore) < 0)
                 {
                     _bestProofScore = proof.Score;
-                    // Serialize proof for submission
-                    _bestProof = SerializeProof(proof);
                 }
             }
 
@@ -494,7 +491,40 @@ public sealed class MinerEventLoop : IAsyncDisposable
     {
         try
         {
-            var proofData = SerializeProof(proof);
+            // Convert Proof to BlockProof for submission
+            var plotMetadata = FindPlotForProof(proof);
+            if (plotMetadata == null)
+            {
+                Console.WriteLine("  ⚠️  Cannot submit proof: plot metadata not found");
+                return;
+            }
+
+            var plotLoader = _plotManager.LoadedPlots.FirstOrDefault(p => p.MerkleRoot.SequenceEqual(proof.MerkleRoot));
+            if (plotLoader == null)
+            {
+                Console.WriteLine("  ⚠️  Cannot submit proof: plot loader not found");
+                return;
+            }
+
+            var blockPlotMetadata = BlockPlotMetadata.Create(
+                leafCount: plotLoader.LeafCount,
+                plotId: plotLoader.PlotSeed.ToArray(),
+                plotHeaderHash: ComputePlotHeaderHash(plotLoader.Header),
+                version: PlotHeader.FormatVersion);
+
+            var blockProof = new BlockProof(
+                proof.LeafValue,
+                proof.LeafIndex,
+                proof.SiblingHashes,
+                proof.OrientationBits,
+                blockPlotMetadata);
+
+            // Serialize BlockProof
+            using var ms = new MemoryStream();
+            using var writer = new BinaryWriter(ms);
+            blockProof.Serialize(writer);
+            var proofData = ms.ToArray();
+
             var minerId = _blockSigner.GetPublicKey();
 
             var message = new ProofSubmissionMessage(
@@ -522,11 +552,44 @@ public sealed class MinerEventLoop : IAsyncDisposable
     /// </summary>
     private async Task<bool> CheckIfWinningProofAsync(Proof proof, CancellationToken cancellationToken)
     {
-        // In a real implementation, this would query the node for the current difficulty
-        // and check if our score meets it
-        // For now, we'll use a simplified check
-        await Task.CompletedTask;
-        return false;
+        // Get the current difficulty target from chain state
+        var difficultyTarget = await GetDifficultyTargetAsync(cancellationToken);
+        
+        // Check if the proof score is below the difficulty target
+        return ProofValidator.IsScoreBelowTarget(proof.Score, difficultyTarget);
+    }
+
+    /// <summary>
+    /// Gets the difficulty target from the chain state.
+    /// </summary>
+    /// <remarks>
+    /// The difficulty target is a 32-byte value. Proofs with scores less than this target are winners.
+    /// This method converts the difficulty integer from chain state to a 32-byte target if needed.
+    /// </remarks>
+    private async Task<byte[]> GetDifficultyTargetAsync(CancellationToken cancellationToken)
+    {
+        var difficulty = await _chainState.GetExpectedDifficultyAsync(cancellationToken);
+        
+        // TODO: Convert difficulty integer to 32-byte target
+        // For now, use a simple conversion (this should be replaced with proper difficulty adjustment logic)
+        // Higher difficulty integer = lower target = harder to win
+        var target = new byte[32];
+        for (int i = 0; i < 32; i++)
+        {
+            target[i] = 0xFF;
+        }
+        
+        // Reduce target based on difficulty (simplified - proper implementation needed)
+        if (difficulty > 0)
+        {
+            var shift = Math.Min((int)(difficulty / 1000), 31);
+            for (int i = 0; i < shift; i++)
+            {
+                target[i] = 0x00;
+            }
+        }
+        
+        return target;
     }
 
     /// <summary>
@@ -541,30 +604,51 @@ public sealed class MinerEventLoop : IAsyncDisposable
         {
             Console.WriteLine("\n🎉 WINNING PROOF! Building block...");
 
-            var blockBuilder = new BlockBuilder(_mempool, _blockSigner, _blockValidator);
+            // Get current chain state
+            var parentHash = await _chainState.GetChainTipHashAsync(cancellationToken);
+            if (parentHash == null)
+            {
+                Console.WriteLine("✗ Error: Cannot build block - chain tip not available");
+                return;
+            }
+
+            var height = await _chainState.GetChainTipHeightAsync(cancellationToken) + 1;
+            var difficulty = await _chainState.GetExpectedDifficultyAsync(cancellationToken);
+            var challenge = await _chainState.GetExpectedChallengeAsync(cancellationToken);
             
-            // Get current chain state (in real impl, query from node)
-            var parentHash = new byte[32]; // Placeholder
-            var height = epochNumber;
-            var difficulty = 1000L; // Placeholder
-            var challenge = _epochManager.CurrentChallenge;
-            var plotRoot = proof.MerkleRoot;
-            var proofScore = proof.Score;
+            // Find the plot that generated this proof by matching merkle roots
+            var plotMetadata = FindPlotForProof(proof);
+            if (plotMetadata == null)
+            {
+                Console.WriteLine("✗ Error: Cannot find plot metadata for proof");
+                return;
+            }
 
-            // Create plot metadata for the proof
-            var plotMetadata = BlockPlotMetadata.Create(
-                leafCount: 0, // Placeholder - would need actual plot info
-                plotId: new byte[32], // Placeholder
-                plotHeaderHash: new byte[32], // Placeholder
-                version: 1);
+            // Get the plot header to extract plot ID and other metadata
+            var plotLoader = _plotManager.LoadedPlots.FirstOrDefault(p => p.MerkleRoot.SequenceEqual(proof.MerkleRoot));
+            if (plotLoader == null)
+            {
+                Console.WriteLine("✗ Error: Cannot find plot loader for proof");
+                return;
+            }
 
+            // Create BlockPlotMetadata from the plot header
+            var blockPlotMetadata = BlockPlotMetadata.Create(
+                leafCount: plotLoader.LeafCount,
+                plotId: plotLoader.PlotSeed.ToArray(), // Use plot seed as plot ID
+                plotHeaderHash: ComputePlotHeaderHash(plotLoader.Header),
+                version: PlotHeader.FormatVersion);
+
+            // Create BlockProof from the Proof
             var blockProof = new BlockProof(
                 proof.LeafValue,
                 proof.LeafIndex,
                 proof.SiblingHashes,
                 proof.OrientationBits,
-                plotMetadata);
+                blockPlotMetadata);
 
+            // Build the block
+            var blockBuilder = new BlockBuilder(_mempool, _blockSigner, _blockValidator);
             var block = await blockBuilder.BuildBlockAsync(
                 parentHash,
                 height,
@@ -572,8 +656,8 @@ public sealed class MinerEventLoop : IAsyncDisposable
                 epochNumber,
                 challenge,
                 blockProof,
-                plotRoot,
-                proofScore,
+                proof.MerkleRoot,
+                proof.Score,
                 maxTransactions: 1000,
                 cancellationToken);
 
@@ -594,48 +678,21 @@ public sealed class MinerEventLoop : IAsyncDisposable
     }
 
     /// <summary>
-    /// Serializes a proof to bytes for network transmission.
+    /// Finds the plot metadata for a given proof by matching Merkle roots.
     /// </summary>
-    private static byte[] SerializeProof(Proof proof)
+    private PlotMetadata? FindPlotForProof(Proof proof)
     {
-        using var ms = new MemoryStream();
-        using var writer = new BinaryWriter(ms);
+        return _plotManager.PlotMetadataCollection
+            .FirstOrDefault(m => m.MerkleRoot.SequenceEqual(proof.MerkleRoot));
+    }
 
-        // Write leaf value
-        writer.Write(proof.LeafValue.Length);
-        writer.Write(proof.LeafValue);
-
-        // Write leaf index
-        writer.Write(proof.LeafIndex);
-
-        // Write sibling hashes count and data
-        writer.Write(proof.SiblingHashes.Count);
-        foreach (var hash in proof.SiblingHashes)
-        {
-            writer.Write(hash.Length);
-            writer.Write(hash);
-        }
-
-        // Write orientation bits
-        writer.Write(proof.OrientationBits.Count);
-        foreach (var bit in proof.OrientationBits)
-        {
-            writer.Write(bit);
-        }
-
-        // Write merkle root
-        writer.Write(proof.MerkleRoot.Length);
-        writer.Write(proof.MerkleRoot);
-
-        // Write challenge
-        writer.Write(proof.Challenge.Length);
-        writer.Write(proof.Challenge);
-
-        // Write score
-        writer.Write(proof.Score.Length);
-        writer.Write(proof.Score);
-
-        return ms.ToArray();
+    /// <summary>
+    /// Computes the hash of a plot header.
+    /// </summary>
+    private byte[] ComputePlotHeaderHash(PlotHeader header)
+    {
+        var serialized = header.Serialize();
+        return _hashFunction.ComputeHash(serialized);
     }
 
     /// <summary>

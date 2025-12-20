@@ -1,5 +1,6 @@
 using MerkleTree.Hashing;
 using NSubstitute;
+using Spacetime.Consensus;
 using Spacetime.Core;
 using Spacetime.Network;
 using Spacetime.Plotting;
@@ -17,6 +18,7 @@ public class MinerEventLoopTests
     private readonly IBlockValidator _blockValidator;
     private readonly IMempool _mempool;
     private readonly IHashFunction _hashFunction;
+    private readonly IChainState _chainState;
 
     public MinerEventLoopTests()
     {
@@ -29,6 +31,7 @@ public class MinerEventLoopTests
         _blockValidator = Substitute.For<IBlockValidator>();
         _mempool = Substitute.For<IMempool>();
         _hashFunction = Substitute.For<IHashFunction>();
+        _chainState = Substitute.For<IChainState>();
     }
 
     [Fact]
@@ -45,7 +48,8 @@ public class MinerEventLoopTests
                 _blockSigner,
                 _blockValidator,
                 _mempool,
-                _hashFunction));
+                _hashFunction,
+                _chainState));
     }
 
     [Fact]
@@ -62,7 +66,8 @@ public class MinerEventLoopTests
                 _blockSigner,
                 _blockValidator,
                 _mempool,
-                _hashFunction));
+                _hashFunction,
+                _chainState));
     }
 
     [Fact]
@@ -79,7 +84,8 @@ public class MinerEventLoopTests
                 _blockSigner,
                 _blockValidator,
                 _mempool,
-                _hashFunction));
+                _hashFunction,
+                _chainState));
     }
 
     [Fact]
@@ -96,7 +102,8 @@ public class MinerEventLoopTests
                 _blockSigner,
                 _blockValidator,
                 _mempool,
-                _hashFunction));
+                _hashFunction,
+                _chainState));
     }
 
     [Fact]
@@ -113,7 +120,8 @@ public class MinerEventLoopTests
                 _blockSigner,
                 _blockValidator,
                 _mempool,
-                _hashFunction));
+                _hashFunction,
+                _chainState));
     }
 
     [Fact]
@@ -130,7 +138,8 @@ public class MinerEventLoopTests
                 null!,
                 _blockValidator,
                 _mempool,
-                _hashFunction));
+                _hashFunction,
+                _chainState));
     }
 
     [Fact]
@@ -147,7 +156,8 @@ public class MinerEventLoopTests
                 _blockSigner,
                 null!,
                 _mempool,
-                _hashFunction));
+                _hashFunction,
+                _chainState));
     }
 
     [Fact]
@@ -164,7 +174,8 @@ public class MinerEventLoopTests
                 _blockSigner,
                 _blockValidator,
                 null!,
-                _hashFunction));
+                _hashFunction,
+                _chainState));
     }
 
     [Fact]
@@ -181,6 +192,25 @@ public class MinerEventLoopTests
                 _blockSigner,
                 _blockValidator,
                 _mempool,
+                null!,
+                _chainState));
+    }
+
+    [Fact]
+    public void Constructor_WithNullChainState_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new MinerEventLoop(
+                _config,
+                _plotManager,
+                _epochManager,
+                _connectionManager,
+                _messageRelay,
+                _blockSigner,
+                _blockValidator,
+                _mempool,
+                _hashFunction,
                 null!));
     }
 
@@ -197,7 +227,8 @@ public class MinerEventLoopTests
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Assert
         Assert.NotNull(eventLoop);
@@ -209,11 +240,15 @@ public class MinerEventLoopTests
     }
 
     [Fact]
-    public async Task StartAsync_WithNoPlots_ThrowsInvalidOperationException()
+    public async Task StartAsync_WithNoPlots_StartsSuccessfullyWithWarning()
     {
         // Arrange
         _plotManager.ValidPlotCount.Returns(0);
         _plotManager.LoadMetadataAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        var mockConnection = Substitute.For<IPeerConnection>();
+        mockConnection.IsConnected.Returns(true);
+        _connectionManager.ConnectAsync(Arg.Any<System.Net.IPEndPoint>(), Arg.Any<CancellationToken>())
+            .Returns(mockConnection);
 
         var eventLoop = new MinerEventLoop(
             _config,
@@ -224,12 +259,17 @@ public class MinerEventLoopTests
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await eventLoop.StartAsync());
+        // Act
+        await eventLoop.StartAsync();
 
+        // Assert - should start successfully even with no plots
+        Assert.True(eventLoop.IsRunning);
+
+        // Cleanup
+        await eventLoop.StopAsync();
         await eventLoop.DisposeAsync();
     }
 
@@ -252,7 +292,8 @@ public class MinerEventLoopTests
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         await eventLoop.StartAsync();
 
@@ -277,7 +318,8 @@ public class MinerEventLoopTests
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Act & Assert - should not throw
         await eventLoop.StopAsync();
@@ -297,7 +339,8 @@ public class MinerEventLoopTests
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Act
         await eventLoop.DisposeAsync();
@@ -320,7 +363,8 @@ public class MinerEventLoopTests
             _blockSigner,
             _blockValidator,
             _mempool,
-            _hashFunction);
+            _hashFunction,
+            _chainState);
 
         // Act & Assert - should not throw on multiple dispose
         await eventLoop.DisposeAsync();
