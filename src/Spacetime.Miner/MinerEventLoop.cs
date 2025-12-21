@@ -138,7 +138,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
     {
         try
         {
-            Console.WriteLine($"Plot added: {Path.GetFileName(e.Metadata.FilePath)} ({FormatBytes(e.Metadata.SpaceAllocatedBytes)})");
+            Console.WriteLine($"Plot added: {Path.GetFileName(e.Metadata.FilePath)} ({Spacetime.Common.ByteFormatting.FormatBytes(e.Metadata.SpaceAllocatedBytes)})");
         }
         catch
         {
@@ -183,7 +183,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
         // Step 2: Load plots
         Console.WriteLine("\nLoading plots...");
         await LoadPlotsAsync(cancellationToken);
-        Console.WriteLine($"Loaded {_plotManager.ValidPlotCount} valid plots ({FormatBytes(_plotManager.TotalSpaceAllocatedBytes)})");
+        Console.WriteLine($"Loaded {_plotManager.ValidPlotCount} valid plots ({Spacetime.Common.ByteFormatting.FormatBytes(_plotManager.TotalSpaceAllocatedBytes)})");
 
         if (_plotManager.ValidPlotCount == 0)
         {
@@ -262,7 +262,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
                 var metadata = await _plotManager.AddPlotAsync(plotFile, null, cancellationToken);
                 if (metadata?.Status == PlotStatus.Valid)
                 {
-                    Console.WriteLine($"  ✓ Loaded: {Path.GetFileName(plotFile)} ({FormatBytes(metadata.SpaceAllocatedBytes)})");
+                    Console.WriteLine($"  ✓ Loaded: {Path.GetFileName(plotFile)} ({Spacetime.Common.ByteFormatting.FormatBytes(metadata.SpaceAllocatedBytes)})");
                 }
                 else
                 {
@@ -615,27 +615,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
     private async Task<byte[]> GetDifficultyTargetAsync(CancellationToken cancellationToken)
     {
         var difficulty = await _chainState.GetExpectedDifficultyAsync(cancellationToken);
-        
-        // TODO: Convert difficulty integer to 32-byte target
-        // For now, use a simple conversion (this should be replaced with proper difficulty adjustment logic)
-        // Higher difficulty integer = lower target = harder to win
-        var target = new byte[32];
-        for (int i = 0; i < 32; i++)
-        {
-            target[i] = 0xFF;
-        }
-        
-        // Reduce target based on difficulty (simplified - proper implementation needed)
-        if (difficulty > 0)
-        {
-            var shift = Math.Min((int)(difficulty / 1000), 31);
-            for (int i = 0; i < shift; i++)
-            {
-                target[i] = 0x00;
-            }
-        }
-        
-        return target;
+        return DifficultyAdjuster.DifficultyToTarget(difficulty);
     }
 
     /// <summary>
@@ -739,24 +719,6 @@ public sealed class MinerEventLoop : IAsyncDisposable
     {
         var serialized = header.Serialize();
         return _hashFunction.ComputeHash(serialized);
-    }
-    
-    /// <summary>
-    /// Formats bytes to a human-readable string.
-    /// </summary>
-    private static string FormatBytes(long bytes)
-    {
-        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
-        var order = 0;
-        var size = (double)bytes;
-        
-        while (size >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-
-        return $"{size:F2} {sizes[order]}";
     }
 
     /// <summary>
