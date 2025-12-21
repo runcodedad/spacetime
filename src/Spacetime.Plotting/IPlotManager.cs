@@ -97,4 +97,14 @@ public interface IPlotManager : IAsyncDisposable
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task LoadMetadataAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Raised when a new plot metadata entry is added to the manager.
+    /// </summary>
+    event EventHandler<PlotChangedEventArgs>? PlotAdded;
+
+    /// <summary>
+    /// Raised when a plot metadata entry is removed from the manager.
+    /// </summary>
+    event EventHandler<PlotChangedEventArgs>? PlotRemoved;
 }

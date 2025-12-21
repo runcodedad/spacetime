@@ -117,6 +117,33 @@ public sealed class MinerEventLoop : IAsyncDisposable
         _proofValidator = new ProofValidator(hashFunction);
         _shutdownCts = new CancellationTokenSource();
         _proofGenerationLock = new SemaphoreSlim(_config.MaxConcurrentProofs, _config.MaxConcurrentProofs);
+        // Subscribe to plot manager events so the miner can react to runtime changes
+        _plotManager.PlotAdded += PlotManager_PlotAdded;
+        _plotManager.PlotRemoved += PlotManager_PlotRemoved;
+    }
+
+    private void PlotManager_PlotAdded(object? sender, Spacetime.Plotting.PlotChangedEventArgs e)
+    {
+        try
+        {
+            Console.WriteLine($"Plot added: {Path.GetFileName(e.Metadata.FilePath)} ({FormatBytes(e.Metadata.SpaceAllocatedBytes)})");
+        }
+        catch
+        {
+            // Ignore logging failures
+        }
+    }
+
+    private void PlotManager_PlotRemoved(object? sender, Spacetime.Plotting.PlotChangedEventArgs e)
+    {
+        try
+        {
+            Console.WriteLine($"Plot removed: {Path.GetFileName(e.Metadata.FilePath)}");
+        }
+        catch
+        {
+            // Ignore logging failures
+        }
     }
 
     /// <summary>
@@ -740,6 +767,17 @@ public sealed class MinerEventLoop : IAsyncDisposable
         }
 
         _disposed = true;
+
+        // Unsubscribe from plot manager events
+        try
+        {
+            _plotManager.PlotAdded -= PlotManager_PlotAdded;
+            _plotManager.PlotRemoved -= PlotManager_PlotRemoved;
+        }
+        catch
+        {
+            // ignore
+        }
 
         await StopAsync();
         
