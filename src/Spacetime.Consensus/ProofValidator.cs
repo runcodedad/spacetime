@@ -1,6 +1,7 @@
 using MerkleTree.Hashing;
 using MerkleTree.Proofs;
 using Spacetime.Plotting;
+using Spacetime.Common;
 
 namespace Spacetime.Consensus;
 
@@ -123,7 +124,7 @@ public sealed class ProofValidator
             throw new ArgumentException("Difficulty target must be 32 bytes", nameof(difficultyTarget));
         }
 
-        return CompareScores(score, difficultyTarget) < 0;
+        return ScoreComparer.IsBelowTarget(score, difficultyTarget);
     }
 
     /// <summary>
@@ -272,16 +273,5 @@ public sealed class ProofValidator
     /// <remarks>
     /// Scores are compared as big-endian unsigned integers (byte-by-byte from left to right).
     /// </remarks>
-    private static int CompareScores(ReadOnlySpan<byte> score1, ReadOnlySpan<byte> score2)
-    {
-        for (var i = 0; i < score1.Length && i < score2.Length; i++)
-        {
-            var diff = score1[i] - score2[i];
-            if (diff != 0)
-            {
-                return diff;
-            }
-        }
-        return 0;
-    }
+    // Score comparison provided by Spacetime.Common.ScoreComparer
 }

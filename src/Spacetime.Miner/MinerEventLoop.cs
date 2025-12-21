@@ -4,6 +4,7 @@ using Spacetime.Consensus;
 using Spacetime.Core;
 using Spacetime.Network;
 using Spacetime.Plotting;
+using Spacetime.Common;
 
 namespace Spacetime.Miner;
 
@@ -33,6 +34,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
     private readonly IHashFunction _hashFunction;
     private readonly IChainState _chainState;
     private readonly ProofValidator _proofValidator;
+    private readonly IScanningStrategy _scanningStrategy;
     private readonly CancellationTokenSource _shutdownCts;
     private readonly SemaphoreSlim _proofGenerationLock;
     
@@ -91,7 +93,8 @@ public sealed class MinerEventLoop : IAsyncDisposable
         IBlockValidator blockValidator,
         IMempool mempool,
         IHashFunction hashFunction,
-        IChainState chainState)
+        IChainState chainState,
+        IScanningStrategy? scanningStrategy = null)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(plotManager);
@@ -115,6 +118,15 @@ public sealed class MinerEventLoop : IAsyncDisposable
         _hashFunction = hashFunction;
         _chainState = chainState;
         _proofValidator = new ProofValidator(hashFunction);
+        // If no scanning strategy is provided, default to a reasonable sampling strategy.
+        if (scanningStrategy == null)
+        {
+            _scanningStrategy = new SamplingScanStrategy(10000);
+        }
+        else
+        {
+            _scanningStrategy = scanningStrategy;
+        }
         _shutdownCts = new CancellationTokenSource();
         _proofGenerationLock = new SemaphoreSlim(_config.MaxConcurrentProofs, _config.MaxConcurrentProofs);
         // Subscribe to plot manager events so the miner can react to runtime changes
@@ -451,9 +463,6 @@ public sealed class MinerEventLoop : IAsyncDisposable
 
         var stopwatch = Stopwatch.StartNew();
         
-        // Use sampling strategy for faster proof generation (sample 10,000 leaves)
-        var strategy = new SamplingScanStrategy(10000);
-        
         var progress = _config.EnablePerformanceMonitoring 
             ? new Progress<double>(p => 
                 {
@@ -466,7 +475,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
 
         var proof = await _plotManager.GenerateProofAsync(
             challenge,
-            strategy,
+            _scanningStrategy,
             progress,
             cancellationToken);
 
@@ -485,7 +494,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
             // Track best proof
             lock (_bestProofLock)
             {
-                if (_bestProofScore == null || CompareScores(proof.Score, _bestProofScore) < 0)
+                if (_bestProofScore == null || ScoreComparer.Compare(proof.Score, _bestProofScore) < 0)
                 {
                     _bestProofScore = proof.Score;
                 }
@@ -723,20 +732,8 @@ public sealed class MinerEventLoop : IAsyncDisposable
     }
 
     /// <summary>
-    /// Compares two proof scores (lower is better).
+    /// Score comparison is provided by <see cref="ScoreComparer"/>.
     /// </summary>
-    private static int CompareScores(ReadOnlySpan<byte> score1, ReadOnlySpan<byte> score2)
-    {
-        for (var i = 0; i < score1.Length && i < score2.Length; i++)
-        {
-            var diff = score1[i] - score2[i];
-            if (diff != 0)
-            {
-                return diff;
-            }
-        }
-        return 0;
-    }
 
     /// <summary>
     /// Formats bytes to a human-readable string.

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using MerkleTree.Hashing;
+using Spacetime.Common;
 
 namespace Spacetime.Plotting.Tests;
 
@@ -139,7 +140,7 @@ public class ProofGeneratorIntegrationTests
 
             // Full scan should find a score that is less than or equal to sampling
             // (lower score is better)
-            var comparison = CompareScores(fullScanProof!.Score, samplingProof!.Score);
+            var comparison = ScoreComparer.Compare(fullScanProof!.Score, samplingProof!.Score);
             Assert.True(comparison <= 0, "Full scan should find equal or better score than sampling");
         }
         finally
@@ -272,9 +273,9 @@ public class ProofGeneratorIntegrationTests
 
                 // Best proof should have lowest score
                 Assert.True(
-                    CompareScores(bestProof!.Score, proof1!.Score) <= 0 &&
-                    CompareScores(bestProof.Score, proof2!.Score) <= 0 &&
-                    CompareScores(bestProof.Score, proof3!.Score) <= 0,
+                    ScoreComparer.Compare(bestProof!.Score, proof1!.Score) <= 0 &&
+                    ScoreComparer.Compare(bestProof.Score, proof2!.Score) <= 0 &&
+                    ScoreComparer.Compare(bestProof.Score, proof3!.Score) <= 0,
                     "Parallel generation should select the proof with the best (lowest) score");
             }
             finally
@@ -295,16 +296,5 @@ public class ProofGeneratorIntegrationTests
     /// <summary>
     /// Helper method to compare two scores (lower is better).
     /// </summary>
-    private static int CompareScores(byte[] score1, byte[] score2)
-    {
-        for (var i = 0; i < score1.Length; i++)
-        {
-            var diff = score1[i] - score2[i];
-            if (diff != 0)
-            {
-                return diff;
-            }
-        }
-        return 0;
-    }
+    // Score comparison provided by Spacetime.Common.ScoreComparer
 }

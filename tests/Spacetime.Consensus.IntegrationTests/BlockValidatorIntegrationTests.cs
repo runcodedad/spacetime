@@ -1,6 +1,7 @@
 using NSubstitute;
 using System.Security.Cryptography;
 using MerkleTree.Hashing;
+using Spacetime.Common;
 using Spacetime.Core;
 using Spacetime.Plotting;
 
@@ -412,7 +413,7 @@ public class BlockValidatorIntegrationTests
                 break;
             }
         }
-        while (CompareScores(score, difficultyTarget) >= 0);
+        while (ScoreComparer.Compare(score, difficultyTarget) >= 0);
 
         var merkleRoot = RandomNumberGenerator.GetBytes(32);
         var siblingHashes = new List<byte[]>
@@ -447,18 +448,7 @@ public class BlockValidatorIntegrationTests
         return (blockProof, plotProof);
     }
 
-    private static int CompareScores(ReadOnlySpan<byte> score1, ReadOnlySpan<byte> score2)
-    {
-        for (var i = 0; i < score1.Length && i < score2.Length; i++)
-        {
-            var diff = score1[i] - score2[i];
-            if (diff != 0)
-            {
-                return diff;
-            }
-        }
-        return 0;
-    }
+    // Score comparison provided by Spacetime.Common.ScoreComparer
 
     private static (BlockProof, Proof) CreateProofWithBadScore(byte[] challenge, long difficulty)
     {
