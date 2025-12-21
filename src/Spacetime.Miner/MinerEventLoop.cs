@@ -491,21 +491,31 @@ public sealed class MinerEventLoop : IAsyncDisposable
                 Console.WriteLine($"  Score: {Convert.ToHexString(proof.Score)[..16]}...");
             }
 
-            // Track best proof
+            // Decide atomically whether this proof is the new best for the epoch.
+            var shouldSubmit = false;
             lock (_bestProofLock)
             {
                 if (_bestProofScore == null || ScoreComparer.Compare(proof.Score, _bestProofScore) < 0)
                 {
                     _bestProofScore = proof.Score;
+                    shouldSubmit = true;
                 }
+            }
+
+            if (!shouldSubmit)
+            {
+                if (_config.EnablePerformanceMonitoring)
+                {
+                    Console.WriteLine("  Skipping submission: a better proof already exists for this epoch");
+                }
+                return;
             }
 
             // Submit proof to network
             await SubmitProofAsync(proof, epochNumber, cancellationToken);
-
-            // Check if this proof wins the block
-            // In a real implementation, the node would inform us if we won
-            // For now, we'll check if the score meets the difficulty threshold
+            // Check if this proof meets the difficulty threshold (i.e., is a winning proof)
+            // In Spacetime, miners check locally if their proof is valid for block production.
+            // There is no explicit winner announcement; the first valid block broadcast wins.
             if (await CheckIfWinningProofAsync(proof, cancellationToken))
             {
                 await BuildAndBroadcastBlockAsync(proof, epochNumber, cancellationToken);
@@ -730,11 +740,7 @@ public sealed class MinerEventLoop : IAsyncDisposable
         var serialized = header.Serialize();
         return _hashFunction.ComputeHash(serialized);
     }
-
-    /// <summary>
-    /// Score comparison is provided by <see cref="ScoreComparer"/>.
-    /// </summary>
-
+    
     /// <summary>
     /// Formats bytes to a human-readable string.
     /// </summary>
