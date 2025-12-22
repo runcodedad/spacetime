@@ -50,6 +50,36 @@ public sealed partial class PlotManager : IPlotManager
     private bool _disposed;
 
     /// <inheritdoc />
+    public event EventHandler<PlotChangedEventArgs>? PlotAdded;
+
+    /// <inheritdoc />
+    public event EventHandler<PlotChangedEventArgs>? PlotRemoved;
+
+    private void OnPlotAdded(PlotMetadata metadata)
+    {
+        try
+        {
+            PlotAdded?.Invoke(this, new PlotChangedEventArgs(metadata));
+        }
+        catch
+        {
+            // Swallow exceptions from event handlers to avoid impacting internal state.
+        }
+    }
+
+    private void OnPlotRemoved(PlotMetadata metadata)
+    {
+        try
+        {
+            PlotRemoved?.Invoke(this, new PlotChangedEventArgs(metadata));
+        }
+        catch
+        {
+            // Swallow exceptions from event handlers to avoid impacting internal state.
+        }
+    }
+
+    /// <inheritdoc />
     public IReadOnlyList<PlotLoader> LoadedPlots
     {
         get
@@ -143,6 +173,7 @@ public sealed partial class PlotManager : IPlotManager
             if (metadata != null)
             {
                 await SaveMetadataAsync(cancellationToken);
+                OnPlotAdded(metadata);
             }
             return metadata;
         }
@@ -162,7 +193,7 @@ public sealed partial class PlotManager : IPlotManager
         await _loadLock.WaitAsync(cancellationToken);
         try
         {
-            if (!_plotMetadata.TryRemove(plotId, out _))
+            if (!_plotMetadata.TryRemove(plotId, out var removedMetadata))
             {
                 return false;
             }
@@ -173,6 +204,13 @@ public sealed partial class PlotManager : IPlotManager
             }
 
             await SaveMetadataAsync(cancellationToken);
+
+            // Raise removed event
+            if (removedMetadata != null)
+            {
+                OnPlotRemoved(removedMetadata);
+            }
+
             return true;
         }
         finally

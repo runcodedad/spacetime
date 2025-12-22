@@ -3,6 +3,7 @@ using MerkleTree.Cache;
 using MerkleTree.Core;
 using MerkleTree.Hashing;
 using MerkleTree.Proofs;
+using Spacetime.Common;
 
 namespace Spacetime.Plotting;
 
@@ -214,7 +215,7 @@ public sealed class ProofGenerator
                     // Update best proof if this one is better
                     lock (bestProofLock)
                     {
-                        if (bestProof == null || CompareScores(proof.Score, bestProof.Score) < 0)
+                        if (bestProof == null || ScoreComparer.Compare(proof.Score, bestProof.Score) < 0)
                         {
                             bestProof = proof;
                         }
@@ -278,7 +279,7 @@ public sealed class ProofGenerator
             var score = ComputeScore(challenge, leaf);
 
             // Track best score (lowest value wins)
-            if (bestScore == null || CompareScores(score, bestScore) < 0)
+            if (bestScore == null || ScoreComparer.Compare(score, bestScore) < 0)
             {
                 bestScore = score;
                 // Store leaf directly (already a byte array)
@@ -359,29 +360,7 @@ public sealed class ProofGenerator
         return _hashFunction.ComputeHash(input);
     }
 
-    /// <summary>
-    /// Compares two scores. Returns negative if score1 is better (lower).
-    /// </summary>
-    private static int CompareScores(ReadOnlySpan<byte> score1, ReadOnlySpan<byte> score2)
-    {
-        for (var i = 0; i < score1.Length && i < score2.Length; i++)
-        {
-            var diff = score1[i] - score2[i];
-            if (diff != 0)
-            {
-                return diff;
-            }
-        }
-        return 0;
-    }
-
-    /// <summary>
-    /// Compares two scores (byte array version for compatibility).
-    /// </summary>
-    private static int CompareScores(byte[] score1, byte[] score2)
-    {
-        return CompareScores(score1.AsSpan(), score2.AsSpan());
-    }
+    // Score comparison provided by Spacetime.Common.ScoreComparer
 
     /// <summary>
     /// Internal result of scanning a plot.
