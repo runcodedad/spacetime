@@ -33,7 +33,6 @@ public sealed class MinerEventLoop : IAsyncDisposable
     private readonly IMempool _mempool;
     private readonly IHashFunction _hashFunction;
     private readonly IChainState _chainState;
-    private readonly ProofValidator _proofValidator;
     private readonly IScanningStrategy _scanningStrategy;
     private readonly CancellationTokenSource _shutdownCts;
     private readonly SemaphoreSlim _proofGenerationLock;
@@ -117,7 +116,6 @@ public sealed class MinerEventLoop : IAsyncDisposable
         _mempool = mempool;
         _hashFunction = hashFunction;
         _chainState = chainState;
-        _proofValidator = new ProofValidator(hashFunction);
         // If no scanning strategy is provided, default to a reasonable sampling strategy.
         if (scanningStrategy == null)
         {
