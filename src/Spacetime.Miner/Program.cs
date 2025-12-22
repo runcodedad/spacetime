@@ -1,9 +1,14 @@
-﻿using Spacetime.Miner;
+﻿using System.CommandLine;
+using Spacetime.Miner.Commands;
 
-Console.WriteLine("Spacetime Miner");
-Console.WriteLine("===============\n");
+var rootCommand = new RootCommand("Spacetime Miner - Proof-of-Space-Time blockchain miner")
+{
+    new CreatePlotCommand(),
+    new ListPlotsCommand(),
+    new DeletePlotCommand(),
+    new StartCommand(),
+    new StopCommand(),
+    new StatusCommand()
+};
 
-// For now, just demonstrate the structure
-Console.WriteLine("Miner node implementation in progress...");
-Console.WriteLine("\nUsage:");
-Console.WriteLine("  spacetime-miner --plot-dir <path> --node-addr <address>:<port> --network <id>");
+return await rootCommand.InvokeAsync(args);
