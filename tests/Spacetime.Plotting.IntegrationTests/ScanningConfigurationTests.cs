@@ -1,14 +1,14 @@
 using System.Security.Cryptography;
 using MerkleTree.Hashing;
 
-namespace Spacetime.Plotting.Tests;
+namespace Spacetime.Plotting.IntegrationTests;
 
 /// <summary>
 /// Integration tests for scanning configuration with actual proof generation.
 /// These tests verify that early termination and scan limits work correctly
 /// with the ProofGenerator.
 /// </summary>
-public class ScanningConfigurationIntegrationTests : IDisposable
+public class ScanningConfigurationTests : IDisposable
 {
     private readonly IHashFunction _hashFunction;
     private readonly PlotCreator _plotCreator;
@@ -16,7 +16,7 @@ public class ScanningConfigurationIntegrationTests : IDisposable
     private readonly string _testPlotPath;
     private PlotLoader? _plotLoader;
 
-    public ScanningConfigurationIntegrationTests()
+    public ScanningConfigurationTests()
     {
         _hashFunction = new Sha256HashFunction();
         _plotCreator = new PlotCreator(_hashFunction);

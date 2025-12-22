@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using MerkleTree.Hashing;
 
-namespace Spacetime.Plotting.Tests;
+namespace Spacetime.Plotting.IntegrationTests;
 
 public class PlotManagerTests : IAsyncLifetime
 {
