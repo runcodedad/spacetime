@@ -9,11 +9,14 @@ namespace Spacetime.Miner.Commands;
 /// </summary>
 public sealed class ListPlotsCommand : Command
 {
+    private readonly IHashFunction _hashFunction;
     /// <summary>
     /// Initializes a new instance of the <see cref="ListPlotsCommand"/> class.
     /// </summary>
-    public ListPlotsCommand() : base("list-plots", "Show all registered plots")
+    public ListPlotsCommand(IHashFunction hashFunction) : base("list-plots", "Show all registered plots")
     {
+        _hashFunction = hashFunction;
+        
         var configOption = new Option<string?>(
             aliases: ["--config", "-c"],
             description: "Path to configuration file (default: ~/.spacetime/miner.yaml)");
@@ -29,7 +32,7 @@ public sealed class ListPlotsCommand : Command
         this.SetHandler(ExecuteAsync, configOption, verboseOption);
     }
 
-    private static async Task<int> ExecuteAsync(string? configPath, bool verbose)
+    private async Task<int> ExecuteAsync(string? configPath, bool verbose)
     {
         try
         {
@@ -38,8 +41,7 @@ public sealed class ListPlotsCommand : Command
             var config = await LoadConfigurationAsync(loader, configPath);
 
             // Load plot manager
-            var hashFunction = new Sha256HashFunction();
-            var plotManager = new PlotManager(hashFunction, config.PlotMetadataPath);
+            var plotManager = new PlotManager(_hashFunction, config.PlotMetadataPath);
             await plotManager.LoadMetadataAsync(CancellationToken.None);
 
             var plots = plotManager.PlotMetadataCollection;

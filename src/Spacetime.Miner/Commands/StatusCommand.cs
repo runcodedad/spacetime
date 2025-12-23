@@ -9,11 +9,14 @@ namespace Spacetime.Miner.Commands;
 /// </summary>
 public sealed class StatusCommand : Command
 {
+    private readonly IHashFunction _hashFunction;
     /// <summary>
     /// Initializes a new instance of the <see cref="StatusCommand"/> class.
     /// </summary>
-    public StatusCommand() : base("status", "Show mining status")
+    public StatusCommand(IHashFunction hashFunction) : base("status", "Show mining status")
     {
+        _hashFunction = hashFunction;
+
         var configOption = new Option<string?>(
             aliases: ["--config", "-c"],
             description: "Path to configuration file (default: ~/.spacetime/miner.yaml)");
@@ -23,7 +26,7 @@ public sealed class StatusCommand : Command
         this.SetHandler(ExecuteAsync, configOption);
     }
 
-    private static async Task<int> ExecuteAsync(string? configPath)
+    private async Task<int> ExecuteAsync(string? configPath)
     {
         try
         {
@@ -46,8 +49,7 @@ public sealed class StatusCommand : Command
             Console.WriteLine();
 
             // Load plot manager
-            var hashFunction = new Sha256HashFunction();
-            var plotManager = new PlotManager(hashFunction, config.PlotMetadataPath);
+            var plotManager = new PlotManager(_hashFunction, config.PlotMetadataPath);
             await plotManager.LoadMetadataAsync(CancellationToken.None);
 
             // Plot info

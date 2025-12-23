@@ -9,11 +9,14 @@ namespace Spacetime.Miner.Commands;
 /// </summary>
 public sealed class DeletePlotCommand : Command
 {
+    private readonly IHashFunction _hashFunction;
     /// <summary>
     /// Initializes a new instance of the <see cref="DeletePlotCommand"/> class.
     /// </summary>
-    public DeletePlotCommand() : base("delete-plot", "Remove a plot from the miner")
+    public DeletePlotCommand(IHashFunction hashFunction) : base("delete-plot", "Remove a plot from the miner")
     {
+        _hashFunction = hashFunction;
+
         var plotIdArgument = new Argument<string>(
             "plot-id",
             "The ID of the plot to delete");
@@ -40,7 +43,7 @@ public sealed class DeletePlotCommand : Command
         this.SetHandler(ExecuteAsync, plotIdArgument, configOption, deleteFileOption, forceOption);
     }
 
-    private static async Task<int> ExecuteAsync(
+    private async Task<int> ExecuteAsync(
         string plotIdStr,
         string? configPath,
         bool deleteFile,
@@ -60,8 +63,7 @@ public sealed class DeletePlotCommand : Command
             var config = await LoadConfigurationAsync(loader, configPath);
 
             // Load plot manager
-            var hashFunction = new Sha256HashFunction();
-            var plotManager = new PlotManager(hashFunction, config.PlotMetadataPath);
+            var plotManager = new PlotManager(_hashFunction, config.PlotMetadataPath);
             await plotManager.LoadMetadataAsync(CancellationToken.None);
 
             // Find the plot

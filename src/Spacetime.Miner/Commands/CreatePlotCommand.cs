@@ -9,15 +9,20 @@ namespace Spacetime.Miner.Commands;
 /// </summary>
 public sealed class CreatePlotCommand : Command
 {
+    private readonly IHashFunction _hashFunction;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CreatePlotCommand"/> class.
     /// </summary>
-    public CreatePlotCommand() : base("create-plot", "Create a new plot file")
+    public CreatePlotCommand(IHashFunction hashFunction) : base("create-plot", "Create a new plot file")
     {
+        _hashFunction = hashFunction;
+
         var sizeOption = new Option<long>(
             aliases: ["--size", "-s"],
             description: "Plot size in gigabytes",
             getDefaultValue: () => 1L);
+            
         sizeOption.AddValidator(result =>
         {
             var value = result.GetValueForOption(sizeOption);
@@ -62,7 +67,7 @@ public sealed class CreatePlotCommand : Command
         this.SetHandler(ExecuteAsync, sizeOption, outputOption, configOption, includeCacheOption, cacheLevelsOption);
     }
 
-    private static async Task<int> ExecuteAsync(
+    private async Task<int> ExecuteAsync(
         long sizeGB,
         string? outputPath,
         string? configPath,
@@ -115,8 +120,7 @@ public sealed class CreatePlotCommand : Command
                 cacheLevels);
 
             // Create plot
-            var hashFunction = new Sha256HashFunction();
-            var creator = new PlotCreator(hashFunction);
+            var creator = new PlotCreator(_hashFunction);
             var progress = new ProgressReporter("Creating plot");
             
             var result = await creator.CreatePlotAsync(
