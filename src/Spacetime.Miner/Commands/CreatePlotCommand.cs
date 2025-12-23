@@ -1,5 +1,6 @@
 using System.CommandLine;
 using MerkleTree.Hashing;
+using Spacetime.Common;
 using Spacetime.Plotting;
 
 namespace Spacetime.Miner.Commands;
@@ -135,7 +136,7 @@ public sealed class CreatePlotCommand : MinerCommand
 
             Console.WriteLine($"\n✓ Plot created successfully!");
             Console.WriteLine($"  Merkle Root: {Convert.ToHexString(result.Header.MerkleRoot)}");
-            Console.WriteLine($"  File Size: {FormatBytes(fileInfo.Length)}");
+            Console.WriteLine($"  File Size: {ByteFormatting.FormatBytes(fileInfo.Length)}");
             Console.WriteLine($"  Leaf Count: {result.Header.LeafCount:N0}");
             if (result.CacheFilePath != null)
             {
@@ -149,19 +150,6 @@ public sealed class CreatePlotCommand : MinerCommand
             Console.Error.WriteLine($"Error creating plot: {ex.Message}");
             return 1;
         }
-    }
-
-    private static string FormatBytes(long bytes)
-    {
-        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
-        double len = bytes;
-        var order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len /= 1024;
-        }
-        return $"{len:F2} {sizes[order]}";
     }
 
     /// <summary>
