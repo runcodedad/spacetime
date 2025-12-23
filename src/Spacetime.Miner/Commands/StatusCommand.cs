@@ -1,5 +1,6 @@
 using System.CommandLine;
 using MerkleTree.Hashing;
+using Spacetime.Common;
 using Spacetime.Plotting;
 
 namespace Spacetime.Miner.Commands;
@@ -7,15 +8,20 @@ namespace Spacetime.Miner.Commands;
 /// <summary>
 /// CLI command to show mining status.
 /// </summary>
-public sealed class StatusCommand : Command
+public sealed class StatusCommand : MinerCommand
 {
     private readonly IHashFunction _hashFunction;
+    private readonly IConfigurationLoader _configurationLoader;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="StatusCommand"/> class.
     /// </summary>
-    public StatusCommand(IHashFunction hashFunction) : base("status", "Show mining status")
+    public StatusCommand(
+        IHashFunction hashFunction,
+        IConfigurationLoader configurationLoader) : base("status", "Show mining status")
     {
         _hashFunction = hashFunction;
+        _configurationLoader = configurationLoader;
 
         var configOption = new Option<string?>(
             aliases: ["--config", "-c"],
@@ -31,8 +37,7 @@ public sealed class StatusCommand : Command
         try
         {
             // Load configuration
-            var loader = new ConfigurationLoader();
-            var config = await LoadConfigurationAsync(loader, configPath);
+            var config = await LoadConfigurationAsync(_configurationLoader, configPath);
 
             Console.WriteLine("Spacetime Miner Status");
             Console.WriteLine("======================");
@@ -56,7 +61,7 @@ public sealed class StatusCommand : Command
             Console.WriteLine("Plots:");
             Console.WriteLine($"  Total Plots: {plotManager.TotalPlotCount}");
             Console.WriteLine($"  Valid Plots: {plotManager.ValidPlotCount}");
-            Console.WriteLine($"  Total Space: {FormatBytes(plotManager.TotalSpaceAllocatedBytes)}");
+            Console.WriteLine($"  Total Space: {ByteFormatting.FormatBytes(plotManager.TotalSpaceAllocatedBytes)}");
             Console.WriteLine();
 
             // Mining status
@@ -79,39 +84,5 @@ public sealed class StatusCommand : Command
             Console.Error.WriteLine($"Error getting status: {ex.Message}");
             return 1;
         }
-    }
-
-    private static async Task<MinerConfiguration> LoadConfigurationAsync(
-        ConfigurationLoader loader,
-        string? configPath)
-    {
-        if (string.IsNullOrWhiteSpace(configPath))
-        {
-            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            configPath = Path.Combine(homeDir, ".spacetime", "miner.yaml");
-        }
-
-        if (!File.Exists(configPath))
-        {
-            Console.WriteLine($"Configuration file not found: {configPath}");
-            Console.WriteLine("Creating default configuration...");
-            await loader.CreateDefaultConfigAsync(configPath);
-            Console.WriteLine($"Created default configuration at: {configPath}");
-        }
-
-        return await loader.LoadWithEnvironmentOverridesAsync(configPath);
-    }
-
-    private static string FormatBytes(long bytes)
-    {
-        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
-        double len = bytes;
-        var order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len /= 1024;
-        }
-        return $"{len:F2} {sizes[order]}";
     }
 }

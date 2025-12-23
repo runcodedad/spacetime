@@ -6,7 +6,7 @@ namespace Spacetime.Miner;
 /// <summary>
 /// Loads miner configuration from YAML files and environment variables.
 /// </summary>
-public sealed class ConfigurationLoader
+public sealed class ConfigurationLoader : IConfigurationLoader
 {
     private readonly IDeserializer _deserializer;
 

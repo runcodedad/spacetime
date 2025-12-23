@@ -7,16 +7,20 @@ namespace Spacetime.Miner.Commands;
 /// <summary>
 /// CLI command to create a new plot file.
 /// </summary>
-public sealed class CreatePlotCommand : Command
+public sealed class CreatePlotCommand : MinerCommand
 {
     private readonly IHashFunction _hashFunction;
+    private readonly IConfigurationLoader _configurationLoader;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CreatePlotCommand"/> class.
     /// </summary>
-    public CreatePlotCommand(IHashFunction hashFunction) : base("create-plot", "Create a new plot file")
+    public CreatePlotCommand(
+        IHashFunction hashFunction,
+        IConfigurationLoader configurationLoader) : base("create-plot", "Create a new plot file")
     {
         _hashFunction = hashFunction;
+        _configurationLoader = configurationLoader;
 
         var sizeOption = new Option<long>(
             aliases: ["--size", "-s"],
@@ -81,8 +85,7 @@ public sealed class CreatePlotCommand : Command
             Console.WriteLine($"  Cache: {(includeCache ? $"Enabled ({cacheLevels} levels)" : "Disabled")}");
 
             // Load configuration
-            var loader = new ConfigurationLoader();
-            var config = await LoadConfigurationAsync(loader, configPath);
+            var config = await LoadConfigurationAsync(_configurationLoader, configPath);
 
             // Ensure plot directory exists
             if (!Directory.Exists(config.PlotDirectory))
@@ -146,27 +149,6 @@ public sealed class CreatePlotCommand : Command
             Console.Error.WriteLine($"Error creating plot: {ex.Message}");
             return 1;
         }
-    }
-
-    private static async Task<MinerConfiguration> LoadConfigurationAsync(
-        ConfigurationLoader loader,
-        string? configPath)
-    {
-        if (string.IsNullOrWhiteSpace(configPath))
-        {
-            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            configPath = Path.Combine(homeDir, ".spacetime", "miner.yaml");
-        }
-
-        if (!File.Exists(configPath))
-        {
-            Console.WriteLine($"Configuration file not found: {configPath}");
-            Console.WriteLine("Creating default configuration...");
-            await loader.CreateDefaultConfigAsync(configPath);
-            Console.WriteLine($"Created default configuration at: {configPath}");
-        }
-
-        return await loader.LoadWithEnvironmentOverridesAsync(configPath);
     }
 
     private static string FormatBytes(long bytes)

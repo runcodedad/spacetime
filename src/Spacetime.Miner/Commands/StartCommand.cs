@@ -5,13 +5,17 @@ namespace Spacetime.Miner.Commands;
 /// <summary>
 /// CLI command to start the mining process.
 /// </summary>
-public sealed class StartCommand : Command
+public sealed class StartCommand : MinerCommand
 {
+    private readonly IConfigurationLoader _configurationLoader;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="StartCommand"/> class.
     /// </summary>
-    public StartCommand() : base("start", "Start mining")
+    public StartCommand(IConfigurationLoader configurationLoader) : base("start", "Start mining")
     {
+        _configurationLoader = configurationLoader;
+
         var configOption = new Option<string?>(
             aliases: ["--config", "-c"],
             description: "Path to configuration file (default: ~/.spacetime/miner.yaml)");
@@ -27,13 +31,12 @@ public sealed class StartCommand : Command
         this.SetHandler(ExecuteAsync, configOption, daemonOption);
     }
 
-    private static async Task<int> ExecuteAsync(string? configPath, bool daemon)
+    private async Task<int> ExecuteAsync(string? configPath, bool daemon)
     {
         try
         {
             // Load configuration
-            var loader = new ConfigurationLoader();
-            var config = await LoadConfigurationAsync(loader, configPath);
+            var config = await LoadConfigurationAsync(_configurationLoader, configPath);
 
             Console.WriteLine("Spacetime Miner Starting...");
             Console.WriteLine($"  Plot Directory: {config.PlotDirectory}");
@@ -79,26 +82,5 @@ public sealed class StartCommand : Command
             Console.Error.WriteLine($"Error starting miner: {ex.Message}");
             return 1;
         }
-    }
-
-    private static async Task<MinerConfiguration> LoadConfigurationAsync(
-        ConfigurationLoader loader,
-        string? configPath)
-    {
-        if (string.IsNullOrWhiteSpace(configPath))
-        {
-            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            configPath = Path.Combine(homeDir, ".spacetime", "miner.yaml");
-        }
-
-        if (!File.Exists(configPath))
-        {
-            Console.WriteLine($"Configuration file not found: {configPath}");
-            Console.WriteLine("Creating default configuration...");
-            await loader.CreateDefaultConfigAsync(configPath);
-            Console.WriteLine($"Created default configuration at: {configPath}");
-        }
-
-        return await loader.LoadWithEnvironmentOverridesAsync(configPath);
     }
 }
