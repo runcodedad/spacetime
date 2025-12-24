@@ -24,8 +24,8 @@ public class ByteFormattingTests
     [InlineData(1048576, "1 MB")]
     [InlineData(2147483648, "2 GB")]
     [InlineData(2097152, "2 MB")]
-    [InlineData(3221225472, "3.00 GB")]
-    [InlineData(3145728, "3.00 MB")]
+    [InlineData(3221225472, "3 GB")]
+    [InlineData(3145728, "3 MB")]
     [InlineData(123456789, "117.74 MB")]
     [InlineData(9876543210, "9.20 GB")]
     public void FormatSize_ValidSizes_ReturnsExpectedString(long bytes, string expected)

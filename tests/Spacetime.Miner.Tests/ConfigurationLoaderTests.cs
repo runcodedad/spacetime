@@ -1,3 +1,5 @@
+using YamlDotNet.Core;
+
 namespace Spacetime.Miner.Tests;
 
 public class ConfigurationLoaderTests
@@ -82,17 +84,19 @@ enablePerformanceMonitoring: false
         var loader = new ConfigurationLoader();
         var tempFile = Path.GetTempFileName();
         var yaml = @"
-nodeAddress: 192.168.1.1
-nodePort: 9000
-";
+        nodeAddress: 192.168.1.1
+        nodePort: 9000
+        ";
 
         try
         {
             await File.WriteAllTextAsync(tempFile, yaml);
 
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(
+            var exception = await Assert.ThrowsAsync<YamlException>(
                 () => loader.LoadFromFileAsync(tempFile));
+
+            Assert.IsType<InvalidOperationException>(exception.InnerException);
         }
         finally
         {

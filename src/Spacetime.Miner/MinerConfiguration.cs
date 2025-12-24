@@ -65,6 +65,40 @@ public sealed record MinerConfiguration
     public bool EnablePerformanceMonitoring { get; init; } = true;
 
     /// <summary>
+    /// Validates required fields in the configuration.
+    /// </summary>
+    /// <exception cref="InvalidOperationException"> 
+    /// Thrown when a required field is missing or invalid.
+    /// </exception>
+    public MinerConfiguration()
+    {
+        if (string.IsNullOrWhiteSpace(PlotDirectory))
+        {
+            throw new InvalidOperationException("PlotDirectory is required in configuration");
+        }
+
+        if (string.IsNullOrWhiteSpace(PlotMetadataPath))
+        {
+            throw new InvalidOperationException("PlotMetadataPath is required in configuration");
+        }
+
+        if (string.IsNullOrWhiteSpace(NodeAddress))
+        {
+            throw new InvalidOperationException("NodeAddress is required in configuration");
+        }
+
+        if (string.IsNullOrWhiteSpace(PrivateKeyPath))
+        {
+            throw new InvalidOperationException("PrivateKeyPath is required in configuration");
+        }
+
+        if (string.IsNullOrWhiteSpace(NetworkId))
+        {
+            throw new InvalidOperationException("NetworkId is required in configuration");
+        }
+    }
+
+    /// <summary>
     /// Creates a default configuration for testing.
     /// </summary>
     public static MinerConfiguration Default()
