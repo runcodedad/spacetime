@@ -41,14 +41,14 @@ public sealed class ConfigurationLoader : IConfigurationLoader
         }
 
         var yaml = await File.ReadAllTextAsync(filePath, cancellationToken);
-        var config = _deserializer.Deserialize<MinerConfigurationYaml>(yaml);
+        var config = _deserializer.Deserialize<MinerConfiguration>(yaml);
 
         if (config == null)
         {
             throw new InvalidOperationException("Failed to deserialize configuration file");
         }
 
-        return MapToConfiguration(config);
+        return config;
     }
 
     /// <summary>
@@ -81,20 +81,7 @@ public sealed class ConfigurationLoader : IConfigurationLoader
         var spacetimeDir = Path.Combine(homeDir, ".spacetime");
         var plotsDir = Path.Combine(spacetimeDir, "plots");
 
-        var defaultConfig = new MinerConfigurationYaml
-        {
-            PlotDirectory = plotsDir,
-            PlotMetadataPath = Path.Combine(spacetimeDir, "plots_metadata.json"),
-            NodeAddress = "127.0.0.1",
-            NodePort = 8333,
-            PrivateKeyPath = Path.Combine(spacetimeDir, "miner_key.dat"),
-            NetworkId = "testnet",
-            MaxConcurrentProofs = 1,
-            ProofGenerationTimeoutSeconds = 60,
-            ConnectionRetryIntervalSeconds = 5,
-            MaxConnectionRetries = 10,
-            EnablePerformanceMonitoring = true
-        };
+        var defaultConfig = MinerConfiguration.Default();
 
         var serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -158,66 +145,5 @@ public sealed class ConfigurationLoader : IConfigurationLoader
             MaxConnectionRetries = maxRetries,
             EnablePerformanceMonitoring = perfMonitoring
         };
-    }
-
-    private static MinerConfiguration MapToConfiguration(MinerConfigurationYaml yaml)
-    {
-        if (string.IsNullOrWhiteSpace(yaml.PlotDirectory))
-        {
-            throw new InvalidOperationException("PlotDirectory is required in configuration");
-        }
-
-        if (string.IsNullOrWhiteSpace(yaml.PlotMetadataPath))
-        {
-            throw new InvalidOperationException("PlotMetadataPath is required in configuration");
-        }
-
-        if (string.IsNullOrWhiteSpace(yaml.NodeAddress))
-        {
-            throw new InvalidOperationException("NodeAddress is required in configuration");
-        }
-
-        if (string.IsNullOrWhiteSpace(yaml.PrivateKeyPath))
-        {
-            throw new InvalidOperationException("PrivateKeyPath is required in configuration");
-        }
-
-        if (string.IsNullOrWhiteSpace(yaml.NetworkId))
-        {
-            throw new InvalidOperationException("NetworkId is required in configuration");
-        }
-
-        return new MinerConfiguration
-        {
-            PlotDirectory = yaml.PlotDirectory,
-            PlotMetadataPath = yaml.PlotMetadataPath,
-            NodeAddress = yaml.NodeAddress,
-            NodePort = yaml.NodePort,
-            PrivateKeyPath = yaml.PrivateKeyPath,
-            NetworkId = yaml.NetworkId,
-            MaxConcurrentProofs = yaml.MaxConcurrentProofs,
-            ProofGenerationTimeoutSeconds = yaml.ProofGenerationTimeoutSeconds,
-            ConnectionRetryIntervalSeconds = yaml.ConnectionRetryIntervalSeconds,
-            MaxConnectionRetries = yaml.MaxConnectionRetries,
-            EnablePerformanceMonitoring = yaml.EnablePerformanceMonitoring
-        };
-    }
-
-    /// <summary>
-    /// Internal representation for YAML deserialization.
-    /// </summary>
-    private sealed class MinerConfigurationYaml
-    {
-        public string PlotDirectory { get; init; } = string.Empty;
-        public string PlotMetadataPath { get; init; } = string.Empty;
-        public string NodeAddress { get; init; } = string.Empty;
-        public int NodePort { get; init; }
-        public string PrivateKeyPath { get; init; } = string.Empty;
-        public string NetworkId { get; init; } = string.Empty;
-        public int MaxConcurrentProofs { get; init; } = 1;
-        public int ProofGenerationTimeoutSeconds { get; init; } = 60;
-        public int ConnectionRetryIntervalSeconds { get; init; } = 5;
-        public int MaxConnectionRetries { get; init; } = 10;
-        public bool EnablePerformanceMonitoring { get; init; } = true;
     }
 }
