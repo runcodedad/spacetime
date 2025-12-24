@@ -93,10 +93,8 @@ enablePerformanceMonitoring: false
             await File.WriteAllTextAsync(tempFile, yaml);
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<YamlException>(
+            await Assert.ThrowsAsync<InvalidOperationException>(
                 () => loader.LoadFromFileAsync(tempFile));
-
-            Assert.IsType<InvalidOperationException>(exception.InnerException);
         }
         finally
         {

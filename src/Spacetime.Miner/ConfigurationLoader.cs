@@ -48,6 +48,7 @@ public sealed class ConfigurationLoader : IConfigurationLoader
             throw new InvalidOperationException("Failed to deserialize configuration file");
         }
 
+        Validate(config);
         return config;
     }
 
@@ -145,5 +146,39 @@ public sealed class ConfigurationLoader : IConfigurationLoader
             MaxConnectionRetries = maxRetries,
             EnablePerformanceMonitoring = perfMonitoring
         };
+    }
+
+    /// <summary>
+    /// Validates required fields in the configuration.
+    /// </summary>
+    /// <exception cref="InvalidOperationException"> 
+    /// Thrown when a required field is missing or invalid.
+    /// </exception>
+    private static void Validate(MinerConfiguration config)
+    {
+        if (string.IsNullOrWhiteSpace(config.PlotDirectory))
+        {
+            throw new InvalidOperationException("PlotDirectory is required in configuration");
+        }
+
+        if (string.IsNullOrWhiteSpace(config.PlotMetadataPath))
+        {
+            throw new InvalidOperationException("PlotMetadataPath is required in configuration");
+        }
+
+        if (string.IsNullOrWhiteSpace(config.NodeAddress))
+        {
+            throw new InvalidOperationException("NodeAddress is required in configuration");
+        }
+
+        if (string.IsNullOrWhiteSpace(config.PrivateKeyPath))
+        {
+            throw new InvalidOperationException("PrivateKeyPath is required in configuration");
+        }
+
+        if (string.IsNullOrWhiteSpace(config.NetworkId))
+        {
+            throw new InvalidOperationException("NetworkId is required in configuration");
+        }
     }
 }
