@@ -23,17 +23,30 @@ public sealed class CreatePlotCommand : MinerCommand
         _hashFunction = hashFunction;
         _configurationLoader = configurationLoader;
 
-        var sizeOption = new Option<long>(
+        var sizeOption = new Option<string>(
             aliases: ["--size", "-s"],
-            description: "Plot size in gigabytes",
-            getDefaultValue: () => 1L);
-            
+            description: "Plot size (e.g. 200MB, 2GB). Default is GB if no unit specified.",
+            getDefaultValue: () => "1GB");
+        
         sizeOption.AddValidator(result =>
         {
             var value = result.GetValueForOption(sizeOption);
-            if (value < 1)
+            
+            if (string.IsNullOrWhiteSpace(value))
             {
-                result.ErrorMessage = "Plot size must be at least 1 GB";
+                result.ErrorMessage = "Plot size is required.";
+                return;
+            }
+
+            if (!value.TryParseSize(out var sizeBytes, out var error))
+            {
+                result.ErrorMessage = error ?? "Invalid plot size format.";
+                return;
+            }
+
+            if (sizeBytes < 100 * 1024 * 1024)
+            {
+                result.ErrorMessage = "Plot size must be at least 100 MB.";
             }
         });
 
@@ -73,7 +86,7 @@ public sealed class CreatePlotCommand : MinerCommand
     }
 
     private async Task<int> ExecuteAsync(
-        long sizeGB,
+        string sizeInput,
         string? outputPath,
         string? configPath,
         bool includeCache,
@@ -81,8 +94,20 @@ public sealed class CreatePlotCommand : MinerCommand
     {
         try
         {
+            if (!sizeInput.TryParseSize(out var sizeBytes, out var error))
+            {
+                Console.Error.WriteLine($"Invalid plot size: {error}");
+                return 1;
+            }
+            
+            if (sizeBytes < 100 * 1024 * 1024)
+            {
+                Console.Error.WriteLine("Plot size must be at least 100 MB.");
+                return 1;
+            }
+
             Console.WriteLine("Creating plot...");
-            Console.WriteLine($"  Size: {sizeGB} GB");
+            Console.WriteLine($"  Size: { ByteFormatting.FormatSize(sizeBytes)}");
             Console.WriteLine($"  Cache: {(includeCache ? $"Enabled ({cacheLevels} levels)" : "Disabled")}");
 
             // Load configuration
@@ -114,9 +139,9 @@ public sealed class CreatePlotCommand : MinerCommand
             System.Security.Cryptography.RandomNumberGenerator.Fill(minerPublicKey);
             System.Security.Cryptography.RandomNumberGenerator.Fill(plotSeed);
 
-            // Create plot configuration
-            var plotConfig = PlotConfiguration.CreateFromGB(
-                sizeGB,
+            // Create plot configuration (convert bytes to GB for API, but pass bytes for future-proofing)
+            var plotConfig = new PlotConfiguration(
+                sizeBytes,
                 minerPublicKey,
                 plotSeed,
                 outputPath,
@@ -126,7 +151,7 @@ public sealed class CreatePlotCommand : MinerCommand
             // Create plot
             var creator = new PlotCreator(_hashFunction);
             var progress = new ProgressReporter("Creating plot");
-            
+
             var result = await creator.CreatePlotAsync(
                 plotConfig,
                 progress,
