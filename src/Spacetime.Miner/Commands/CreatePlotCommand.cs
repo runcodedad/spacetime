@@ -99,7 +99,7 @@ public sealed class CreatePlotCommand : MinerCommand
                 Console.Error.WriteLine($"Invalid plot size: {error}");
                 return 1;
             }
-            
+
             if (sizeBytes < 100 * 1024 * 1024)
             {
                 Console.Error.WriteLine("Plot size must be at least 100 MB.");
@@ -150,7 +150,7 @@ public sealed class CreatePlotCommand : MinerCommand
 
             // Create plot
             var creator = new PlotCreator(_hashFunction);
-            var progress = new ProgressReporter("Creating plot");
+            var progress = new ConsoleProgressReporter("Creating plot");
 
             var result = await creator.CreatePlotAsync(
                 plotConfig,
@@ -174,35 +174,6 @@ public sealed class CreatePlotCommand : MinerCommand
         {
             Console.Error.WriteLine($"Error creating plot: {ex.Message}");
             return 1;
-        }
-    }
-
-    /// <summary>
-    /// Simple progress reporter that writes to console.
-    /// </summary>
-    private sealed class ProgressReporter : IProgress<double>
-    {
-        private readonly string _message;
-        private int _lastPercent = -1;
-
-        public ProgressReporter(string message)
-        {
-            _message = message;
-        }
-
-        public void Report(double value)
-        {
-            var percent = (int)(value * 100);
-            if (percent != _lastPercent && percent % 5 == 0)
-            {
-                Console.Write($"\r{_message}: {percent}%");
-                _lastPercent = percent;
-            }
-
-            if (percent >= 100)
-            {
-                Console.WriteLine();
-            }
         }
     }
 }
