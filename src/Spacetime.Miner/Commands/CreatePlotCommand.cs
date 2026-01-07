@@ -1,0 +1,179 @@
+using System.CommandLine;
+using MerkleTree.Hashing;
+using Spacetime.Common;
+using Spacetime.Plotting;
+
+namespace Spacetime.Miner.Commands;
+
+/// <summary>
+/// CLI command to create a new plot file.
+/// </summary>
+public sealed class CreatePlotCommand : MinerCommand
+{
+    private readonly IHashFunction _hashFunction;
+    private readonly IConfigurationLoader _configurationLoader;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CreatePlotCommand"/> class.
+    /// </summary>
+    public CreatePlotCommand(
+        IHashFunction hashFunction,
+        IConfigurationLoader configurationLoader) : base("create-plot", "Create a new plot file")
+    {
+        _hashFunction = hashFunction;
+        _configurationLoader = configurationLoader;
+
+        var sizeOption = new Option<string>(
+            aliases: ["--size", "-s"],
+            description: "Plot size (e.g. 200MB, 2GB). Default is GB if no unit specified.",
+            getDefaultValue: () => "1GB");
+        
+        sizeOption.AddValidator(result =>
+        {
+            var value = result.GetValueForOption(sizeOption);
+            
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                result.ErrorMessage = "Plot size is required.";
+                return;
+            }
+
+            if (!value.TryParseSize(out var sizeBytes, out var error))
+            {
+                result.ErrorMessage = error ?? "Invalid plot size format.";
+                return;
+            }
+
+            if (sizeBytes < 100 * 1024 * 1024)
+            {
+                result.ErrorMessage = "Plot size must be at least 100 MB.";
+            }
+        });
+
+        var outputOption = new Option<string?>(
+            aliases: ["--output", "-o"],
+            description: "Output file path (default: auto-generated in plot directory)");
+
+        var configOption = new Option<string?>(
+            aliases: ["--config", "-c"],
+            description: "Path to configuration file (default: ~/.spacetime/miner.yaml)");
+
+        var includeCacheOption = new Option<bool>(
+            aliases: ["--cache"],
+            description: "Include Merkle tree cache for faster proof generation",
+            getDefaultValue: () => false);
+
+        var cacheLevelsOption = new Option<int>(
+            aliases: ["--cache-levels"],
+            description: "Number of Merkle tree levels to cache",
+            getDefaultValue: () => 5);
+        cacheLevelsOption.AddValidator(result =>
+        {
+            var value = result.GetValueForOption(cacheLevelsOption);
+            if (value < 0 || value > 20)
+            {
+                result.ErrorMessage = "Cache levels must be between 0 and 20";
+            }
+        });
+
+        AddOption(sizeOption);
+        AddOption(outputOption);
+        AddOption(configOption);
+        AddOption(includeCacheOption);
+        AddOption(cacheLevelsOption);
+
+        this.SetHandler(ExecuteAsync, sizeOption, outputOption, configOption, includeCacheOption, cacheLevelsOption);
+    }
+
+    private async Task<int> ExecuteAsync(
+        string sizeInput,
+        string? outputPath,
+        string? configPath,
+        bool includeCache,
+        int cacheLevels)
+    {
+        try
+        {
+            if (!sizeInput.TryParseSize(out var sizeBytes, out var error))
+            {
+                Console.Error.WriteLine($"Invalid plot size: {error}");
+                return 1;
+            }
+
+            if (sizeBytes < 100 * 1024 * 1024)
+            {
+                Console.Error.WriteLine("Plot size must be at least 100 MB.");
+                return 1;
+            }
+
+            Console.WriteLine("Creating plot...");
+            Console.WriteLine($"  Size: { ByteFormatting.FormatSize(sizeBytes)}");
+            Console.WriteLine($"  Cache: {(includeCache ? $"Enabled ({cacheLevels} levels)" : "Disabled")}");
+
+            // Load configuration
+            var config = await LoadConfigurationAsync(_configurationLoader, configPath);
+
+            // Ensure plot directory exists
+            if (!Directory.Exists(config.PlotDirectory))
+            {
+                Directory.CreateDirectory(config.PlotDirectory);
+                Console.WriteLine($"  Created plot directory: {config.PlotDirectory}");
+            }
+
+            // Generate output path if not provided
+            if (string.IsNullOrWhiteSpace(outputPath))
+            {
+                var plotId = Guid.NewGuid();
+                outputPath = Path.Combine(config.PlotDirectory, $"plot_{plotId:N}.plot");
+            }
+            else if (!Path.IsPathRooted(outputPath))
+            {
+                outputPath = Path.Combine(config.PlotDirectory, outputPath);
+            }
+
+            Console.WriteLine($"  Output: {outputPath}");
+
+            // Generate random keys for plot
+            var minerPublicKey = new byte[32];
+            var plotSeed = new byte[32];
+            System.Security.Cryptography.RandomNumberGenerator.Fill(minerPublicKey);
+            System.Security.Cryptography.RandomNumberGenerator.Fill(plotSeed);
+
+            // Create plot configuration (convert bytes to GB for API, but pass bytes for future-proofing)
+            var plotConfig = new PlotConfiguration(
+                sizeBytes,
+                minerPublicKey,
+                plotSeed,
+                outputPath,
+                includeCache,
+                cacheLevels);
+
+            // Create plot
+            var creator = new PlotCreator(_hashFunction);
+            var progress = new ConsoleProgressReporter("Creating plot");
+
+            var result = await creator.CreatePlotAsync(
+                plotConfig,
+                progress,
+                CancellationToken.None);
+
+            var fileInfo = new FileInfo(outputPath);
+
+            Console.WriteLine($"\n✓ Plot created successfully!");
+            Console.WriteLine($"  Merkle Root: {Convert.ToHexString(result.Header.MerkleRoot)}");
+            Console.WriteLine($"  File Size: {ByteFormatting.FormatBytes(fileInfo.Length)}");
+            Console.WriteLine($"  Leaf Count: {result.Header.LeafCount:N0}");
+            if (result.CacheFilePath != null)
+            {
+                Console.WriteLine($"  Cache File: {result.CacheFilePath}");
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error creating plot: {ex.Message}");
+            return 1;
+        }
+    }
+}

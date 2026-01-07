@@ -43,7 +43,8 @@ public class MinerEventLoopIntegrationTests : IAsyncDisposable
             ProofGenerationTimeoutSeconds = 5,
             ConnectionRetryIntervalSeconds = 1,
             MaxConnectionRetries = 2,
-            EnablePerformanceMonitoring = false
+            EnablePerformanceMonitoring = false,
+            ChainStoragePath = Path.Combine(_tempDir, "storage")
         };
 
         // Create mocks for dependencies

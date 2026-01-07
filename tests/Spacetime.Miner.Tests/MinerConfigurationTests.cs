@@ -33,7 +33,8 @@ public class MinerConfigurationTests
             NodeAddress = "192.168.1.1",
             NodePort = 9000,
             PrivateKeyPath = "/test/key.dat",
-            NetworkId = "testnet"
+            NetworkId = "testnet",
+            ChainStoragePath = "/test/storage"
         };
 
         // Assert
@@ -56,7 +57,8 @@ public class MinerConfigurationTests
             NodeAddress = "192.168.1.1",
             NodePort = 9000,
             PrivateKeyPath = "/test/key.dat",
-            NetworkId = "testnet"
+            NetworkId = "testnet",
+            ChainStoragePath = "/test/storage"
         };
 
         // Assert - check default values
@@ -83,7 +85,8 @@ public class MinerConfigurationTests
             ProofGenerationTimeoutSeconds = 120,
             ConnectionRetryIntervalSeconds = 10,
             MaxConnectionRetries = 5,
-            EnablePerformanceMonitoring = false
+            EnablePerformanceMonitoring = false,
+            ChainStoragePath = "/test/storage"
         };
 
         // Assert

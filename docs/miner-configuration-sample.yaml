@@ -1,0 +1,76 @@
+# Sample Miner Configuration
+
+# This is a sample configuration file for the Spacetime miner.
+# Copy this to ~/.spacetime/miner.yaml and customize as needed.
+
+# Directory where plot files are stored
+plotDirectory: /path/to/plots
+
+# Path to the plot metadata JSON file
+# This file tracks all plots managed by the miner
+plotMetadataPath: /path/to/plots_metadata.json
+
+# IP address of the full node to connect to
+nodeAddress: 127.0.0.1
+
+# Port of the full node
+nodePort: 8333
+
+# Path to the miner's private key file
+# This key is used to sign blocks and proofs
+privateKeyPath: /path/to/miner_key.dat
+
+# Network identifier
+# Options: "mainnet", "testnet"
+networkId: testnet
+
+# Path to the chain storage database
+# This is where the node's chain database files (leveldb/rocksdb, etc.) are stored
+chainStoragePath: /path/to/storage
+
+# Performance Settings
+# =====================
+
+# Maximum number of concurrent proof generation tasks
+# Higher values can improve performance on multi-core systems
+# but will use more memory and CPU
+maxConcurrentProofs: 1
+
+# Timeout for proof generation in seconds
+# If proof generation takes longer than this, it will be cancelled
+proofGenerationTimeoutSeconds: 60
+
+# Connection Settings
+# ====================
+
+# Interval in seconds between connection retry attempts
+connectionRetryIntervalSeconds: 5
+
+# Maximum number of connection retry attempts before giving up
+maxConnectionRetries: 10
+
+# Monitoring Settings
+# ====================
+
+# Enable detailed performance monitoring
+# When enabled, the miner tracks and reports:
+# - Total challenges received
+# - Total proofs generated
+# - Total proofs submitted
+# - Total blocks won
+enablePerformanceMonitoring: true
+
+# Environment Variable Overrides
+# ================================
+#
+# You can override any configuration value using environment variables
+# with the prefix SPACETIME_MINER_:
+#
+# SPACETIME_MINER_PLOT_DIRECTORY=/custom/plots
+# SPACETIME_MINER_NODE_ADDRESS=192.168.1.100
+# SPACETIME_MINER_NODE_PORT=9000
+# SPACETIME_MINER_NETWORK_ID=mainnet
+# SPACETIME_MINER_MAX_CONCURRENT_PROOFS=4
+# SPACETIME_MINER_CHAIN_STORAGE_PATH=/custom/storage
+#
+# Environment variables take precedence over values in this file.

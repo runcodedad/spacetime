@@ -1,41 +1,169 @@
 # Spacetime.Miner
 
-The miner node implementation for the Spacetime blockchain.
+The miner node implementation and CLI for the Spacetime blockchain.
 
 ## Overview
 
-`Spacetime.Miner` implements the main event loop for miner nodes that:
-- Load and manage plot files
-- Connect to full nodes or validators
-- Listen for new challenges (via BlockAccepted messages)
-- Generate proofs from plots in response to challenges
-- Submit proofs to the network
-- Build and broadcast blocks when winning
+`Spacetime.Miner` provides:
+- **Command-line interface** for plot management and mining operations
+- **Mining event loop** for automated proof generation and block building
+- **Configuration management** with YAML files and environment variables
 
-## Architecture
+The miner:
+- Loads and manages plot files
+- Connects to full nodes or validators
+- Listens for new challenges (via BlockAccepted messages)
+- Generates proofs from plots in response to challenges
+- Submits proofs to the network
+- Builds and broadcasts blocks when winning
 
-### Core Components
+## Command-Line Interface
 
-#### MinerConfiguration
-Configuration settings for the miner including:
-- Plot directory and metadata paths
-- Node connection settings
-- Network ID
-- Performance tuning parameters
-- Monitoring settings
+### Installation
 
-#### MinerEventLoop
-Main event loop that orchestrates mining operations:
-- **Boot Sequence**: Loads plots and connects to node
-- **Challenge Handling**: Derives new challenges from block acceptances
-- **Proof Generation**: Coordinates parallel proof generation across plots
-- **Proof Submission**: Submits winning proofs to network
-- **Block Building**: Builds blocks when proof wins
-- **Error Recovery**: Handles connection failures and retries
+```bash
+dotnet build src/Spacetime.Miner
+dotnet run --project src/Spacetime.Miner -- --help
+```
 
-## Usage
+### Commands
 
-### Basic Example
+#### create-plot
+
+Create a new plot file.
+
+```bash
+spacetime-miner create-plot [options]
+```
+
+**Options:**
+- `--size, -s <size>` - Plot size in gigabytes (default: 1)
+- `--output, -o <path>` - Output file path (optional)
+- `--config, -c <path>` - Path to configuration file
+- `--cache` - Include Merkle tree cache for faster proof generation
+- `--cache-levels <levels>` - Number of Merkle tree levels to cache (default: 5)
+
+**Examples:**
+
+```bash
+# Create a 1 GB plot
+spacetime-miner create-plot
+
+# Create a 10 GB plot with cache
+spacetime-miner create-plot --size 10 --cache
+
+# Create a plot with custom output path
+spacetime-miner create-plot --size 5 --output my_plot.plot
+```
+
+#### list-plots
+
+Show all registered plots.
+
+```bash
+spacetime-miner list-plots [options]
+```
+
+**Options:**
+- `--config, -c <path>` - Path to configuration file
+- `--verbose, -v` - Show detailed information
+
+**Example:**
+
+```bash
+spacetime-miner list-plots --verbose
+```
+
+#### delete-plot
+
+Remove a plot from the miner.
+
+```bash
+spacetime-miner delete-plot <plot-id> [options]
+```
+
+**Arguments:**
+- `<plot-id>` - The ID of the plot to delete (GUID)
+
+**Options:**
+- `--config, -c <path>` - Path to configuration file
+- `--delete-file` - Also delete the plot file from disk
+- `--force, -f` - Skip confirmation prompt
+
+**Examples:**
+
+```bash
+# Remove plot from manager (keeps file on disk)
+spacetime-miner delete-plot 550e8400-e29b-41d4-a716-446655440000
+
+# Remove plot and delete file
+spacetime-miner delete-plot 550e8400-e29b-41d4-a716-446655440000 --delete-file
+```
+
+#### start
+
+Start the mining process.
+
+```bash
+spacetime-miner start [options]
+```
+
+**Options:**
+- `--config, -c <path>` - Path to configuration file
+- `--daemon, -d` - Run as background daemon (not yet implemented)
+
+**Example:**
+
+```bash
+spacetime-miner start
+```
+
+#### stop
+
+Stop the mining process (not yet fully implemented).
+
+```bash
+spacetime-miner stop
+```
+
+#### status
+
+Show mining status and statistics.
+
+```bash
+spacetime-miner status [options]
+```
+
+**Options:**
+- `--config, -c <path>` - Path to configuration file
+
+**Example:**
+
+```bash
+spacetime-miner status
+```
+
+## Configuration
+
+The miner uses a YAML configuration file located at `~/.spacetime/miner.yaml` by default.
+
+### Configuration File Format
+
+```yaml
+plotDirectory: /path/to/plots
+plotMetadataPath: /path/to/plots_metadata.json
+nodeAddress: 127.0.0.1
+nodePort: 8333
+privateKeyPath: /path/to/miner_key.dat
+networkId: testnet
+maxConcurrentProofs: 1
+proofGenerationTimeoutSeconds: 60
+connectionRetryIntervalSeconds: 5
+maxConnectionRetries: 10
+enablePerformanceMonitoring: true
+```
+
+### Configuration Options
 
 ```csharp
 using MerkleTree.Hashing;
@@ -94,17 +222,64 @@ await miner.DisposeAsync();
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `PlotDirectory` | required | Directory containing plot files |
-| `PlotMetadataPath` | required | Path to plot metadata JSON |
-| `NodeAddress` | required | Address of full node |
-| `NodePort` | required | Port of full node |
-| `PrivateKeyPath` | required | Path to miner's private key |
-| `NetworkId` | required | Network identifier |
-| `MaxConcurrentProofs` | 1 | Max parallel proof generation tasks |
-| `ProofGenerationTimeoutSeconds` | 60 | Timeout for proof generation |
-| `ConnectionRetryIntervalSeconds` | 5 | Retry interval for connections |
-| `MaxConnectionRetries` | 10 | Max connection retry attempts |
-| `EnablePerformanceMonitoring` | true | Enable detailed monitoring |
+| `plotDirectory` | `~/.spacetime/plots` | Directory containing plot files |
+| `plotMetadataPath` | `~/.spacetime/plots_metadata.json` | Path to plot metadata JSON |
+| `nodeAddress` | `127.0.0.1` | Address of full node |
+| `nodePort` | `8333` | Port of full node |
+| `privateKeyPath` | `~/.spacetime/miner_key.dat` | Path to miner's private key |
+| `networkId` | `testnet` | Network identifier |
+| `maxConcurrentProofs` | `1` | Max parallel proof generation tasks |
+| `proofGenerationTimeoutSeconds` | `60` | Timeout for proof generation |
+| `connectionRetryIntervalSeconds` | `5` | Retry interval for connections |
+| `maxConnectionRetries` | `10` | Max connection retry attempts |
+| `enablePerformanceMonitoring` | `true` | Enable detailed monitoring |
+
+### Environment Variables
+
+You can override configuration values using environment variables with the prefix `SPACETIME_MINER_`:
+
+- `SPACETIME_MINER_PLOT_DIRECTORY`
+- `SPACETIME_MINER_PLOT_METADATA_PATH`
+- `SPACETIME_MINER_NODE_ADDRESS`
+- `SPACETIME_MINER_NODE_PORT`
+- `SPACETIME_MINER_PRIVATE_KEY_PATH`
+- `SPACETIME_MINER_NETWORK_ID`
+- `SPACETIME_MINER_MAX_CONCURRENT_PROOFS`
+- `SPACETIME_MINER_PROOF_GENERATION_TIMEOUT_SECONDS`
+- `SPACETIME_MINER_CONNECTION_RETRY_INTERVAL_SECONDS`
+- `SPACETIME_MINER_MAX_CONNECTION_RETRIES`
+- `SPACETIME_MINER_ENABLE_PERFORMANCE_MONITORING`
+
+## Architecture
+
+### Core Components
+
+#### ConfigurationLoader
+Loads configuration from YAML files and applies environment variable overrides.
+
+#### MinerConfiguration
+Configuration settings for the miner including plot directory, node connection, and performance parameters.
+
+#### MinerEventLoop
+Main event loop that orchestrates mining operations:
+- **Boot Sequence**: Loads plots and connects to node
+- **Challenge Handling**: Derives new challenges from block acceptances
+- **Proof Generation**: Coordinates parallel proof generation across plots
+- **Proof Submission**: Submits winning proofs to network
+- **Block Building**: Builds blocks when proof wins
+- **Error Recovery**: Handles connection failures and retries
+
+#### CLI Commands
+- `CreatePlotCommand` - Creates new plots
+- `ListPlotsCommand` - Lists existing plots
+- `DeletePlotCommand` - Removes plots
+- `StartCommand` - Starts mining
+- `StopCommand` - Stops mining
+- `StatusCommand` - Shows status
+
+## Programmatic Usage
+
+### Basic Example
 
 ## Mining Flow
 
