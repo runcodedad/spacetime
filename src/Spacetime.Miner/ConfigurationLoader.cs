@@ -78,10 +78,6 @@ public sealed class ConfigurationLoader : IConfigurationLoader
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
-        var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var spacetimeDir = Path.Combine(homeDir, ".spacetime");
-        var plotsDir = Path.Combine(spacetimeDir, "plots");
-
         var defaultConfig = MinerConfiguration.Default();
 
         var serializer = new SerializerBuilder()
@@ -108,6 +104,9 @@ public sealed class ConfigurationLoader : IConfigurationLoader
     /// </remarks>
     private static MinerConfiguration ApplyEnvironmentOverrides(MinerConfiguration config)
     {
+        // Allow overriding the on-disk chain storage path via environment variable
+        var chainStoragePath = Environment.GetEnvironmentVariable("SPACETIME_MINER_CHAIN_STORAGE_PATH") ?? config.ChainStoragePath;
+
         var plotDirectory = Environment.GetEnvironmentVariable("SPACETIME_MINER_PLOT_DIRECTORY") ?? config.PlotDirectory;
         var plotMetadataPath = Environment.GetEnvironmentVariable("SPACETIME_MINER_PLOT_METADATA_PATH") ?? config.PlotMetadataPath;
         var nodeAddress = Environment.GetEnvironmentVariable("SPACETIME_MINER_NODE_ADDRESS") ?? config.NodeAddress;
@@ -144,7 +143,8 @@ public sealed class ConfigurationLoader : IConfigurationLoader
             ProofGenerationTimeoutSeconds = proofTimeout,
             ConnectionRetryIntervalSeconds = retryInterval,
             MaxConnectionRetries = maxRetries,
-            EnablePerformanceMonitoring = perfMonitoring
+            EnablePerformanceMonitoring = perfMonitoring,
+            ChainStoragePath = chainStoragePath
         };
     }
 

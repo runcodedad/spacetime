@@ -11,7 +11,7 @@ var rootCommand = new RootCommand("Spacetime Miner - Proof-of-Space-Time blockch
     new CreatePlotCommand(hashFunction, configurationLoader),
     new ListPlotsCommand(hashFunction, configurationLoader),
     new DeletePlotCommand(hashFunction, configurationLoader),
-    new StartCommand(configurationLoader),
+    new StartCommand(hashFunction, configurationLoader),
     new StopCommand(),
     new StatusCommand(hashFunction, configurationLoader)
 };

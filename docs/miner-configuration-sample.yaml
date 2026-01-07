@@ -24,6 +24,10 @@ privateKeyPath: /path/to/miner_key.dat
 # Options: "mainnet", "testnet"
 networkId: testnet
 
+# Path to the chain storage database
+# This is where the node's chain database files (leveldb/rocksdb, etc.) are stored
+chainStoragePath: /path/to/storage
+
 # Performance Settings
 # =====================
 
@@ -67,5 +71,6 @@ enablePerformanceMonitoring: true
 # SPACETIME_MINER_NODE_PORT=9000
 # SPACETIME_MINER_NETWORK_ID=mainnet
 # SPACETIME_MINER_MAX_CONCURRENT_PROOFS=4
+# SPACETIME_MINER_CHAIN_STORAGE_PATH=/custom/storage
 #
 # Environment variables take precedence over values in this file.
