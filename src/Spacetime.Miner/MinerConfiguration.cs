@@ -65,6 +65,11 @@ public sealed record MinerConfiguration
     public bool EnablePerformanceMonitoring { get; init; } = true;
 
     /// <summary>
+    /// Gets the path to the chain storage database.
+    /// </summary>
+    public required string ChainStoragePath { get; init; }
+
+    /// <summary>
     /// Creates a default configuration for testing.
     /// </summary>
     public static MinerConfiguration Default()
@@ -86,7 +91,8 @@ public sealed record MinerConfiguration
             ProofGenerationTimeoutSeconds = 60,
             ConnectionRetryIntervalSeconds = 5,
             MaxConnectionRetries = 10,
-            EnablePerformanceMonitoring = true
+            EnablePerformanceMonitoring = true,
+            ChainStoragePath = Path.Combine(spacetimeDir, "storage")
         };
     }
 }

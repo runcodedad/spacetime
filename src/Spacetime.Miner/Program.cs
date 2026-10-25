@@ -1,9 +1,19 @@
-﻿using Spacetime.Miner;
+﻿using System.CommandLine;
+using MerkleTree.Hashing;
+using Spacetime.Miner;
+using Spacetime.Miner.Commands;
 
-Console.WriteLine("Spacetime Miner");
-Console.WriteLine("===============\n");
+var hashFunction = new Sha256HashFunction();
+var configurationLoader = new ConfigurationLoader();
 
-// For now, just demonstrate the structure
-Console.WriteLine("Miner node implementation in progress...");
-Console.WriteLine("\nUsage:");
-Console.WriteLine("  spacetime-miner --plot-dir <path> --node-addr <address>:<port> --network <id>");
+var rootCommand = new RootCommand("Spacetime Miner - Proof-of-Space-Time blockchain miner")
+{
+    new CreatePlotCommand(hashFunction, configurationLoader),
+    new ListPlotsCommand(hashFunction, configurationLoader),
+    new DeletePlotCommand(hashFunction, configurationLoader),
+    new StartCommand(hashFunction, configurationLoader),
+    new StopCommand(),
+    new StatusCommand(hashFunction, configurationLoader)
+};
+
+return await rootCommand.InvokeAsync(args);
